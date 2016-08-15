@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use proto;
 use metrics::{Metric, Opts};
@@ -24,8 +24,7 @@ use errors::{Result, Error};
 /// goes up.
 #[derive(Clone)]
 pub struct Counter {
-    desc: Arc<Desc>,
-    v: Arc<RwLock<Value>>,
+    v: Arc<Value>,
 }
 
 impl Counter {
@@ -36,11 +35,8 @@ impl Counter {
 
     pub fn with_opts(opts: Opts) -> Result<Counter> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        let v = try!(Value::new(&desc, ValueType::Counter, 0.0, vec![]));
-        Ok(Counter {
-            desc: Arc::new(desc),
-            v: Arc::new(RwLock::new(v)),
-        })
+        let v = try!(Value::new(desc, ValueType::Counter, 0.0, vec![]));
+        Ok(Counter { v: Arc::new(v) })
     }
 }
 
@@ -48,34 +44,34 @@ impl Counter {
     /// `add` adds the given value to the counter. It panics if the value is <
     /// 0.
     #[inline]
-    pub fn add(&mut self, v: f64) -> Result<()> {
+    pub fn add(&self, v: f64) -> Result<()> {
         if v < 0.0 {
             return Err(Error::DecreaseCounter(v));
         }
 
-        Ok(self.v.write().unwrap().add(v))
+        Ok(self.v.add(v))
     }
 
     /// `inc` increments the counter by 1.
     #[inline]
-    pub fn inc(&mut self) {
+    pub fn inc(&self) {
         self.add(1.0).unwrap()
     }
 
     /// `value` returns the counter value.
     #[inline]
     pub fn value(&self) -> f64 {
-        self.v.read().unwrap().val
+        self.v.get()
     }
 }
 
 impl Metric for Counter {
     fn desc(&self) -> &Desc {
-        &self.desc
+        &self.v.desc
     }
 
     fn metric(&self) -> proto::Metric {
-        self.v.read().unwrap().metric()
+        self.v.metric()
     }
 }
 
@@ -91,7 +87,7 @@ mod tests {
         const_labels.insert("a".to_owned(), "1".to_owned());
         const_labels.insert("b".to_owned(), "2".to_owned());
         let opts = Opts::with_label("", "", "test", "test help", const_labels);
-        let mut counter = Counter::with_opts(opts).unwrap();
+        let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.value() as u64, 1);
         counter.add(42.0).unwrap();

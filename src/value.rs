@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::RwLock;
+
 use protobuf::RepeatedField;
 
 use proto::{LabelPair, Metric, Counter, Gauge, Untyped};
@@ -26,13 +28,15 @@ pub enum ValueType {
 
 /// `Value` is a generic metric for Counter, Gauge and Untyped.
 pub struct Value {
-    pub val: f64,
+    pub desc: Desc,
+    // TODO: like prometheus client go, use atomic u64.
+    pub val: RwLock<f64>,
     pub val_type: ValueType,
     pub label_pairs: Vec<LabelPair>,
 }
 
 impl Value {
-    pub fn new(desc: &Desc,
+    pub fn new(desc: Desc,
                value_type: ValueType,
                val: f64,
                label_values: Vec<String>)
@@ -41,37 +45,43 @@ impl Value {
             return Err(Error::InconsistentCardinality);
         }
 
-        let label_pairs = make_label_pairs(desc, label_values);
+        let label_pairs = make_label_pairs(&desc, label_values);
 
         Ok(Value {
-            val: val,
+            desc: desc,
+            val: RwLock::new(val),
             val_type: value_type,
             label_pairs: label_pairs,
         })
     }
 
     #[inline]
-    pub fn set(&mut self, val: f64) {
-        self.val = val;
+    pub fn set(&self, val: f64) {
+        *self.val.write().unwrap() = val;
     }
 
     #[inline]
-    pub fn inc(&mut self) {
+    pub fn get(&self) -> f64 {
+        *self.val.read().unwrap()
+    }
+
+    #[inline]
+    pub fn inc(&self) {
         self.add(1.0);
     }
 
     #[inline]
-    pub fn dec(&mut self) {
+    pub fn dec(&self) {
         self.add(-1.0);
     }
 
     #[inline]
-    pub fn add(&mut self, val: f64) {
-        self.val += val;
+    pub fn add(&self, val: f64) {
+        *self.val.write().unwrap() += val;
     }
 
     #[inline]
-    pub fn sub(&mut self, val: f64) {
+    pub fn sub(&self, val: f64) {
         self.add(val * -1.0)
     }
 
@@ -79,20 +89,21 @@ impl Value {
         let mut m = Metric::new();
         m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
 
+        let val = self.get();
         match self.val_type {
             ValueType::Counter => {
                 let mut counter = Counter::new();
-                counter.set_value(self.val);
+                counter.set_value(val);
                 m.set_counter(counter);
             }
             ValueType::Gauge => {
                 let mut gauge = Gauge::new();
-                gauge.set_value(self.val);
+                gauge.set_value(val);
                 m.set_gauge(gauge);
             }
             ValueType::Untyped => {
                 let mut untyped = Untyped::new();
-                untyped.set_value(self.val);
+                untyped.set_value(val);
                 m.set_untyped(untyped);
             }
         }

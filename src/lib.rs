@@ -23,6 +23,7 @@ extern crate fnv;
 pub mod metrics;
 mod proto;
 mod desc;
+// TODO: remove dead_code later.
 #[allow(dead_code)]
 mod value;
 mod errors;

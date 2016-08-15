@@ -106,7 +106,7 @@ mod tests {
             r1.write_pb(&mut w).unwrap();
         });
 
-        let mut counter = Counter::new("", "", "test", "test help").unwrap();
+        let counter = Counter::new("", "", "test", "test help").unwrap();
 
         r.register(box counter.clone()).unwrap();
         counter.inc();
