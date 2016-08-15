@@ -41,21 +41,21 @@ impl Counter {
 }
 
 impl Counter {
-    /// `add` adds the given value to the counter. It panics if the value is <
+    /// `inc_by` increments the given value to the counter. Error if the value is <
     /// 0.
     #[inline]
-    pub fn add(&self, v: f64) -> Result<()> {
+    pub fn inc_by(&self, v: f64) -> Result<()> {
         if v < 0.0 {
             return Err(Error::DecreaseCounter(v));
         }
 
-        Ok(self.v.add(v))
+        Ok(self.v.inc_by(v))
     }
 
     /// `inc` increments the counter by 1.
     #[inline]
     pub fn inc(&self) {
-        self.add(1.0).unwrap()
+        self.inc_by(1.0).unwrap()
     }
 
     /// `value` returns the counter value.
@@ -90,7 +90,7 @@ mod tests {
         let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.value() as u64, 1);
-        counter.add(42.0).unwrap();
+        counter.inc_by(42.0).unwrap();
         assert_eq!(counter.value() as u64, 43);
 
         let m = counter.metric();

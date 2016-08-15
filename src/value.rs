@@ -67,22 +67,22 @@ impl Value {
 
     #[inline]
     pub fn inc(&self) {
-        self.add(1.0);
+        self.inc_by(1.0);
     }
 
     #[inline]
     pub fn dec(&self) {
-        self.add(-1.0);
+        self.inc_by(-1.0);
     }
 
     #[inline]
-    pub fn add(&self, val: f64) {
+    pub fn inc_by(&self, val: f64) {
         *self.val.write().unwrap() += val;
     }
 
     #[inline]
-    pub fn sub(&self, val: f64) {
-        self.add(val * -1.0)
+    pub fn dec_by(&self, val: f64) {
+        self.inc_by(val * -1.0)
     }
 
     pub fn metric(&self) -> Metric {
