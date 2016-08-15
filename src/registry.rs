@@ -108,9 +108,9 @@ mod tests {
 
         let counter = Counter::new("", "", "test", "test help").unwrap();
 
-        r.register(box counter.clone()).unwrap();
+        r.register(Box::new(counter.clone())).unwrap();
         counter.inc();
 
-        assert!(r.register(box counter.clone()).is_err());
+        assert!(r.register(Box::new(counter.clone())).is_err());
     }
 }

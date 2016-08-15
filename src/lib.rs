@@ -11,9 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(plugin)]
-#![cfg_attr(feature = "dev", plugin(clippy))]
-#![feature(box_syntax)]
+#![cfg_attr(feature="dev", feature(plugin))]
+#![cfg_attr(feature="dev", plugin(clippy))]
 
 #[macro_use]
 extern crate quick_error;
