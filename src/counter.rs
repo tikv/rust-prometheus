@@ -18,7 +18,7 @@ use proto;
 use metrics::{Metric, Opts};
 use value::{Value, ValueType};
 use desc::Desc;
-use errors::Result;
+use errors::{Result, Error};
 
 /// `Counter` is a Metric that represents a single numerical value that only ever
 /// goes up.
@@ -48,15 +48,18 @@ impl Counter {
     /// `add` adds the given value to the counter. It panics if the value is <
     /// 0.
     #[inline]
-    pub fn add(&mut self, v: f64) {
-        assert!(v >= 0.0, "counter cannot decrease in value");
-        self.v.write().unwrap().add(v)
+    pub fn add(&mut self, v: f64) -> Result<()> {
+        if v < 0.0 {
+            return Err(Error::DecreaseCounter(v));
+        }
+
+        Ok(self.v.write().unwrap().add(v))
     }
 
     /// `inc` increments the counter by 1.
     #[inline]
     pub fn inc(&mut self) {
-        self.add(1.0)
+        self.add(1.0).unwrap()
     }
 
     /// `value` returns the counter value.
@@ -91,7 +94,7 @@ mod tests {
         let mut counter = Counter::with_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.value() as u64, 1);
-        counter.add(42.0);
+        counter.add(42.0).unwrap();
         assert_eq!(counter.value() as u64, 43);
 
         let m = counter.metric();

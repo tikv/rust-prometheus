@@ -1,5 +1,5 @@
 [package]
-name = "prometheus"
+name = "prom"
 version = "0.1.0"
 keywords = ["prometheus", "metrics"]
 

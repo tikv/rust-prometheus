@@ -117,7 +117,7 @@ impl PartialOrd for LabelPair {
 /// library use this function internally to generate the fully-qualified metric
 /// name from the name component in their Opts. Users of the library will only
 /// need this function if they implement their own Metric or instantiate a Desc
-/// (with NewDesc) directly.
+/// directly.
 pub fn build_fq_name(namespace: &str, sub_system: &str, name: &str) -> String {
     if name.is_empty() {
         return "".to_owned();
