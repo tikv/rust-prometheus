@@ -93,13 +93,7 @@ impl Opts {
 
 impl Ord for LabelPair {
     fn cmp(&self, other: &LabelPair) -> Ordering {
-        if self.get_name() < other.get_name() {
-            return Ordering::Less;
-        } else if self.get_name() > other.get_name() {
-            return Ordering::Greater;
-        }
-
-        Ordering::Equal
+        self.get_name().cmp(other.get_name())
     }
 }
 
