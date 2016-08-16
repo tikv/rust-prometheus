@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, BTreeSet};
 use std::hash::Hasher;
 
 use fnv::FnvHasher;
@@ -82,16 +82,15 @@ impl Desc {
 
         let mut label_values = Vec::with_capacity(const_labels.len() + 1);
         label_values.push(fq_name);
-        let mut label_names = Vec::with_capacity(const_labels.len() + variable_labels.len());
-        let mut label_name_set = HashSet::new();
+
+        let mut label_names = BTreeSet::new();
 
         for label_name in const_labels.keys() {
             // TODO: check invalid label name
-            label_names.push(label_name.clone());
-            label_name_set.insert(label_name.clone());
+            if !label_names.insert(label_name.clone()) {
+                return Err(Error::Msg(format!("duplicate const label name {}", label_name)));
+            }
         }
-
-        label_names.sort();
 
         // ... so that we can now add const label values in the order of their names.
         for label_name in &label_names {
@@ -103,12 +102,9 @@ impl Desc {
         // dimension with a different mix between preset and variable labels.
         for label_name in variable_labels {
             // TODO: check invalid label name
-            label_names.push(format!("${}", label_name));
-            label_name_set.insert(label_name);
-        }
-
-        if label_names.len() != label_name_set.len() {
-            return Err(Error::Msg("duplicate label names".into()));
+            if !label_names.insert(format!("${}", label_name)) {
+                return Err(Error::Msg(format!("duplicate variable label name {}", label_name)));
+            }
         }
 
         let mut vh = FnvHasher::default();
@@ -119,8 +115,6 @@ impl Desc {
 
         desc.id = vh.finish();
 
-        // Sort labelNames so that order doesn't matter for the hash.
-        label_names.sort();
         // Now hash together (in this order) the help string and the sorted
         // label names.
         let mut lh = FnvHasher::default();

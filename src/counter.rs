@@ -58,9 +58,9 @@ impl Counter {
         self.inc_by(1.0).unwrap()
     }
 
-    /// `value` returns the counter value.
+    /// `get` returns the counter value.
     #[inline]
-    pub fn value(&self) -> f64 {
+    pub fn get(&self) -> f64 {
         self.v.get()
     }
 }
@@ -89,9 +89,9 @@ mod tests {
         let opts = Opts::with_label("", "", "test", "test help", const_labels);
         let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
-        assert_eq!(counter.value() as u64, 1);
+        assert_eq!(counter.get() as u64, 1);
         counter.inc_by(42.0).unwrap();
-        assert_eq!(counter.value() as u64, 43);
+        assert_eq!(counter.get() as u64, 43);
 
         let m = counter.metric();
         assert_eq!(m.get_label().len(), 2);
