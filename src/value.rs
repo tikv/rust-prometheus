@@ -16,7 +16,7 @@ use std::sync::RwLock;
 
 use protobuf::RepeatedField;
 
-use proto::{LabelPair, Metric, Counter, Gauge, Untyped};
+use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType};
 use desc::Desc;
 use errors::{Result, Error};
 
@@ -108,6 +108,26 @@ impl Value {
             }
         }
 
+        m
+    }
+
+    pub fn collect(&self) -> MetricFamily {
+        let mut m = MetricFamily::new();
+        m.set_name(self.desc.fq_name.clone());
+        m.set_help(self.desc.help.clone());
+        match self.val_type {
+            ValueType::Counter => {
+                m.set_field_type(MetricType::COUNTER);
+            }
+            ValueType::Gauge => {
+                m.set_field_type(MetricType::GAUGE);
+            }
+            ValueType::Untyped => {
+                m.set_field_type(MetricType::UNTYPED);
+            }
+        }
+
+        m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
         m
     }
 }

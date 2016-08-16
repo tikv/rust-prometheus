@@ -12,29 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::io::Write;
 
-use metrics::Metric;
+use metrics::Collector;
 use errors::{Result, Error};
 
 struct RegistryCore {
-    pub metrics_by_id: HashMap<u64, Box<Metric>>,
-    pub desc_ids: HashSet<u64>,
+    pub colloctors_by_id: HashMap<u64, Box<Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
 }
 
 impl RegistryCore {
-    pub fn register(&mut self, metric: Box<Metric>) -> Result<()> {
+    pub fn register(&mut self, c: Box<Collector>) -> Result<()> {
         // TODO: should simplify later.
         let id = {
-            let desc = metric.desc();
-            if self.desc_ids.contains(&desc.id) {
-                return Err(Error::Msg(format!("descriptor {:?} already exists with the same \
-                                               fully-qualified name and const label values",
-                                              desc)));
-            }
+            let desc = c.desc();
 
             if let Some(hash) = self.dim_hashes_by_name.get(&desc.fq_name) {
                 if *hash != desc.dim_hash {
@@ -46,17 +40,27 @@ impl RegistryCore {
                 }
             }
 
-            if self.metrics_by_id.contains_key(&desc.id) {
+            if self.colloctors_by_id.contains_key(&desc.id) {
                 return Err(Error::AlreadyReg);
             }
 
-            self.desc_ids.insert(desc.id);
             self.dim_hashes_by_name.insert(desc.fq_name.clone(), desc.dim_hash);
 
             desc.id
         };
 
-        self.metrics_by_id.insert(id, metric);
+        self.colloctors_by_id.insert(id, c);
+        Ok(())
+    }
+
+    pub fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
+        let desc = c.desc();
+        if self.colloctors_by_id.remove(&desc.id).is_none() {
+            return Err(Error::Msg(format!("collector {:?} is not registered", desc)));
+        }
+
+        // dim_hashes_by_name is left untouched as those must be consistent
+        // throughout the lifetime of a program.
         Ok(())
     }
 }
@@ -69,16 +73,19 @@ pub struct Registry {
 impl Registry {
     pub fn new() -> Registry {
         let r = RegistryCore {
-            metrics_by_id: HashMap::new(),
-            desc_ids: HashSet::new(),
+            colloctors_by_id: HashMap::new(),
             dim_hashes_by_name: HashMap::new(),
         };
 
         Registry { r: Arc::new(RwLock::new(r)) }
     }
 
-    pub fn register(&mut self, metric: Box<Metric>) -> Result<()> {
-        self.r.write().unwrap().register(metric)
+    pub fn register(&self, c: Box<Collector>) -> Result<()> {
+        self.r.write().unwrap().register(c)
+    }
+
+    pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
+        self.r.write().unwrap().unregister(c)
     }
 
     pub fn write_pb<T: Write>(&self, _: &mut T) -> Result<()> {
@@ -98,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_registry() {
-        let mut r = Registry::new();
+        let r = Registry::new();
 
         let r1 = r.clone();
         thread::spawn(move || {
@@ -106,11 +113,13 @@ mod tests {
             r1.write_pb(&mut w).unwrap();
         });
 
-        let counter = Counter::new("", "", "test", "test help").unwrap();
+        let counter = Counter::new("test", "test help").unwrap();
 
         r.register(Box::new(counter.clone())).unwrap();
         counter.inc();
 
         assert!(r.register(Box::new(counter.clone())).is_err());
+        assert!(r.unregister(Box::new(counter.clone())).is_ok());
+        assert!(r.unregister(Box::new(counter.clone())).is_err());
     }
 }

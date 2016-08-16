@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 use proto;
-use metrics::{Metric, Opts};
+use metrics::{Opts, Collector};
 use value::{Value, ValueType};
 use desc::Desc;
 use errors::{Result, Error};
@@ -28,8 +28,8 @@ pub struct Counter {
 }
 
 impl Counter {
-    pub fn new<S: Into<String>>(namespace: S, sub_system: S, name: S, help: S) -> Result<Counter> {
-        let opts = Opts::new(namespace, sub_system, name, help);
+    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Counter> {
+        let opts = Opts::new(name, help);
         Counter::with_opts(opts)
     }
 
@@ -65,35 +65,32 @@ impl Counter {
     }
 }
 
-impl Metric for Counter {
+impl Collector for Counter {
     fn desc(&self) -> &Desc {
         &self.v.desc
     }
 
-    fn metric(&self) -> proto::Metric {
-        self.v.metric()
+    fn collect(&self) -> proto::MetricFamily {
+        self.v.collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use super::*;
-    use metrics::{Opts, Metric};
+    use metrics::{Opts, Collector};
 
     #[test]
     fn test_counter() {
-        let mut const_labels = HashMap::new();
-        const_labels.insert("a".to_owned(), "1".to_owned());
-        const_labels.insert("b".to_owned(), "2".to_owned());
-        let opts = Opts::with_label("", "", "test", "test help", const_labels);
+        let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
         let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.get() as u64, 1);
         counter.inc_by(42.0).unwrap();
         assert_eq!(counter.get() as u64, 43);
 
-        let m = counter.metric();
+        let mf = counter.collect();
+        let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
     }

@@ -20,12 +20,12 @@ use std::cmp::{Ord, Ordering, Eq, PartialOrd};
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
-pub trait Metric: Sync + Send {
-    /// `desc` returns the descriptor for the Metric
+pub trait Collector: Sync + Send {
+    /// `desc` returns the descriptor for the metric collector.
     fn desc(&self) -> &Desc;
-    /// `metric` encodes the Metric into a "Metric" Protocol Buffer data
-    /// transmission object.
-    fn metric(&self) -> proto::Metric;
+
+    /// `collect` collects the metric.
+    fn collect(&self) -> proto::MetricFamily;
 }
 
 /// `Opts` bundles the options for creating most Metric types.
@@ -67,23 +67,34 @@ pub struct Opts {
 }
 
 impl Opts {
-    pub fn new<S: Into<String>>(namespace: S, sub_system: S, name: S, help: S) -> Opts {
-        Opts::with_label(namespace, sub_system, name, help, HashMap::new())
-    }
-
-    pub fn with_label<S: Into<String>>(namespace: S,
-                                       sub_system: S,
-                                       name: S,
-                                       help: S,
-                                       const_labels: HashMap<String, String>)
-                                       -> Opts {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
         Opts {
-            namespace: namespace.into(),
-            sub_system: sub_system.into(),
+            namespace: "".to_owned(),
+            sub_system: "".to_owned(),
             name: name.into(),
             help: help.into(),
-            const_labels: const_labels,
+            const_labels: HashMap::new(),
         }
+    }
+
+    pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
+        self.namespace = namesapce.into();
+        self
+    }
+
+    pub fn sub_system<S: Into<String>>(mut self, sub_system: S) -> Self {
+        self.sub_system = sub_system.into();
+        self
+    }
+
+    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
+        self.const_labels = labels;
+        self
+    }
+
+    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        self.const_labels.insert(name.into(), value.into());
+        self
     }
 
     pub fn fq_name(&self) -> String {
