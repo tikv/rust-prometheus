@@ -1,0 +1,14 @@
+[package]
+name = "prom"
+version = "0.1.0"
+keywords = ["prometheus", "metrics"]
+
+[features]
+default = []
+dev = ["clippy"]
+
+[dependencies]
+protobuf = "1.0"
+quick-error = "0.2"
+clippy = {version = "*", optional = true}
+fnv = "1.0.3"
