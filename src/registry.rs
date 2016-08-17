@@ -72,12 +72,7 @@ pub struct Registry {
 
 impl Registry {
     pub fn new() -> Registry {
-        let r = RegistryCore {
-            colloctors_by_id: HashMap::new(),
-            dim_hashes_by_name: HashMap::new(),
-        };
-
-        Registry { r: Arc::new(RwLock::new(r)) }
+        Registry::default()
     }
 
     pub fn register(&self, c: Box<Collector>) -> Result<()> {
@@ -92,8 +87,19 @@ impl Registry {
         Ok(())
     }
 
-    pub fn write_test<T: Write>(&self, _: &mut T) -> Result<()> {
+    pub fn write_text<T: Write>(&self, _: &mut T) -> Result<()> {
         Ok(())
+    }
+}
+
+impl Default for Registry {
+    fn default() -> Registry {
+        let r = RegistryCore {
+            colloctors_by_id: HashMap::new(),
+            dim_hashes_by_name: HashMap::new(),
+        };
+
+        Registry { r: Arc::new(RwLock::new(r)) }
     }
 }
 

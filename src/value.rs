@@ -26,6 +26,16 @@ pub enum ValueType {
     Untyped,
 }
 
+impl ValueType {
+    pub fn metric_type(&self) -> MetricType {
+        match *self {
+            ValueType::Counter => MetricType::COUNTER,
+            ValueType::Gauge => MetricType::GAUGE,
+            ValueType::Untyped => MetricType::UNTYPED,
+        }
+    }
+}
+
 /// `Value` is a generic metric for Counter, Gauge and Untyped.
 pub struct Value {
     pub desc: Desc,
@@ -115,18 +125,7 @@ impl Value {
         let mut m = MetricFamily::new();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
-        match self.val_type {
-            ValueType::Counter => {
-                m.set_field_type(MetricType::COUNTER);
-            }
-            ValueType::Gauge => {
-                m.set_field_type(MetricType::GAUGE);
-            }
-            ValueType::Untyped => {
-                m.set_field_type(MetricType::UNTYPED);
-            }
-        }
-
+        m.set_field_type(self.val_type.metric_type());
         m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
         m
     }

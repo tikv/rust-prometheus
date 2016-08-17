@@ -19,8 +19,8 @@ extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
 
-pub mod metrics;
-mod proto;
+mod metrics;
+pub mod proto;
 mod desc;
 // TODO: remove dead_code later.
 #[allow(dead_code)]
@@ -30,3 +30,7 @@ mod errors;
 mod counter;
 #[allow(dead_code)]
 mod registry;
+
+pub use self::registry::Registry;
+pub use self::metrics::{Collector, Opts};
+pub use self::counter::Counter;
