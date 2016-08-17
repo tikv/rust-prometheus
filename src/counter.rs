@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 use proto;
-use metrics::{Opts, Collector};
+use metrics::{Opts, Collector, Metric};
 use value::{Value, ValueType};
 use desc::Desc;
 use errors::{Result, Error};
@@ -72,6 +72,12 @@ impl Collector for Counter {
 
     fn collect(&self) -> proto::MetricFamily {
         self.v.collect()
+    }
+}
+
+impl Metric for Counter {
+    fn metric(&self) -> proto::Metric {
+        self.v.metric()
     }
 }
 

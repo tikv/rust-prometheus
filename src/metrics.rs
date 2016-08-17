@@ -28,6 +28,11 @@ pub trait Collector: Sync + Send {
     fn collect(&self) -> proto::MetricFamily;
 }
 
+pub trait Metric {
+    /// `metric` returns the protocol Metric.
+    fn metric(&self) -> proto::Metric;
+}
+
 /// `Opts` bundles the options for creating most Metric types.
 pub struct Opts {
     // namespace, sub_system, and name are components of the fully-qualified
