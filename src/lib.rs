@@ -18,9 +18,13 @@
 extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
+extern crate hyper;
+
+pub mod http;
+pub mod proto;
+pub mod encoder;
 
 mod metrics;
-pub mod proto;
 mod desc;
 // TODO: remove dead_code later.
 #[allow(dead_code)]

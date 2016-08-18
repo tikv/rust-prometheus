@@ -15,3 +15,10 @@ format:
 
 clean:
 	cargo clean
+
+demo:
+	mkdir -p bin
+	cargo build --bin demo
+	cp target/debug/demo bin/
+
+.PHONY: demo all

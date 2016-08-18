@@ -7,8 +7,17 @@ keywords = ["prometheus", "metrics"]
 default = []
 dev = ["clippy"]
 
+[[bin]]
+name = "demo"
+path = "demo/simple.rs"
+
 [dependencies]
 protobuf = "1.0"
 quick-error = "0.2"
 clippy = {version = "*", optional = true}
 fnv = "1.0.3"
+
+[dependencies.hyper]
+git = "https://github.com/hyperium/hyper.git"
+default-features = false # don't use ssl now.
+features = ["nightly"]

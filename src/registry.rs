@@ -13,19 +13,18 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use std::io::Write;
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 use metrics::Collector;
 use errors::{Result, Error};
 
-struct RegistryCore {
+pub struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
 }
 
 impl RegistryCore {
-    pub fn register(&mut self, c: Box<Collector>) -> Result<()> {
+    fn register(&mut self, c: Box<Collector>) -> Result<()> {
         // TODO: should simplify later.
         let id = {
             let desc = c.desc();
@@ -53,7 +52,7 @@ impl RegistryCore {
         Ok(())
     }
 
-    pub fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
+    fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
         let desc = c.desc();
         if self.colloctors_by_id.remove(&desc.id).is_none() {
             return Err(Error::Msg(format!("collector {:?} is not registered", desc)));
@@ -70,6 +69,17 @@ pub struct Registry {
     r: Arc<RwLock<RegistryCore>>,
 }
 
+impl Default for Registry {
+    fn default() -> Registry {
+        let r = RegistryCore {
+            colloctors_by_id: HashMap::new(),
+            dim_hashes_by_name: HashMap::new(),
+        };
+
+        Registry { r: Arc::new(RwLock::new(r)) }
+    }
+}
+
 impl Registry {
     pub fn new() -> Registry {
         Registry::default()
@@ -83,29 +93,13 @@ impl Registry {
         self.r.write().unwrap().unregister(c)
     }
 
-    pub fn write_pb<T: Write>(&self, _: &mut T) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn write_text<T: Write>(&self, _: &mut T) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl Default for Registry {
-    fn default() -> Registry {
-        let r = RegistryCore {
-            colloctors_by_id: HashMap::new(),
-            dim_hashes_by_name: HashMap::new(),
-        };
-
-        Registry { r: Arc::new(RwLock::new(r)) }
+    pub fn get_core(&self) -> RwLockReadGuard<RegistryCore> {
+        self.r.read().unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
     use super::*;
     use counter::Counter;
 
@@ -113,14 +107,7 @@ mod tests {
     fn test_registry() {
         let r = Registry::new();
 
-        let r1 = r.clone();
-        thread::spawn(move || {
-            let mut w = vec![];
-            r1.write_pb(&mut w).unwrap();
-        });
-
         let counter = Counter::new("test", "test help").unwrap();
-
         r.register(Box::new(counter.clone())).unwrap();
         counter.inc();
 
