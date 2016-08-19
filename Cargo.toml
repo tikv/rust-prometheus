@@ -8,8 +8,8 @@ default = []
 dev = ["clippy"]
 
 [[bin]]
-name = "demo"
-path = "demo/simple.rs"
+name = "example"
+path = "example/simple_example.rs"
 
 [dependencies]
 protobuf = "1.0"
@@ -19,5 +19,3 @@ fnv = "1.0.3"
 
 [dependencies.hyper]
 git = "https://github.com/hyperium/hyper.git"
-default-features = false # don't use ssl now.
-features = ["nightly"]

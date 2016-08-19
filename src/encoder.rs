@@ -19,12 +19,21 @@ use proto::{self, MetricType};
 
 pub trait Encoder {
     fn encode(&self, &MetricFamily, &mut Write) -> Result<usize>;
+    fn get_format(&self) -> String;
 }
 
-pub const TEXT_FORMAT: &'static str = "text/plain; version=0.0.4";
+pub type Format = &'static str;
 
-#[derive(Debug)]
-pub struct TextEncoder;
+pub const TEXT_FORMAT: Format = "text/plain; version=0.0.4";
+
+#[derive(Debug, Default)]
+pub struct TextEncoder(String);
+
+impl TextEncoder {
+    pub fn new() -> TextEncoder {
+        TextEncoder(TEXT_FORMAT.to_owned())
+    }
+}
 
 impl Encoder for TextEncoder {
     /// encode converts a MetricFamily proto message into text format and
@@ -70,6 +79,10 @@ impl Encoder for TextEncoder {
             }
         }
         Ok(written)
+    }
+
+    fn get_format(&self) -> String {
+        self.0.clone()
     }
 }
 
@@ -205,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_text() {
+    fn test_text_encoder() {
         let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
         let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
@@ -229,7 +242,7 @@ test{a="1",b="2"} 1
 "##;
 
         let mut buffer = Buffer(Vec::new());
-        let encoder = TextEncoder {};
+        let encoder = TextEncoder::new();
         assert!(encoder.encode(&mf, &mut buffer).is_ok());
         assert_eq!(ans.as_bytes(), buffer.0.as_slice());
     }

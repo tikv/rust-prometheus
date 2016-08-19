@@ -11,6 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate prom;
+extern crate hyper;
+
+use std::thread;
+use std::time::Duration;
 use std::io::{self, Write};
 
 use hyper::{StatusCode, Decoder, Next, Encoder as HyperEncoder};
@@ -19,13 +24,40 @@ use hyper::net::HttpStream;
 use hyper::server::{Server, Handler, Request, Response};
 use hyper::mime::Mime;
 
-use registry::Registry;
-use errors::{Result, Error};
-use encoder::{Encoder, TextEncoder, TEXT_FORMAT};
+use prom::errors::{Error, Result};
+use prom::encoder::{Encoder, TextEncoder};
+use prom::{Counter, Opts, Registry, scrap_registry};
 
-// run_with_registry runs a http server with a Registry, it blocks current thread.
-pub fn run_with_registry(addr: &str, reg: &Registry) -> Result<()> {
-    run(addr, reg, &TextEncoder {})
+fn main() {
+    let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
+    let counter = Counter::with_opts(opts).unwrap();
+
+    let r = Registry::new();
+    r.register(Box::new(counter.clone())).unwrap();
+
+    counter.inc();
+    assert_eq!(counter.get() as u64, 1);
+    counter.inc_by(42.0).unwrap();
+    assert_eq!(counter.get() as u64, 43);
+
+    let c2 = counter.clone();
+    thread::spawn(move || {
+        loop {
+            thread::sleep(Duration::from_millis(300));
+            c2.inc_by(3.14159265358979323846264338327).unwrap();
+        }
+    });
+
+    thread::spawn(move || {
+        loop {
+            thread::sleep(Duration::from_millis(1500));
+            counter.inc();
+        }
+    });
+
+    let encoder = TextEncoder::new();
+    // Http server
+    run("127.0.0.1:9898", &r, &encoder).unwrap();
 }
 
 // run runs a http server with a Registry and a Encoder, it blocks current thread.
@@ -83,7 +115,7 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
     }
 
     fn on_response(&mut self, res: &mut Response) -> Next {
-        if let Ok(written) = scarp(&self.registry, &mut self.buffer, self.encoder) {
+        if let Ok(written) = scrap_registry(&self.registry, &mut self.buffer, self.encoder) {
             res.headers_mut().set(ContentLength(written as u64));
         } else {
             return Next::remove();
@@ -91,7 +123,7 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
 
         self.write_pos = 0;
         res.set_status(StatusCode::Ok);
-        res.headers_mut().set(ContentType(TEXT_FORMAT.parse::<Mime>().unwrap()));
+        res.headers_mut().set(ContentType((&self.encoder.get_format()).parse::<Mime>().unwrap()));
         Next::write()
     }
 
@@ -110,16 +142,4 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
             Err(_) => Next::remove(),
         }
     }
-}
-
-fn scarp(registry: &Registry, writer: &mut Write, encoder: &Encoder) -> Result<usize> {
-    let core = registry.get_core();
-    let mut written = 0;
-
-    for collector in core.colloctors_by_id.values() {
-        let metric_family = collector.collect();
-        written += try!(encoder.encode(&metric_family, writer));
-    }
-
-    Ok(written)
 }

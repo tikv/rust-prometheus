@@ -16,9 +16,9 @@ format:
 clean:
 	cargo clean
 
-demo:
+example:
 	mkdir -p bin
-	cargo build --bin demo
-	cp target/debug/demo bin/
+	cargo build --bin example
+	cp target/debug/example bin/
 
-.PHONY: demo all
+.PHONY: example all

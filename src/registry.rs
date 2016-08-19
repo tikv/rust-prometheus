@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::io::Write;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 use metrics::Collector;
 use errors::{Result, Error};
+use encoder::Encoder;
 
 pub struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
@@ -96,6 +98,18 @@ impl Registry {
     pub fn get_core(&self) -> RwLockReadGuard<RegistryCore> {
         self.r.read().unwrap()
     }
+}
+
+pub fn scrap_registry(registry: &Registry, writer: &mut Write, encoder: &Encoder) -> Result<usize> {
+    let core = registry.get_core();
+    let mut written = 0;
+
+    for collector in core.colloctors_by_id.values() {
+        let metric_family = collector.collect();
+        written += try!(encoder.encode(&metric_family, writer));
+    }
+
+    Ok(written)
 }
 
 #[cfg(test)]
