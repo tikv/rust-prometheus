@@ -29,6 +29,8 @@ mod errors;
 #[allow(dead_code)]
 mod counter;
 #[allow(dead_code)]
+mod gauge;
+#[allow(dead_code)]
 mod registry;
 
 pub use self::registry::Registry;

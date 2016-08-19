@@ -1,0 +1,124 @@
+// Copyright 2014 The Prometheus Authors
+// Copyright 2016 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use std::sync::Arc;
+
+use proto;
+use metrics::{Opts, Collector, Metric};
+use value::{Value, ValueType};
+use desc::Desc;
+use errors::Result;
+
+/// `Gauge` is a Metric that represents a single numerical value that can
+/// arbitrarily go up and down.
+#[derive(Clone)]
+pub struct Gauge {
+    v: Arc<Value>,
+}
+
+impl Gauge {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Gauge> {
+        let opts = Opts::new(name, help);
+        Gauge::with_opts(opts)
+    }
+
+    pub fn with_opts(opts: Opts) -> Result<Gauge> {
+        let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
+        let v = try!(Value::new(desc, ValueType::Gauge, 0.0, vec![]));
+        Ok(Gauge { v: Arc::new(v) })
+    }
+}
+
+impl Gauge {
+    // `set` sets the gauge to an arbitrary value.
+    #[inline]
+    pub fn set(&self, v: f64) {
+        self.v.set(v);
+    }
+
+    /// `inc` increments the gauge by 1.
+    #[inline]
+    pub fn inc(&self) {
+        self.add(1.0);
+    }
+
+    /// `dec` decrements the gauge by 1.
+    #[inline]
+    pub fn dec(&self) {
+        self.sub(1.0);
+    }
+
+    // `add` adds the given value to the gauge. (The value can be
+    // negative, resulting in a decrease of the gauge.)
+    #[inline]
+    pub fn add(&self, v: f64) {
+        self.v.inc_by(v);
+    }
+
+    // `sub` subtracts the given value from the gauge. (The value can be
+    // negative, resulting in an increase of the gauge.)
+    #[inline]
+    pub fn sub(&self, v: f64) {
+        self.v.dec_by(v);
+    }
+
+    /// `get` returns the gauge value.
+    #[inline]
+    pub fn get(&self) -> f64 {
+        self.v.get()
+    }
+}
+
+impl Collector for Gauge {
+    fn desc(&self) -> &Desc {
+        &self.v.desc
+    }
+
+    fn collect(&self) -> proto::MetricFamily {
+        self.v.collect()
+    }
+}
+
+impl Metric for Gauge {
+    fn metric(&self) -> proto::Metric {
+        self.v.metric()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use metrics::{Opts, Collector};
+
+    #[test]
+    fn test_gauge() {
+        let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
+        let gauge = Gauge::with_opts(opts).unwrap();
+        gauge.inc();
+        assert_eq!(gauge.get() as u64, 1);
+        gauge.add(42.0);
+        assert_eq!(gauge.get() as u64, 43);
+        gauge.sub(42.0);
+        assert_eq!(gauge.get() as u64, 1);
+        gauge.dec();
+        assert_eq!(gauge.get() as u64, 0);
+        gauge.set(42.0);
+        assert_eq!(gauge.get() as u64, 42);
+
+        let mf = gauge.collect();
+        let m = mf.get_metric().as_ref().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 2);
+        assert_eq!(m.get_gauge().get_value() as u64, 42);
+    }
+}
