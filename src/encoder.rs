@@ -34,17 +34,17 @@ impl Encoder for TextEncoder {
     /// will result in invalid text format output.
     fn encode(&self, metric_family: &MetricFamily, writer: &mut Write) -> Result<usize> {
         if metric_family.get_metric().len() == 0 {
-            return Err(Error::Msg(format!("MetricFamily has no metrics")));
+            return Err(Error::Msg("MetricFamily has no metrics".to_owned()));
         }
 
         let name = metric_family.get_name();
         if name == "" {
-            return Err(Error::Msg(format!("MetricFamily has no name")));
+            return Err(Error::Msg("MetricFamily has no name".to_owned()));
         }
 
         let mut written = 0;
         let help = metric_family.get_help();
-        if help.len() != 0 {
+        if !help.is_empty() {
             written += try!(
                 writer.write((format!("# HELP {} {}\n", name, escape_string(help, false)))
                         .as_bytes()).or_else(|e| Err(Error::Io(e))));
@@ -66,16 +66,14 @@ impl Encoder for TextEncoder {
                     written +=
                         try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
                 }
-                MetricType::SUMMARY => {}
-                MetricType::HISTOGRAM => {}
-                MetricType::UNTYPED => {}
+                MetricType::SUMMARY | MetricType::HISTOGRAM | MetricType::UNTYPED => {}
             }
         }
         Ok(written)
     }
 }
 
-/// write_sample writes a single sample in text format to out, given the metric
+/// `write_sample` writes a single sample in text format to out, given the metric
 /// name, the metric proto message itself, optionally an additional label name
 /// and value (use empty strings if not required), and the value. The function
 /// returns the number of bytes written and any error encountered.
@@ -106,10 +104,10 @@ fn write_sample(name: &str,
     Ok(written)
 }
 
-/// label_pairs_to_text converts a slice of LabelPair proto messages plus the
+/// `label_pairs_to_text` converts a slice of `LabelPair` proto messages plus the
 /// explicitly given additional label pair into text formatted as required by the
 /// text format and writes it to 'out'. An empty slice in combination with an
-/// empty string 'additionalLabelName' results in nothing being
+/// empty string `additional_label_name` results in nothing being
 /// written. Otherwise, the label pairs are written, escaped as required by the
 /// text format, and enclosed in '{...}'. The function returns the number of
 /// bytes written and any error encountered.
@@ -149,8 +147,8 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
     Ok(written)
 }
 
-/// escape_string replaces '\' by '\\', new line character by '\n', and - if
-/// include_double_quote is true - '"' by '\"'.
+/// `escape_string` replaces '\' by '\\', new line character by '\n', and - if
+/// `include_double_quote` is true - '"' by '\"'.
 pub fn escape_string(v: &str, include_double_quote: bool) -> String {
     let mut escaped = String::with_capacity(v.len() * 2);
 
@@ -177,6 +175,9 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{self, Write};
+
+    use super::super::*;
     use super::*;
 
     #[test]
@@ -188,5 +189,48 @@ mod tests {
         assert_eq!(r"\\n", escape_string("\\n", false));
 
         assert_eq!("\\\\n\"", escape_string("\\n\"", true));
+    }
+
+    struct Buffer(Vec<u8>);
+
+    impl Write for Buffer {
+        fn write(&mut self, v: &[u8]) -> io::Result<usize> {
+            self.0.extend_from_slice(v);
+            Ok(v.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_encode_text() {
+        let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
+        let counter = Counter::with_opts(opts).unwrap();
+        counter.inc();
+
+        let r = Registry::new();
+        r.register(Box::new(counter.clone())).unwrap();
+        let mf = {
+            let core = r.get_core();
+            let mut values = core.colloctors_by_id.values();
+            assert_eq!(values.len(), 1);
+
+            let collector = values.next();
+            assert!(collector.is_some());
+
+            collector.unwrap().collect()
+        };
+
+        let ans = r##"# HELP test test help
+# TYPE test counter
+test{a="1",b="2"} 1
+"##;
+
+        let mut buffer = Buffer(Vec::new());
+        let encoder = TextEncoder {};
+        assert!(encoder.encode(&mf, &mut buffer).is_ok());
+        assert_eq!(ans.as_bytes(), buffer.0.as_slice());
     }
 }

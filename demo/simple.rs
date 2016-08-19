@@ -21,10 +21,10 @@ use std::time::Duration;
 use prom::*;
 
 fn main() {
-    let r = Registry::new();
-
     let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
     let counter = Counter::with_opts(opts).unwrap();
+
+    let r = Registry::new();
     r.register(Box::new(counter.clone())).unwrap();
 
     counter.inc();
