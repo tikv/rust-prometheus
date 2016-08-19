@@ -69,7 +69,7 @@ impl Desc {
             fq_name: fq_name.clone(),
             help: help,
             const_label_pairs: Vec::with_capacity(const_labels.len()),
-            variable_labels: vec![],
+            variable_labels: variable_labels,
             id: 0,
             dim_hash: 0,
         };
@@ -100,7 +100,7 @@ impl Desc {
         // Now add the variable label names, but prefix them with something that
         // cannot be in a regular label name. That prevents matching the label
         // dimension with a different mix between preset and variable labels.
-        for label_name in variable_labels {
+        for label_name in &desc.variable_labels {
             // TODO: check invalid label name
             if !label_names.insert(format!("${}", label_name)) {
                 return Err(Error::Msg(format!("duplicate variable label name {}", label_name)));

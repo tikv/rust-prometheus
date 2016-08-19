@@ -19,6 +19,7 @@ use metrics::{Opts, Collector, Metric};
 use value::{Value, ValueType};
 use desc::Desc;
 use errors::{Result, Error};
+use vec::{MetricVec, MetricVecBuilder};
 
 /// `Counter` is a Metric that represents a single numerical value that only ever
 /// goes up.
@@ -35,12 +36,14 @@ impl Counter {
 
     pub fn with_opts(opts: Opts) -> Result<Counter> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        let v = try!(Value::new(desc, ValueType::Counter, 0.0, vec![]));
+        Counter::with_desc(desc, vec![])
+    }
+
+    fn with_desc(desc: Desc, label_values: Vec<&str>) -> Result<Counter> {
+        let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
         Ok(Counter { v: Arc::new(v) })
     }
-}
 
-impl Counter {
     /// `inc_by` increments the given value to the counter. Error if the value is <
     /// 0.
     #[inline]
@@ -78,6 +81,32 @@ impl Collector for Counter {
 impl Metric for Counter {
     fn metric(&self) -> proto::Metric {
         self.v.metric()
+    }
+}
+
+#[derive(Clone)]
+pub struct CounterVecBuilder {}
+
+impl MetricVecBuilder for CounterVecBuilder {
+    type Output = Counter;
+
+    fn build(&self, desc: &Desc, vals: Vec<&str>) -> Result<Counter> {
+        Counter::with_desc(desc.clone(), vals)
+    }
+}
+
+/// `CounterVec` is a Collector that bundles a set of Counters that all share the
+/// same Desc, but have different values for their variable labels. This is used
+/// if you want to count the same thing partitioned by various dimensions
+/// (e.g. number of HTTP requests, partitioned by response code and method).
+pub type CounterVec = MetricVec<CounterVecBuilder>;
+
+impl CounterVec {
+    pub fn new(opts: Opts, label_names: Vec<String>) -> Result<CounterVec> {
+        let desc = try!(Desc::new(opts.fq_name(), opts.help, label_names, opts.const_labels));
+        let metric_vec = MetricVec::create(desc, proto::MetricType::COUNTER, CounterVecBuilder {});
+
+        Ok(metric_vec as CounterVec)
     }
 }
 

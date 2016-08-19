@@ -25,7 +25,7 @@ struct RegistryCore {
 }
 
 impl RegistryCore {
-    pub fn register(&mut self, c: Box<Collector>) -> Result<()> {
+    fn register(&mut self, c: Box<Collector>) -> Result<()> {
         // TODO: should simplify later.
         let id = {
             let desc = c.desc();
@@ -53,7 +53,7 @@ impl RegistryCore {
         Ok(())
     }
 
-    pub fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
+    fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
         let desc = c.desc();
         if self.colloctors_by_id.remove(&desc.id).is_none() {
             return Err(Error::Msg(format!("collector {:?} is not registered", desc)));
@@ -107,7 +107,8 @@ impl Default for Registry {
 mod tests {
     use std::thread;
     use super::*;
-    use counter::Counter;
+    use counter::{Counter, CounterVec};
+    use metrics::Opts;
 
     #[test]
     fn test_registry() {
@@ -127,5 +128,12 @@ mod tests {
         assert!(r.register(Box::new(counter.clone())).is_err());
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
+
+        let counter_vec = CounterVec::new(Opts::new("test_vec", "test vec help"),
+                                          vec!["a".to_owned(), "b".to_owned()])
+            .unwrap();
+
+        r.register(Box::new(counter_vec.clone())).unwrap();
+        counter_vec.with_label_values(vec!["1", "2"]).inc();
     }
 }
