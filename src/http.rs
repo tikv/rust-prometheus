@@ -98,11 +98,11 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
     fn on_response_writable(&mut self, encoder: &mut HyperEncoder<HttpStream>) -> Next {
         match encoder.try_write(&self.buffer.0[self.write_pos..]) {
             Ok(Some(n)) => {
-                if n == self.buffer.0.len() {
+                if (self.write_pos + n) == self.buffer.0.len() {
                     Next::end()
                 } else {
                     // a partial write
-                    self.write_pos = n;
+                    self.write_pos += n;
                     Next::write()
                 }
             }
