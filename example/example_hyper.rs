@@ -16,7 +16,6 @@ extern crate hyper;
 
 use std::thread;
 use std::time::Duration;
-use std::io::{self, Write};
 
 use hyper::{StatusCode, Decoder, Next, Encoder as HyperEncoder};
 use hyper::header::{ContentLength, ContentType};
@@ -26,7 +25,7 @@ use hyper::mime::Mime;
 
 use prom::errors::{Error, Result};
 use prom::encoder::{Encoder, TextEncoder};
-use prom::{Counter, Opts, Registry, scrap_registry};
+use prom::{Counter, Opts, Registry};
 
 fn main() {
     let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
@@ -73,23 +72,10 @@ pub fn run<'a>(addr: &str, reg: &Registry, encoder: &'a Encoder) -> Result<()> {
     Err(Error::Msg("http server error".to_owned()))
 }
 
-struct Buffer(Vec<u8>);
-
-impl Write for Buffer {
-    fn write(&mut self, v: &[u8]) -> io::Result<usize> {
-        self.0.extend_from_slice(v);
-        Ok(v.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
 pub struct HttpHandler<'a> {
     registry: Registry,
     encoder: &'a (Encoder + 'a),
-    buffer: Buffer,
+    buffer: Vec<u8>,
     write_pos: usize,
 }
 
@@ -98,7 +84,7 @@ impl<'a> HttpHandler<'a> {
         HttpHandler {
             registry: registry,
             encoder: encoder,
-            buffer: Buffer(Vec::new()),
+            buffer: Vec::new(),
             write_pos: 0,
         }
     }
@@ -115,7 +101,7 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
     }
 
     fn on_response(&mut self, res: &mut Response) -> Next {
-        if let Ok(written) = scrap_registry(&self.registry, &mut self.buffer, self.encoder) {
+        if let Ok(written) = self.registry.scrap(&mut self.buffer, self.encoder) {
             res.headers_mut().set(ContentLength(written as u64));
         } else {
             return Next::remove();
@@ -123,14 +109,14 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
 
         self.write_pos = 0;
         res.set_status(StatusCode::Ok);
-        res.headers_mut().set(ContentType((&self.encoder.get_format()).parse::<Mime>().unwrap()));
+        res.headers_mut().set(ContentType((&self.encoder.format_type()).parse::<Mime>().unwrap()));
         Next::write()
     }
 
     fn on_response_writable(&mut self, encoder: &mut HyperEncoder<HttpStream>) -> Next {
-        match encoder.try_write(&self.buffer.0[self.write_pos..]) {
+        match encoder.try_write(&self.buffer[self.write_pos..]) {
             Ok(Some(n)) => {
-                if (self.write_pos + n) == self.buffer.0.len() {
+                if (self.write_pos + n) == self.buffer.len() {
                     Next::end()
                 } else {
                     // a partial write

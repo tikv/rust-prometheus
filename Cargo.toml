@@ -8,8 +8,12 @@ default = []
 dev = ["clippy"]
 
 [[bin]]
-name = "example"
-path = "example/simple_example.rs"
+name = "example_hyper"
+path = "example/example_hyper.rs"
+
+[[bin]]
+name = "example_embed"
+path = "example/example_embed.rs"
 
 [dependencies]
 protobuf = "1.0"

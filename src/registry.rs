@@ -14,13 +14,13 @@
 
 use std::io::Write;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::sync::{Arc, RwLock};
 
 use metrics::Collector;
 use errors::{Result, Error};
 use encoder::Encoder;
 
-pub struct RegistryCore {
+struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
 }
@@ -95,27 +95,28 @@ impl Registry {
         self.r.write().unwrap().unregister(c)
     }
 
-    pub fn get_core(&self) -> RwLockReadGuard<RegistryCore> {
-        self.r.read().unwrap()
+    pub fn scrap(&self, writer: &mut Write, encoder: &Encoder) -> Result<usize> {
+        let core = self.r.read().unwrap();
+        let mut written = 0;
+
+        for collector in core.colloctors_by_id.values() {
+            let metric_family = collector.collect();
+            written += try!(encoder.encode(&metric_family, writer));
+        }
+
+        Ok(written)
     }
 }
 
-pub fn scrap_registry(registry: &Registry, writer: &mut Write, encoder: &Encoder) -> Result<usize> {
-    let core = registry.get_core();
-    let mut written = 0;
-
-    for collector in core.colloctors_by_id.values() {
-        let metric_family = collector.collect();
-        written += try!(encoder.encode(&metric_family, writer));
-    }
-
-    Ok(written)
-}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::thread;
+
     use counter::Counter;
+    use encoder::NopEncoder;
+
+    use super::*;
 
     #[test]
     fn test_registry() {
@@ -124,6 +125,14 @@ mod tests {
         let counter = Counter::new("test", "test help").unwrap();
         r.register(Box::new(counter.clone())).unwrap();
         counter.inc();
+
+        let r1 = r.clone();
+        thread::spawn(move || {
+            let mut writer = Vec::<u8>::new();
+
+            let written = r1.scrap(&mut writer, &NopEncoder);
+            assert!(written.is_ok());
+        });
 
         assert!(r.register(Box::new(counter.clone())).is_err());
         assert!(r.unregister(Box::new(counter.clone())).is_ok());

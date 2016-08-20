@@ -18,7 +18,9 @@ clean:
 
 example:
 	mkdir -p bin
-	cargo build --bin example
-	cp target/debug/example bin/
+	cargo build --bin example_embed
+	cp target/debug/example_embed bin/
+	cargo build --bin example_hyper
+	cp target/debug/example_hyper bin/
 
 .PHONY: example all
