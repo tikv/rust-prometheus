@@ -47,7 +47,7 @@ fn main() {
         }
     });
 
-    // Choose your writter and encoder.
+    // Choose your writer and encoder.
     let mut buffer = Vec::<u8>::new();
     let encoder = TextEncoder::new();
     loop {

@@ -1,4 +1,4 @@
-all: format build test
+all: format build examples test
 
 build:
 	cargo build --features default
@@ -16,11 +16,7 @@ format:
 clean:
 	cargo clean
 
-example:
-	mkdir -p bin
-	cargo build --bin example_embed
-	cp target/debug/example_embed bin/
-	cargo build --bin example_hyper
-	cp target/debug/example_hyper bin/
+examples: build
+	cp target/debug/examples/* bin/
 
-.PHONY: example all
+.PHONY: all

@@ -7,14 +7,6 @@ keywords = ["prometheus", "metrics"]
 default = []
 dev = ["clippy"]
 
-[[bin]]
-name = "example_hyper"
-path = "example/example_hyper.rs"
-
-[[bin]]
-name = "example_embed"
-path = "example/example_embed.rs"
-
 [dependencies]
 protobuf = "1.0"
 quick-error = "0.2"

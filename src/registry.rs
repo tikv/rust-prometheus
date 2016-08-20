@@ -16,6 +16,7 @@ use std::io::Write;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use proto;
 use metrics::Collector;
 use errors::{Result, Error};
 use encoder::Encoder;
@@ -64,6 +65,34 @@ impl RegistryCore {
         // throughout the lifetime of a program.
         Ok(())
     }
+
+    #[allow(unknown_lints)]
+    #[allow(map_entry)]
+    fn gather(&self) -> Vec<proto::MetricFamily> {
+        let mut mf_by_name = HashMap::new();
+
+        for c in self.colloctors_by_id.values() {
+            let mf = c.collect();
+            let name = mf.get_name().to_owned();
+            if !mf_by_name.contains_key(&name) {
+                mf_by_name.insert(name, mf);
+                continue;
+            }
+
+            let mut existent_mf = mf_by_name.get_mut(&name).unwrap();
+            let mut existent_metrics = existent_mf.mut_metric();
+
+            // TODO: check type.
+            // TODO: check consistency.
+            for metric in mf.get_metric() {
+                existent_metrics.push(metric.clone())
+            }
+        }
+
+        // TODO: metric_family injection hook.
+        // TODO: sort metrics.
+        mf_by_name.values().cloned().collect()
+    }
 }
 
 #[derive(Clone)]
@@ -95,13 +124,15 @@ impl Registry {
         self.r.write().unwrap().unregister(c)
     }
 
+    fn gather(&self) -> Vec<proto::MetricFamily> {
+        self.r.read().unwrap().gather()
+    }
+
     pub fn scrap(&self, writer: &mut Write, encoder: &Encoder) -> Result<usize> {
-        let core = self.r.read().unwrap();
         let mut written = 0;
 
-        for collector in core.colloctors_by_id.values() {
-            let metric_family = collector.collect();
-            written += try!(encoder.encode(&metric_family, writer));
+        for mf in self.gather() {
+            written += try!(encoder.encode(&mf, writer));
         }
 
         Ok(written)
