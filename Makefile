@@ -16,7 +16,9 @@ format:
 clean:
 	cargo clean
 
-examples: test
+examples:
+	cargo build --example example_embed
+	cargo build --example example_hyper
 	cp target/debug/examples/* bin/
 
 .PHONY: all
