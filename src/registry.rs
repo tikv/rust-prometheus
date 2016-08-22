@@ -14,7 +14,7 @@
 
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
-use std::collections::hash_map::Entry::Vacant;
+use std::collections::hash_map::Entry;
 
 use proto;
 use metrics::Collector;
@@ -69,20 +69,23 @@ impl RegistryCore {
         let mut mf_by_name = HashMap::new();
 
         for c in self.colloctors_by_id.values() {
-            let mf = c.collect();
+            let mut mf = c.collect();
             let name = mf.get_name().to_owned();
-            if let Vacant(entry) = mf_by_name.entry(name.clone()) {
-                entry.insert(mf);
-                continue;
-            }
 
-            let mut existent_mf = mf_by_name.get_mut(&name).unwrap();
-            let mut existent_metrics = existent_mf.mut_metric();
+            match mf_by_name.entry(name) {
+                Entry::Vacant(entry) => {
+                    entry.insert(mf);
+                }
+                Entry::Occupied(mut entry) => {
+                    let mut existent_mf = entry.get_mut();
+                    let mut existent_metrics = existent_mf.mut_metric();
 
-            // TODO: check type.
-            // TODO: check consistency.
-            for metric in mf.get_metric() {
-                existent_metrics.push(metric.clone())
+                    // TODO: check type.
+                    // TODO: check consistency.
+                    for metric in mf.take_metric().into_iter() {
+                        existent_metrics.push(metric);
+                    }
+                }
             }
         }
 
@@ -125,7 +128,6 @@ impl Registry {
         self.r.read().unwrap().gather()
     }
 }
-
 
 #[cfg(test)]
 mod tests {

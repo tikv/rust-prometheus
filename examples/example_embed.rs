@@ -36,7 +36,7 @@ fn main() {
     thread::spawn(move || {
         for _ in 0..10 {
             thread::sleep(Duration::from_millis(500));
-            c2.inc_by(3.14159265358979323846264338327).unwrap();
+            c2.inc();
         }
     });
 

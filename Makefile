@@ -21,4 +21,4 @@ examples:
 	cargo build --example example_hyper
 	cp target/debug/examples/* bin/
 
-.PHONY: all
+.PHONY: all examples

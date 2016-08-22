@@ -43,7 +43,7 @@ fn main() {
     thread::spawn(move || {
         loop {
             thread::sleep(Duration::from_millis(300));
-            c2.inc_by(3.14159265358979323846264338327).unwrap();
+            c2.inc();
         }
     });
 
