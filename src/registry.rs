@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::collections::HashMap;
+use std::collections::hash_map::Entry::Vacant;
 
 use proto;
 use metrics::Collector;
@@ -64,16 +65,14 @@ impl RegistryCore {
         Ok(())
     }
 
-    #[allow(unknown_lints)]
-    #[allow(map_entry)]
     fn gather(&self) -> Vec<proto::MetricFamily> {
         let mut mf_by_name = HashMap::new();
 
         for c in self.colloctors_by_id.values() {
             let mf = c.collect();
             let name = mf.get_name().to_owned();
-            if !mf_by_name.contains_key(&name) {
-                mf_by_name.insert(name, mf);
+            if let Vacant(entry) = mf_by_name.entry(name.clone()) {
+                entry.insert(mf);
                 continue;
             }
 

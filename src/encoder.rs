@@ -176,14 +176,13 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
 
     for c in v.chars() {
         match c {
-            '\\' => {
-                escaped.push_str(r"\\");
-            }
-            '\n' => {
-                escaped.push_str(r"\n");
+            '\\' | '\n' => {
+                let ch: String = c.escape_default().collect();
+                escaped.push_str(&ch);
             }
             '"' if include_double_quote => {
-                escaped.push_str(r##"\""##);
+                let ch: String = c.escape_default().collect();
+                escaped.push_str(&ch);
             }
             _ => {
                 escaped.push(c);
