@@ -17,7 +17,7 @@ extern crate hyper;
 use std::thread;
 use std::time::Duration;
 
-use prom::encoder::TextEncoder;
+use prom::encoder::{TextEncoder, Encoder};
 use prom::{Counter, Opts, Registry};
 
 fn main() {
@@ -34,15 +34,15 @@ fn main() {
 
     let c2 = counter.clone();
     thread::spawn(move || {
-        loop {
-            thread::sleep(Duration::from_millis(300));
+        for _ in 0..10 {
+            thread::sleep(Duration::from_millis(500));
             c2.inc_by(3.14159265358979323846264338327).unwrap();
         }
     });
 
     thread::spawn(move || {
-        loop {
-            thread::sleep(Duration::from_millis(1500));
+        for _ in 0..5 {
+            thread::sleep(Duration::from_secs(1));
             counter.inc();
         }
     });
@@ -50,13 +50,14 @@ fn main() {
     // Choose your writer and encoder.
     let mut buffer = Vec::<u8>::new();
     let encoder = TextEncoder::new();
-    loop {
-        r.scrap(&mut buffer, &encoder).unwrap();
+    for _ in 0..5 {
+        let metric_familys = r.gather();
+        encoder.encode(&metric_familys, &mut buffer).unwrap();
 
         // Output to the standard output.
         println!("{}", String::from_utf8(buffer.clone()).unwrap());
 
         buffer.clear();
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(Duration::from_secs(1));
     }
 }

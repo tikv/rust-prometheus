@@ -65,7 +65,9 @@ pub fn run<'a>(addr: &str, reg: &Registry, encoder: &'a Encoder) -> Result<()> {
 
     let addr = try!(addr.parse().or_else(|e| Err(Error::Msg(format!("{:?}", e)))));
     let server = try!(Server::http(&addr).or_else(|e| Err(Error::Msg(format!("{:?}", e)))));
-    if let Ok((_, server)) = server.handle(|_| HttpHandler::new(reg.clone(), encoder)) {
+    if let Ok((listener, server)) = server.handle(|_| HttpHandler::new(reg.clone(), encoder)) {
+        println!("listening {}", listener);
+
         server.run();
     }
 
@@ -101,7 +103,8 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
     }
 
     fn on_response(&mut self, res: &mut Response) -> Next {
-        if let Ok(written) = self.registry.scrap(&mut self.buffer, self.encoder) {
+        let metric_familys = self.registry.gather();
+        if let Ok(written) = self.encoder.encode(&metric_familys, &mut self.buffer) {
             res.headers_mut().set(ContentLength(written as u64));
         } else {
             return Next::remove();

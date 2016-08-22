@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Write;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use proto;
 use metrics::Collector;
 use errors::{Result, Error};
-use encoder::Encoder;
 
 struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
@@ -124,18 +122,8 @@ impl Registry {
         self.r.write().unwrap().unregister(c)
     }
 
-    fn gather(&self) -> Vec<proto::MetricFamily> {
+    pub fn gather(&self) -> Vec<proto::MetricFamily> {
         self.r.read().unwrap().gather()
-    }
-
-    pub fn scrap(&self, writer: &mut Write, encoder: &Encoder) -> Result<usize> {
-        let mut written = 0;
-
-        for mf in self.gather() {
-            written += try!(encoder.encode(&mf, writer));
-        }
-
-        Ok(written)
     }
 }
 
@@ -145,7 +133,6 @@ mod tests {
     use std::thread;
 
     use counter::Counter;
-    use encoder::NopEncoder;
 
     use super::*;
 
@@ -158,14 +145,15 @@ mod tests {
         counter.inc();
 
         let r1 = r.clone();
-        thread::spawn(move || {
-            let mut writer = Vec::<u8>::new();
-
-            let written = r1.scrap(&mut writer, &NopEncoder);
-            assert!(written.is_ok());
+        let handler = thread::spawn(move || {
+            let metric_familys = r1.gather();
+            assert_eq!(metric_familys.len(), 1);
         });
 
         assert!(r.register(Box::new(counter.clone())).is_err());
+
+        assert!(handler.join().is_ok());
+
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
     }

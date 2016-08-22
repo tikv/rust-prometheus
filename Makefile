@@ -1,4 +1,4 @@
-all: format build examples test
+all: format build test examples
 
 build:
 	cargo build --features default
@@ -16,7 +16,7 @@ format:
 clean:
 	cargo clean
 
-examples: build
+examples: test
 	cp target/debug/examples/* bin/
 
 .PHONY: all

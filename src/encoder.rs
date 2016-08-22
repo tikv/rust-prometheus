@@ -18,12 +18,13 @@ use proto::MetricFamily;
 use proto::{self, MetricType};
 
 pub trait Encoder {
-    /// `encode` converts a MetricFamily proto message into target format and
-    /// writes the resulting lines to `writer`. It returns the number of bytes
-    /// written and any error encountered. This function does not perform checks
-    /// on the content of the metric and label names, i.e. invalid metric or
-    /// label names will result in invalid text format output.
-    fn encode(&self, &MetricFamily, &mut Write) -> Result<usize>;
+    /// `encode` converts a slice of MetricFamily proto messages into target
+    /// format and writes the resulting lines to `writer`. It returns the number
+    /// of bytes written and any error encountered. This function does not
+    /// perform checks on the content of the metric and label names,
+    /// i.e. invalid metric or label names will result in invalid text format
+    /// output.
+    fn encode(&self, &[MetricFamily], &mut Write) -> Result<usize>;
 
     /// `format_type` returns target format.
     fn format_type(&self) -> &str;
@@ -36,56 +37,61 @@ pub const TEXT_FORMAT: Format = "text/plain; version=0.0.4";
 /// Implementation of a `Encoder` that converts a `MetricFamily` proto message
 /// into text format.
 #[derive(Debug, Default)]
-pub struct TextEncoder(String);
+pub struct TextEncoder;
 
 impl TextEncoder {
     pub fn new() -> TextEncoder {
-        TextEncoder(TEXT_FORMAT.to_owned())
+        TextEncoder
     }
 }
 
 impl Encoder for TextEncoder {
-    fn encode(&self, metric_family: &MetricFamily, writer: &mut Write) -> Result<usize> {
-        if metric_family.get_metric().len() == 0 {
-            return Err(Error::Msg("MetricFamily has no metrics".to_owned()));
-        }
-
-        let name = metric_family.get_name();
-        if name.is_empty() {
-            return Err(Error::Msg("MetricFamily has no name".to_owned()));
-        }
-
+    fn encode(&self, metric_familys: &[MetricFamily], writer: &mut Write) -> Result<usize> {
         let mut written = 0;
-        let help = metric_family.get_help();
-        if !help.is_empty() {
-            written += try!(
+
+        for mf in metric_familys {
+            if mf.get_metric().len() == 0 {
+                return Err(Error::Msg("MetricFamily has no metrics".to_owned()));
+            }
+
+            let name = mf.get_name();
+            if name.is_empty() {
+                return Err(Error::Msg("MetricFamily has no name".to_owned()));
+            }
+
+            let help = mf.get_help();
+            if !help.is_empty() {
+                written += try!(
                 writer.write(format!("# HELP {} {}\n", name, escape_string(help, false))
                         .as_bytes()));
-        }
+            }
 
-        let metric_type = metric_family.get_field_type();
+            let metric_type = mf.get_field_type();
+            let lowercase_type = format!("{:?}", metric_type).to_lowercase();
+            written +=
+                try!(writer.write(format!("# TYPE {} {}\n", name, lowercase_type).as_bytes()));
 
-        let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-        written += try!(writer.write(format!("# TYPE {} {}\n", name, lowercase_type).as_bytes()));
-
-        for m in metric_family.get_metric() {
-            match metric_type {
-                MetricType::COUNTER => {
-                    written +=
-                        try!(write_sample(name, m, "", "", m.get_counter().get_value(), writer));
+            for m in mf.get_metric() {
+                match metric_type {
+                    MetricType::COUNTER => {
+                        written += try!(write_sample(name,
+                                                     m,
+                                                     "",
+                                                     "",
+                                                     m.get_counter().get_value(),
+                                                     writer));
+                    }
+                    MetricType::GAUGE | MetricType::SUMMARY | MetricType::HISTOGRAM |
+                    MetricType::UNTYPED => {}
                 }
-                MetricType::GAUGE => {
-                    written +=
-                        try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
-                }
-                MetricType::SUMMARY | MetricType::HISTOGRAM | MetricType::UNTYPED => {}
             }
         }
+
         Ok(written)
     }
 
     fn format_type(&self) -> &str {
-        &self.0
+        TEXT_FORMAT
     }
 }
 
@@ -190,22 +196,6 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
     escaped
 }
 
-/// Implementation of a `Encoder` that discards all metric conversion.
-///
-/// Useful for disabling metric conversion or unit tests.
-#[derive(Debug)]
-pub struct NopEncoder;
-
-impl Encoder for NopEncoder {
-    fn encode(&self, _: &MetricFamily, _: &mut Write) -> Result<usize> {
-        Ok(0)
-    }
-
-    fn format_type(&self) -> &str {
-        ""
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use counter::Counter;
@@ -236,7 +226,7 @@ mod tests {
         let mf = counter.collect();
         let mut writer = Vec::<u8>::new();
         let encoder = TextEncoder::new();
-        assert!(encoder.encode(&mf, &mut writer).is_ok());
+        assert!(encoder.encode(&[mf], &mut writer).is_ok());
 
         let ans = r##"# HELP test test help
 # TYPE test counter
