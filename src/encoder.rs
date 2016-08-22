@@ -82,7 +82,7 @@ impl Encoder for TextEncoder {
                                                      writer));
                     }
                     MetricType::GAUGE | MetricType::SUMMARY | MetricType::HISTOGRAM |
-                    MetricType::UNTYPED => {}
+                    MetricType::UNTYPED => unimplemented!(),
                 }
             }
         }
