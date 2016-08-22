@@ -50,7 +50,7 @@ impl Encoder for TextEncoder {
         let mut written = 0;
 
         for mf in metric_familys {
-            if mf.get_metric().len() == 0 {
+            if mf.get_metric().is_empty() {
                 return Err(Error::Msg("MetricFamily has no metrics".to_owned()));
             }
 
@@ -139,7 +139,7 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
                        additional_label_value: &str,
                        writer: &mut Write)
                        -> Result<usize> {
-    if pairs.len() == 0 && additional_label_name.is_empty() {
+    if pairs.is_empty() && additional_label_name.is_empty() {
         return Ok(0);
     }
 
