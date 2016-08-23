@@ -59,13 +59,12 @@ impl Encoder for TextEncoder {
 
             let help = mf.get_help();
             if !help.is_empty() {
-                try!(writer.write_all(format!("# HELP {} {}\n", name, escape_string(help, false))
-                    .as_bytes()));
+                try!(write!(writer, "# HELP {} {}\n", name, escape_string(help, false)));
             }
 
             let metric_type = mf.get_field_type();
             let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-            try!(writer.write_all(format!("# TYPE {} {}\n", name, lowercase_type).as_bytes()));
+            try!(write!(writer, "# TYPE {} {}\n", name, lowercase_type));
 
             for m in mf.get_metric() {
                 match metric_type {
@@ -104,11 +103,11 @@ fn write_sample(name: &str,
                              additional_label_value,
                              writer));
 
-    try!(writer.write_all(format!(" {}", value).as_bytes()));
+    try!(write!(writer, " {}", value));
 
     let timestamp = mc.get_timestamp_ms();
     if timestamp != 0 {
-        try!(writer.write_all(format!(" {}", timestamp).as_bytes()));
+        try!(write!(writer, " {}", timestamp));
     }
 
     try!(writer.write_all(b"\n"));
@@ -134,21 +133,21 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
 
     let mut separator = "{";
     for lp in pairs {
-        try!(writer.write_all(format!("{}{}=\"{}\"",
-                                      separator,
-                                      lp.get_name(),
-                                      escape_string(lp.get_value(), true))
-            .as_bytes()));
+        try!(write!(writer,
+                    "{}{}=\"{}\"",
+                    separator,
+                    lp.get_name(),
+                    escape_string(lp.get_value(), true)));
 
         separator = ",";
     }
 
     if !additional_label_name.is_empty() {
-        try!(writer.write_all(format!("{}{}=\"{}\"",
-                                      separator,
-                                      additional_label_name,
-                                      escape_string(additional_label_value, true))
-            .as_bytes()));
+        try!(write!(writer,
+                    "{}{}=\"{}\"",
+                    separator,
+                    additional_label_name,
+                    escape_string(additional_label_value, true)));
     }
 
     try!(writer.write_all(b"}"));
