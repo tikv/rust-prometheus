@@ -110,7 +110,6 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
             return Next::remove();
         }
 
-        self.write_pos = 0;
         res.set_status(StatusCode::Ok);
         res.headers_mut().set(ContentType((&self.encoder.format_type()).parse::<Mime>().unwrap()));
         Next::write()
