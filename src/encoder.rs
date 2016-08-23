@@ -24,19 +24,10 @@ pub trait Encoder {
     /// perform checks on the content of the metric and label names,
     /// i.e. invalid metric or label names will result in invalid text format
     /// output.
-    fn encode(&self, &[MetricFamily], &mut Write) -> Result<usize>;
+    fn encode(&self, &[MetricFamily], &mut Write) -> Result<()>;
 
     /// `format_type` returns target format.
     fn format_type(&self) -> &str;
-}
-
-macro_rules! write_writer {
-    ($writer: expr, $($arg: tt)*) => {{
-        let to_write = format!($($arg)*);
-        try!($writer.write_all(to_write.as_bytes()));
-
-        to_write.len()
-    }}
 }
 
 pub type Format = &'static str;
@@ -55,9 +46,7 @@ impl TextEncoder {
 }
 
 impl Encoder for TextEncoder {
-    fn encode(&self, metric_familys: &[MetricFamily], writer: &mut Write) -> Result<usize> {
-        let mut written = 0;
-
+    fn encode(&self, metric_familys: &[MetricFamily], writer: &mut Write) -> Result<()> {
         for mf in metric_familys {
             if mf.get_metric().is_empty() {
                 return Err(Error::Msg("MetricFamily has no metrics".to_owned()));
@@ -70,23 +59,18 @@ impl Encoder for TextEncoder {
 
             let help = mf.get_help();
             if !help.is_empty() {
-                written +=
-                    write_writer!(writer, "# HELP {} {}\n", name, escape_string(help, false));
+                try!(writer.write_all(format!("# HELP {} {}\n", name, escape_string(help, false))
+                    .as_bytes()));
             }
 
             let metric_type = mf.get_field_type();
             let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-            written += write_writer!(writer, "# TYPE {} {}\n", name, lowercase_type);
+            try!(writer.write_all(format!("# TYPE {} {}\n", name, lowercase_type).as_bytes()));
 
             for m in mf.get_metric() {
                 match metric_type {
                     MetricType::COUNTER => {
-                        written += try!(write_sample(name,
-                                                     m,
-                                                     "",
-                                                     "",
-                                                     m.get_counter().get_value(),
-                                                     writer));
+                        try!(write_sample(name, m, "", "", m.get_counter().get_value(), writer));
                     }
                     MetricType::GAUGE | MetricType::SUMMARY | MetricType::HISTOGRAM |
                     MetricType::UNTYPED => unimplemented!(),
@@ -94,7 +78,7 @@ impl Encoder for TextEncoder {
             }
         }
 
-        Ok(written)
+        Ok(())
     }
 
     fn format_type(&self) -> &str {
@@ -112,29 +96,24 @@ fn write_sample(name: &str,
                 additional_label_value: &str,
                 value: f64,
                 writer: &mut Write)
-                -> Result<usize> {
-    let mut written = 0;
-
+                -> Result<()> {
     try!(writer.write_all(name.as_bytes()));
-    written += name.len();
 
-    written += try!(label_pairs_to_text(mc.get_label(),
-                                        additional_label_name,
-                                        additional_label_value,
-                                        writer));
+    try!(label_pairs_to_text(mc.get_label(),
+                             additional_label_name,
+                             additional_label_value,
+                             writer));
 
-    written += write_writer!(writer, " {}", value);
-
+    try!(writer.write_all(format!(" {}", value).as_bytes()));
 
     let timestamp = mc.get_timestamp_ms();
     if timestamp != 0 {
-        written += write_writer!(writer, " {}", timestamp);
+        try!(writer.write_all(format!(" {}", timestamp).as_bytes()));
     }
 
     try!(writer.write_all(b"\n"));
-    written += 1;
 
-    Ok(written)
+    Ok(())
 }
 
 /// `label_pairs_to_text` converts a slice of `LabelPair` proto messages plus
@@ -148,36 +127,33 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
                        additional_label_name: &str,
                        additional_label_value: &str,
                        writer: &mut Write)
-                       -> Result<usize> {
+                       -> Result<()> {
     if pairs.is_empty() && additional_label_name.is_empty() {
-        return Ok(0);
+        return Ok(());
     }
-
-    let mut written = 0;
 
     let mut separator = "{";
     for lp in pairs {
-        written += write_writer!(writer,
-                                 "{}{}=\"{}\"",
-                                 separator,
-                                 lp.get_name(),
-                                 escape_string(lp.get_value(), true));
+        try!(writer.write_all(format!("{}{}=\"{}\"",
+                                      separator,
+                                      lp.get_name(),
+                                      escape_string(lp.get_value(), true))
+            .as_bytes()));
 
         separator = ",";
     }
 
     if !additional_label_name.is_empty() {
-        written += write_writer!(writer,
-                                 "{}{}=\"{}\"",
-                                 separator,
-                                 additional_label_name,
-                                 escape_string(additional_label_value, true));
+        try!(writer.write_all(format!("{}{}=\"{}\"",
+                                      separator,
+                                      additional_label_name,
+                                      escape_string(additional_label_value, true))
+            .as_bytes()));
     }
 
     try!(writer.write_all(b"}"));
-    written += 1;
 
-    Ok(written)
+    Ok(())
 }
 
 /// `escape_string` replaces '\' by '\\', new line character by '\n', and - if
@@ -243,6 +219,5 @@ test{a="1",b="2"} 1
 "##;
 
         assert_eq!(ans.as_bytes(), writer.as_slice());
-        assert_eq!(ans.len(), txt.unwrap());
     }
 }

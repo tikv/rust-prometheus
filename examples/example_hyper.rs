@@ -104,8 +104,8 @@ impl<'a> Handler<HttpStream> for HttpHandler<'a> {
 
     fn on_response(&mut self, res: &mut Response) -> Next {
         let metric_familys = self.registry.gather();
-        if let Ok(written) = self.encoder.encode(&metric_familys, &mut self.buffer) {
-            res.headers_mut().set(ContentLength(written as u64));
+        if let Ok(_) = self.encoder.encode(&metric_familys, &mut self.buffer) {
+            res.headers_mut().set(ContentLength(self.buffer.len() as u64));
         } else {
             return Next::remove();
         }
