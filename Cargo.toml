@@ -12,3 +12,6 @@ protobuf = "1.0"
 quick-error = "0.2"
 clippy = {version = "*", optional = true}
 fnv = "1.0.3"
+
+[dev-dependencies.hyper]
+git = "https://github.com/hyperium/hyper.git"

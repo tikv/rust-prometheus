@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::io::Write;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
+use proto;
 use metrics::Collector;
 use errors::{Result, Error};
 
@@ -63,11 +64,51 @@ impl RegistryCore {
         // throughout the lifetime of a program.
         Ok(())
     }
+
+    fn gather(&self) -> Vec<proto::MetricFamily> {
+        let mut mf_by_name = HashMap::new();
+
+        for c in self.colloctors_by_id.values() {
+            let mut mf = c.collect();
+            let name = mf.get_name().to_owned();
+
+            match mf_by_name.entry(name) {
+                Entry::Vacant(entry) => {
+                    entry.insert(mf);
+                }
+                Entry::Occupied(mut entry) => {
+                    let mut existent_mf = entry.get_mut();
+                    let mut existent_metrics = existent_mf.mut_metric();
+
+                    // TODO: check type.
+                    // TODO: check consistency.
+                    for metric in mf.take_metric().into_iter() {
+                        existent_metrics.push(metric);
+                    }
+                }
+            }
+        }
+
+        // TODO: metric_family injection hook.
+        // TODO: sort metrics.
+        mf_by_name.into_iter().map(|(_, m)| m).collect()
+    }
 }
 
 #[derive(Clone)]
 pub struct Registry {
     r: Arc<RwLock<RegistryCore>>,
+}
+
+impl Default for Registry {
+    fn default() -> Registry {
+        let r = RegistryCore {
+            colloctors_by_id: HashMap::new(),
+            dim_hashes_by_name: HashMap::new(),
+        };
+
+        Registry { r: Arc::new(RwLock::new(r)) }
+    }
 }
 
 impl Registry {
@@ -83,47 +124,34 @@ impl Registry {
         self.r.write().unwrap().unregister(c)
     }
 
-    pub fn write_pb<T: Write>(&self, _: &mut T) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn write_text<T: Write>(&self, _: &mut T) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl Default for Registry {
-    fn default() -> Registry {
-        let r = RegistryCore {
-            colloctors_by_id: HashMap::new(),
-            dim_hashes_by_name: HashMap::new(),
-        };
-
-        Registry { r: Arc::new(RwLock::new(r)) }
+    pub fn gather(&self) -> Vec<proto::MetricFamily> {
+        self.r.read().unwrap().gather()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::thread;
-    use super::*;
     use counter::{Counter, CounterVec};
     use metrics::Opts;
+
+    use super::*;
 
     #[test]
     fn test_registry() {
         let r = Registry::new();
 
-        let r1 = r.clone();
-        thread::spawn(move || {
-            let mut w = vec![];
-            r1.write_pb(&mut w).unwrap();
-        });
-
         let counter = Counter::new("test", "test help").unwrap();
-
         r.register(Box::new(counter.clone())).unwrap();
         counter.inc();
+
+        let r1 = r.clone();
+        let handler = thread::spawn(move || {
+            let metric_familys = r1.gather();
+            assert_eq!(metric_familys.len(), 1);
+        });
+
+        assert!(handler.join().is_ok());
 
         assert!(r.register(Box::new(counter.clone())).is_err());
         assert!(r.unregister(Box::new(counter.clone())).is_ok());

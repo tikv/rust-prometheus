@@ -19,13 +19,15 @@ extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
 
-mod metrics;
 pub mod proto;
+pub mod errors;
+pub mod encoder;
+
+mod metrics;
 mod desc;
 // TODO: remove dead_code later.
 #[allow(dead_code)]
 mod value;
-mod errors;
 #[allow(dead_code)]
 mod counter;
 #[allow(dead_code)]
