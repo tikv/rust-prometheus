@@ -30,11 +30,20 @@ pub trait Encoder {
     fn format_type(&self) -> &str;
 }
 
+macro_rules! write_writer {
+    ($writer: expr, $($arg: tt)*) => {{
+        let to_write = format!($($arg)*);
+        try!($writer.write_all(to_write.as_bytes()));
+
+        to_write.len()
+    }}
+}
+
 pub type Format = &'static str;
 
 pub const TEXT_FORMAT: Format = "text/plain; version=0.0.4";
 
-/// Implementation of a `Encoder` that converts a `MetricFamily` proto message
+/// Implementation of an `Encoder` that converts a `MetricFamily` proto message
 /// into text format.
 #[derive(Debug, Default)]
 pub struct TextEncoder;
@@ -61,15 +70,13 @@ impl Encoder for TextEncoder {
 
             let help = mf.get_help();
             if !help.is_empty() {
-                written += try!(
-                writer.write(format!("# HELP {} {}\n", name, escape_string(help, false))
-                        .as_bytes()));
+                written +=
+                    write_writer!(writer, "# HELP {} {}\n", name, escape_string(help, false));
             }
 
             let metric_type = mf.get_field_type();
             let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-            written +=
-                try!(writer.write(format!("# TYPE {} {}\n", name, lowercase_type).as_bytes()));
+            written += write_writer!(writer, "# TYPE {} {}\n", name, lowercase_type);
 
             for m in mf.get_metric() {
                 match metric_type {
@@ -108,21 +115,24 @@ fn write_sample(name: &str,
                 -> Result<usize> {
     let mut written = 0;
 
-    written += try!(writer.write(name.as_bytes()));
+    try!(writer.write_all(name.as_bytes()));
+    written += name.len();
 
     written += try!(label_pairs_to_text(mc.get_label(),
                                         additional_label_name,
                                         additional_label_value,
                                         writer));
 
-    written += try!(writer.write(format!(" {}", value).as_bytes()));
+    written += write_writer!(writer, " {}", value);
+
 
     let timestamp = mc.get_timestamp_ms();
     if timestamp != 0 {
-        written += try!(writer.write(format!(" {}", timestamp).as_bytes()));
+        written += write_writer!(writer, " {}", timestamp);
     }
 
-    written += try!(writer.write(b"\n"));;
+    try!(writer.write_all(b"\n"));
+    written += 1;
 
     Ok(written)
 }
@@ -147,24 +157,25 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
 
     let mut separator = "{";
     for lp in pairs {
-        written += try!(writer.write(format!("{}{}=\"{}\"",
-                                             separator,
-                                             lp.get_name(),
-                                             escape_string(lp.get_value(), true))
-            .as_bytes()));
+        written += write_writer!(writer,
+                                 "{}{}=\"{}\"",
+                                 separator,
+                                 lp.get_name(),
+                                 escape_string(lp.get_value(), true));
 
         separator = ",";
     }
 
     if !additional_label_name.is_empty() {
-        written += try!(writer.write(format!("{}{}=\"{}\"",
-                                             separator,
-                                             additional_label_name,
-                                             escape_string(additional_label_value, true))
-            .as_bytes()));
+        written += write_writer!(writer,
+                                 "{}{}=\"{}\"",
+                                 separator,
+                                 additional_label_name,
+                                 escape_string(additional_label_value, true));
     }
 
-    written += try!(writer.write(b"}"));
+    try!(writer.write_all(b"}"));
+    written += 1;
 
     Ok(written)
 }
@@ -177,12 +188,10 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
     for c in v.chars() {
         match c {
             '\\' | '\n' => {
-                let ch: String = c.escape_default().collect();
-                escaped.push_str(&ch);
+                escaped.extend(c.escape_default());
             }
             '"' if include_double_quote => {
-                let ch: String = c.escape_default().collect();
-                escaped.push_str(&ch);
+                escaped.extend(c.escape_default());
             }
             _ => {
                 escaped.push(c);
@@ -225,7 +234,8 @@ mod tests {
         let mf = counter.collect();
         let mut writer = Vec::<u8>::new();
         let encoder = TextEncoder::new();
-        assert!(encoder.encode(&[mf], &mut writer).is_ok());
+        let txt = encoder.encode(&[mf], &mut writer);
+        assert!(txt.is_ok());
 
         let ans = r##"# HELP test test help
 # TYPE test counter
@@ -233,5 +243,6 @@ test{a="1",b="2"} 1
 "##;
 
         assert_eq!(ans.as_bytes(), writer.as_slice());
+        assert_eq!(ans.len(), txt.unwrap());
     }
 }

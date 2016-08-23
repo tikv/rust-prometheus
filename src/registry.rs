@@ -91,7 +91,7 @@ impl RegistryCore {
 
         // TODO: metric_family injection hook.
         // TODO: sort metrics.
-        mf_by_name.values().cloned().collect()
+        mf_by_name.into_iter().map(|(_, m)| m).collect()
     }
 }
 

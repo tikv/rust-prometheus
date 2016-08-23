@@ -18,7 +18,6 @@
 extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
-extern crate hyper;
 
 pub mod proto;
 pub mod errors;
