@@ -12,7 +12,6 @@
 // limitations under the License.
 
 extern crate prom;
-extern crate hyper;
 
 use std::thread;
 use std::time::Duration;
