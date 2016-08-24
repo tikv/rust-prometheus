@@ -20,9 +20,9 @@ quick_error!{
         AlreadyReg {
             description("duplicate metrics collector registration attempted")
         }
-        InconsistentCardinality(need: usize, got: usize) {
+        InconsistentCardinality(expect: usize, got: usize) {
             description("inconsistent label cardinality")
-            display("need {} label values, but got {}", need, got)
+            display("expect {} label values, but got {}", expect, got)
         }
         Msg(msg: String) {
             description(&msg)
