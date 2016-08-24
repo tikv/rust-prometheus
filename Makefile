@@ -1,25 +1,27 @@
 all: format build test examples
 
+CARGO=RUST_BACKTRACE=1 cargo
+
 build:
-	cargo build --features default
+	$(CARGO) build --features default
 
 test:
-	cargo test --features default -- --nocapture 
+	$(CARGO) test --features default -- --nocapture 
 
 dev: format
-	cargo build --features dev
-	cargo test --features dev -- --nocapture 
+	$(CARGO) build --features dev
+	$(CARGO) test --features dev -- --nocapture 
 
 format:
-	cargo fmt -- --write-mode overwrite
+	$(CARGO) fmt -- --write-mode overwrite
 
 clean:
-	cargo clean
+	$(CARGO) clean
 
 examples:
 	mkdir -p bin
-	cargo build --example example_embed
-	cargo build --example example_hyper
+	$(CARGO) build --example example_embed
+	$(CARGO) build --example example_hyper
 	cp `find target/debug/examples -type f -perm /111` bin
 
 .PHONY: all examples

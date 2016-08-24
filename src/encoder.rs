@@ -71,8 +71,12 @@ impl Encoder for TextEncoder {
                     MetricType::COUNTER => {
                         try!(write_sample(name, m, "", "", m.get_counter().get_value(), writer));
                     }
-                    MetricType::GAUGE | MetricType::SUMMARY | MetricType::HISTOGRAM |
-                    MetricType::UNTYPED => unimplemented!(),
+                    MetricType::GAUGE => {
+                        try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
+                    }
+                    MetricType::SUMMARY | MetricType::HISTOGRAM | MetricType::UNTYPED => {
+                        unimplemented!();
+                    }
                 }
             }
         }
