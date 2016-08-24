@@ -49,7 +49,7 @@ impl Value {
     pub fn new(desc: Desc,
                value_type: ValueType,
                val: f64,
-               label_values: Vec<&str>)
+               label_values: &[&str])
                -> Result<Value> {
         if desc.variable_labels.len() != label_values.len() {
             return Err(Error::InconsistentCardinality(desc.variable_labels.len(),
@@ -132,7 +132,7 @@ impl Value {
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: Vec<&str>) -> Vec<LabelPair> {
+pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
     let total_len = desc.variable_labels.len() + desc.const_label_pairs.len();
     if total_len == 0 {
         return vec![];

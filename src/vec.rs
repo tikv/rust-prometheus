@@ -26,7 +26,7 @@ use errors::{Result, Error};
 
 pub trait MetricVecBuilder: Send + Sync + Clone {
     type Output: Metric;
-    fn build(&self, &Desc, Vec<&str>) -> Result<Self::Output>;
+    fn build(&self, &Desc, &[&str]) -> Result<Self::Output>;
 }
 
 struct MetricVecCore<T: MetricVecBuilder> {
@@ -56,7 +56,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         m
     }
 
-    pub fn get_metric_with_label_values(&self, vals: Vec<&str>) -> Result<T::Output> {
+    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::Output> {
         let h = try!(self.hash_label_values(&vals));
 
         self.get_or_create_metric(h, vals)
@@ -70,11 +70,11 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let vals = labels.values().map(|v| v.as_ref()).collect();
-        self.get_or_create_metric(h, vals)
+        let vals: Vec<_> = labels.values().map(|v| v.as_ref()).collect();
+        self.get_or_create_metric(h, &vals)
     }
 
-    pub fn delete_label_values(&self, vals: Vec<&str>) -> Result<()> {
+    pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
         let h = try!(self.hash_label_values(&vals));
 
         let mut children = self.children.write().unwrap();
@@ -135,7 +135,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn get_or_create_metric(&self, hash: u64, label_values: Vec<&str>) -> Result<T::Output> {
+    fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::Output> {
         let mut children = self.children.write().unwrap();
         if let Some(metric) = children.get(&hash).cloned() {
             return Ok(metric);
@@ -192,7 +192,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// an alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
-    pub fn get_metric_with_label_values(&self, vals: Vec<&str>) -> Result<T::Output> {
+    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::Output> {
         self.v.get_metric_with_label_values(vals)
     }
 
@@ -215,7 +215,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// `with_label_values` works as `get_metric_with_label_values`, but panics if an error
     /// occurs. The method allows neat syntax like:
     ///     httpReqs.with_label_values("404", "POST").inc()
-    pub fn with_label_values(&self, vals: Vec<&str>) -> T::Output {
+    pub fn with_label_values(&self, vals: &[&str]) -> T::Output {
         self.get_metric_with_label_values(vals).unwrap()
     }
 
@@ -238,7 +238,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
-    pub fn delete_label_values(&self, vals: Vec<&str>) -> Result<()> {
+    pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
         self.v.delete_label_values(vals)
     }
 
@@ -314,12 +314,12 @@ mod tests {
                                   vec!["l1".to_owned(), "l2".to_owned()])
             .unwrap();
 
-        assert!(vec.delete_label_values(vec!["v1", "v2"]).is_err());
-        vec.with_label_values(vec!["v1", "v2"]).inc();
-        assert!(vec.delete_label_values(vec!["v1", "v2"]).is_ok());
+        assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.delete_label_values(&["v1", "v2"]).is_ok());
 
-        vec.with_label_values(vec!["v1", "v2"]).inc();
-        assert!(vec.delete_label_values(vec!["v1"]).is_err());
-        assert!(vec.delete_label_values(vec!["v1", "v3"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.delete_label_values(&["v1"]).is_err());
+        assert!(vec.delete_label_values(&["v1", "v3"]).is_err());
     }
 }

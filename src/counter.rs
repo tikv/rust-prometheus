@@ -36,10 +36,10 @@ impl Counter {
 
     pub fn with_opts(opts: Opts) -> Result<Counter> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        Counter::with_desc(desc, vec![])
+        Counter::with_desc(desc, &vec![])
     }
 
-    fn with_desc(desc: Desc, label_values: Vec<&str>) -> Result<Counter> {
+    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Counter> {
         let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
         Ok(Counter { v: Arc::new(v) })
     }
@@ -90,7 +90,7 @@ pub struct CounterVecBuilder {}
 impl MetricVecBuilder for CounterVecBuilder {
     type Output = Counter;
 
-    fn build(&self, desc: &Desc, vals: Vec<&str>) -> Result<Counter> {
+    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Counter> {
         Counter::with_desc(desc.clone(), vals)
     }
 }

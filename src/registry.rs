@@ -162,6 +162,6 @@ mod tests {
             .unwrap();
 
         r.register(Box::new(counter_vec.clone())).unwrap();
-        counter_vec.with_label_values(vec!["1", "2"]).inc();
+        counter_vec.with_label_values(&["1", "2"]).inc();
     }
 }

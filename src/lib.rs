@@ -38,4 +38,4 @@ mod vec;
 pub use self::desc::Desc;
 pub use self::registry::Registry;
 pub use self::metrics::{Collector, Opts};
-pub use self::counter::Counter;
+pub use self::counter::{Counter, CounterVec};
