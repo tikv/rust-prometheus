@@ -17,8 +17,9 @@ clean:
 	cargo clean
 
 examples:
+	mkdir -p bin
 	cargo build --example example_embed
 	cargo build --example example_hyper
-	cp target/debug/examples/* bin/
+	cp `find target/debug/examples -type f -perm /111` bin
 
 .PHONY: all examples
