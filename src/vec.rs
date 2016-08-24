@@ -62,8 +62,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.get_or_create_metric(h, vals)
     }
 
-    pub fn get_metric_with(&self, labels: HashMap<String, String>) -> Result<T::Output> {
-        let h = try!(self.hash_labels(&labels));
+    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::Output> {
+        let h = try!(self.hash_labels(labels));
 
         // Avoid to create vector values, check hash first.
         if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
@@ -85,8 +85,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(())
     }
 
-    pub fn delete(&self, labels: HashMap<String, String>) -> Result<()> {
-        let h = try!(self.hash_labels(&labels));
+    pub fn delete(&self, labels: &HashMap<&str, &str>) -> Result<()> {
+        let h = try!(self.hash_labels(labels));
 
         let mut children = self.children.write().unwrap();
         if children.remove(&h).is_none() {
@@ -115,7 +115,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn hash_labels(&self, labels: &HashMap<String, String>) -> Result<u64> {
+    fn hash_labels(&self, labels: &HashMap<&str, &str>) -> Result<u64> {
         if labels.len() != self.desc.variable_labels.len() {
             return Err(Error::InconsistentCardinality(self.desc.variable_labels.len(),
                                                       labels.len()));
@@ -123,7 +123,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
         let mut h = FnvHasher::default();
         for label in &self.desc.variable_labels {
-            match labels.get(label) {
+            match labels.get(&label.as_ref()) {
                 Some(val) => h.write(val.as_bytes()),
                 None => {
                     return Err(Error::Msg(format!("label name {} missing in label map", label)))
@@ -208,7 +208,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// This method is used for the same purpose as
     /// `get_metric_with_label_values`. See there for pros and cons of the two
     /// methods.
-    pub fn get_metric_with(&self, labels: HashMap<String, String>) -> Result<T::Output> {
+    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::Output> {
         self.v.get_metric_with(labels)
     }
 
@@ -222,7 +222,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// `with` works as `get_metric_with`, but panics if an error occurs. The method allows
     /// neat syntax like:
     ///     httpReqs.with(Labels{"status":"404", "method":"POST"}).inc()
-    pub fn with(&self, labels: HashMap<String, String>) -> T::Output {
+    pub fn with(&self, labels: &HashMap<&str, &str>) -> T::Output {
         self.get_metric_with(labels).unwrap()
     }
 
@@ -250,7 +250,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     ///
     /// This method is used for the same purpose as `delete_label_values`. See
     /// there for pros and cons of the two methods.
-    pub fn delete(&self, labels: HashMap<String, String>) -> Result<()> {
+    pub fn delete(&self, labels: &HashMap<&str, &str>) -> Result<()> {
         self.v.delete(labels)
     }
 
@@ -281,38 +281,34 @@ mod tests {
 
     #[test]
     fn test_counter_vec_with_labels() {
-        let vec = CounterVec::new(Opts::new("test_vec", "test vec help"),
-                                  vec!["l1".to_owned(), "l2".to_owned()])
-            .unwrap();
+        let vec = CounterVec::new(Opts::new("test_vec", "test vec help"), &["l1", "l2"]).unwrap();
 
         let mut labels = HashMap::new();
-        labels.insert("l1".to_owned(), "v1".to_owned());
-        labels.insert("l2".to_owned(), "v2".to_owned());
-        assert!(vec.delete(labels.clone()).is_err());
+        labels.insert("l1", "v1");
+        labels.insert("l2", "v2");
+        assert!(vec.delete(&labels).is_err());
 
-        vec.with(labels.clone()).inc();
-        assert!(vec.delete(labels.clone()).is_ok());
-        assert!(vec.delete(labels.clone()).is_err());
+        vec.with(&labels).inc();
+        assert!(vec.delete(&labels).is_ok());
+        assert!(vec.delete(&labels).is_err());
 
         let mut labels2 = HashMap::new();
-        labels2.insert("l1".to_owned(), "v2".to_owned());
-        labels2.insert("l2".to_owned(), "v1".to_owned());
+        labels2.insert("l1", "v2");
+        labels2.insert("l2", "v1");
 
-        vec.with(labels.clone()).inc();
-        assert!(vec.delete(labels2.clone()).is_err());
+        vec.with(&labels).inc();
+        assert!(vec.delete(&labels2).is_err());
 
-        vec.with(labels.clone()).inc();
+        vec.with(&labels).inc();
 
         let mut labels3 = HashMap::new();
-        labels3.insert("l1".to_owned(), "v1".to_owned());
-        assert!(vec.delete(labels3.clone()).is_err());
+        labels3.insert("l1", "v1");
+        assert!(vec.delete(&labels3).is_err());
     }
 
     #[test]
     fn test_counter_vec_with_label_values() {
-        let vec = CounterVec::new(Opts::new("test_vec", "test vec help"),
-                                  vec!["l1".to_owned(), "l2".to_owned()])
-            .unwrap();
+        let vec = CounterVec::new(Opts::new("test_vec", "test vec help"), &["l1", "l2"]).unwrap();
 
         assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).inc();

@@ -157,8 +157,7 @@ mod tests {
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
 
-        let counter_vec = CounterVec::new(Opts::new("test_vec", "test vec help"),
-                                          vec!["a".to_owned(), "b".to_owned()])
+        let counter_vec = CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"])
             .unwrap();
 
         r.register(Box::new(counter_vec.clone())).unwrap();

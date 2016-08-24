@@ -102,8 +102,9 @@ impl MetricVecBuilder for CounterVecBuilder {
 pub type CounterVec = MetricVec<CounterVecBuilder>;
 
 impl CounterVec {
-    pub fn new(opts: Opts, label_names: Vec<String>) -> Result<CounterVec> {
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, label_names, opts.const_labels));
+    pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
+        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
         let metric_vec = MetricVec::create(desc, proto::MetricType::COUNTER, CounterVecBuilder {});
 
         Ok(metric_vec as CounterVec)
