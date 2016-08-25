@@ -71,8 +71,51 @@ impl Encoder for TextEncoder {
                     MetricType::COUNTER => {
                         try!(write_sample(name, m, "", "", m.get_counter().get_value(), writer));
                     }
-                    MetricType::GAUGE | MetricType::SUMMARY | MetricType::HISTOGRAM |
-                    MetricType::UNTYPED => unimplemented!(),
+                    MetricType::HISTOGRAM => {
+                        let h = m.get_histogram();
+
+                        let mut inf_seen = false;
+                        for b in h.get_bucket() {
+                            let upper_bound = b.get_upper_bound();
+                            let mut name_bucket = name.to_owned();
+                            name_bucket.push_str("_bucket");
+                            try!(write_sample(&name_bucket,
+                                              m,
+                                              "le",
+                                              &format!("{}", upper_bound),
+                                              b.get_cumulative_count() as f64,
+                                              writer));
+                            if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
+                                inf_seen = true;
+                            }
+                        }
+                        if !inf_seen {
+                            let mut name_bucket = name.to_owned();
+                            name_bucket.push_str("_bucket");
+                            try!(write_sample(&name_bucket,
+                                              m,
+                                              "le",
+                                              "+Inf",
+                                              h.get_sample_count() as f64,
+                                              writer));
+                        }
+
+                        let mut name_sum = name.to_owned();
+                        name_sum.push_str("_sum");
+                        try!(write_sample(&name_sum, m, "", "", h.get_sample_sum(), writer));
+
+                        let mut name_count = name.to_owned();
+                        name_count.push_str("_count");
+                        try!(write_sample(&name_count,
+                                          m,
+                                          "",
+                                          "",
+                                          h.get_sample_count() as f64,
+                                          writer));
+                    }
+                    MetricType::GAUGE | MetricType::SUMMARY | MetricType::UNTYPED => {
+                        unimplemented!();
+                    }
                 }
             }
         }
@@ -183,6 +226,7 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
 mod tests {
     use counter::Counter;
     use metrics::{Opts, Collector};
+    use histogram::{Histogram, HistogramOpts};
 
     use super::*;
 
@@ -217,6 +261,38 @@ mod tests {
 test{a="1",b="2"} 1
 "##;
 
+        assert_eq!(ans.as_bytes(), writer.as_slice());
+    }
+
+    #[test]
+    fn test_text_encoder_histogram() {
+        let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1").unwrap();
+        let histogram = Histogram::with_opts(opts).unwrap();
+        histogram.observe(0.25);
+
+        let mf = histogram.collect();
+        let mut writer = Vec::<u8>::new();
+        let encoder = TextEncoder::new();
+        let res = encoder.encode(&[mf], &mut writer);
+        assert!(res.is_ok());
+
+        let ans = r##"# HELP test_histogram test help
+# TYPE test_histogram histogram
+test_histogram_bucket{a="1",le="0.005"} 0
+test_histogram_bucket{a="1",le="0.01"} 0
+test_histogram_bucket{a="1",le="0.025"} 0
+test_histogram_bucket{a="1",le="0.05"} 0
+test_histogram_bucket{a="1",le="0.1"} 0
+test_histogram_bucket{a="1",le="0.25"} 1
+test_histogram_bucket{a="1",le="0.5"} 1
+test_histogram_bucket{a="1",le="1"} 1
+test_histogram_bucket{a="1",le="2.5"} 1
+test_histogram_bucket{a="1",le="5"} 1
+test_histogram_bucket{a="1",le="10"} 1
+test_histogram_bucket{a="1",le="+Inf"} 1
+test_histogram_sum{a="1"} 0.25
+test_histogram_count{a="1"} 1
+"##;
         assert_eq!(ans.as_bytes(), writer.as_slice());
     }
 }
