@@ -122,7 +122,7 @@ impl GaugeVec {
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-        let metric_vec = MetricVec::create(desc, proto::MetricType::COUNTER, GaugeVecBuilder {});
+        let metric_vec = MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {});
 
         Ok(metric_vec as GaugeVec)
     }
