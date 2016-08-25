@@ -14,10 +14,11 @@
 
 use std::sync::{Arc, RwLock};
 
+use protobuf::RepeatedField;
+
 use proto;
-use metrics::{Opts, Collector, Metric};
-use value::{Value, ValueType};
 use desc::Desc;
+use metrics::{Collector, Metric};
 use errors::{Result, Error};
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -27,54 +28,87 @@ struct HistogramCore {
     count: u64,
 
     upper_bounds: Vec<f64>,
-    counts: Vec<f64>,
+    counts: Vec<u64>,
+
     label_pairs: Vec<proto::LabelPair>,
 }
 
-// HistogramOpts bundles the options for creating a Histogram metric. It is
-// mandatory to set Name and Help to a non-empty string. All other fields are
-// optional and can safely be left at their zero value.
+impl HistogramCore {
+    pub fn observe(v: f64) {
+        unimplemented!();
+    }
+
+    fn metric(&self) -> proto::Metric {
+        let mut m = proto::Metric::new();
+
+        m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
+
+        let mut h = proto::Histogram::new();
+        h.set_sample_sum(core.sum);
+        h.set_sample_count(core.count);
+
+        let mut count = 0;
+        let mut buckets = Vec::with_capacity(self.upper_bounds.len());
+        for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
+            count += self.counts[i];
+            let mut b = proto::Bucket::new();
+            b.set_cumulative_count(count);
+            b.set_upper_bound(upper_bound);
+            buckets.append(b);
+        }
+        h.set_bucket(RepeatedField::from_vec(buckets));
+
+        m.set_histogram(h);
+
+        m
+    }
+}
+
+/// `HistogramOpts` bundles the options for creating a Histogram metric. It is
+/// mandatory to set Name and Help to a non-empty string. All other fields are
+/// optional and can safely be left at their zero value.
 pub struct HistogramOpts {
-	// Namespace, Subsystem, and Name are components of the fully-qualified
-	// name of the Histogram (created by joining these components with
-	// "_"). Only Name is mandatory, the others merely help structuring the
-	// name. Note that the fully-qualified name of the Histogram must be a
-	// valid Prometheus metric name.
-	Namespace: string
-	Subsystem string
-	Name      string
+    // namespace, sub_system, and name are components of the fully-qualified
+    // name of the Metric (created by joining these components with
+    // "_"). Only Name is mandatory, the others merely help structuring the
+    // name. Note that the fully-qualified name of the metric must be a
+    // valid Prometheus metric name.
+    pub namespace: String,
+    pub sub_system: String,
+    pub name: String,
 
-	// Help provides information about this Histogram. Mandatory!
-	//
-	// Metrics with the same fully-qualified name must have the same Help
-	// string.
-	Help string
+    // help provides information about this metric. Mandatory!
+    //
+    // Metrics with the same fully-qualified name must have the same Help
+    // string.
+    pub help: String,
 
-	// ConstLabels are used to attach fixed labels to this
-	// Histogram. Histograms with the same fully-qualified name must have the
-	// same label names in their ConstLabels.
-	//
-	// Note that in most cases, labels have a value that varies during the
-	// lifetime of a process. Those labels are usually managed with a
-	// HistogramVec. ConstLabels serve only special purposes. One is for the
-	// special case where the value of a label does not change during the
-	// lifetime of a process, e.g. if the revision of the running binary is
-	// put into a label. Another, more advanced purpose is if more than one
-	// Collector needs to collect Histograms with the same fully-qualified
-	// name. In that case, those Summaries must differ in the values of
-	// their ConstLabels. See the Collector examples.
-	//
-	// If the value of a label never changes (not even between binaries),
-	// that label most likely should not be a label at all (but part of the
-	// metric name).
-	ConstLabels Labels
+    // const_labels are used to attach fixed labels to this metric. Metrics
+    // with the same fully-qualified name must have the same label names in
+    // their ConstLabels.
+    //
+    // Note that in most cases, labels have a value that varies during the
+    // lifetime of a process. Those labels are usually managed with a metric
+    // vector collector (like CounterVec, GaugeVec, UntypedVec). ConstLabels
+    // serve only special purposes. One is for the special case where the
+    // value of a label does not change during the lifetime of a process,
+    // e.g. if the revision of the running binary is put into a
+    // label. Another, more advanced purpose is if more than one Collector
+    // needs to collect Metrics with the same fully-qualified name. In that
+    // case, those Metrics must differ in the values of their
+    // ConstLabels. See the Collector examples.
+    //
+    // If the value of a label never changes (not even between binaries),
+    // that label most likely should not be a label at all (but part of the
+    // metric name).
+    pub const_labels: HashMap<String, String>,
 
-	// Buckets defines the buckets into which observations are counted. Each
+	// buckets defines the buckets into which observations are counted. Each
 	// element in the slice is the upper inclusive bound of a bucket. The
 	// values must be sorted in strictly increasing order. There is no need
 	// to add a highest bucket with +Inf bound, it will be added
 	// implicitly. The default value is DefBuckets.
-	Buckets []float64
+	pub buckets Vec<f64>,
 }
 
 // A `Histogram` counts individual observations from an event or sample stream in
@@ -94,57 +128,54 @@ pub struct HistogramOpts {
 // To create Histogram instances, use NewHistogram.
 #[derive(Clone)]
 pub struct Histogram {
-    v: Arc<RwLock<HistogramCore>>,
+    desc: Desc,
+
+    core: Arc<RwLock<HistogramCore>>,
 }
 
 impl Histogram {
-    pub fn with_opts(opts: Opts) -> Result<Counter> {
+    pub new(opts: HistogramOpts) -> Result<Histogram> {
+        with_opts(opts)
+    }
+
+    pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        Counter::with_desc(desc, &vec![])
+        Histogram::with_desc(desc, &[])
     }
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Counter> {
-        let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
-        Ok(Counter { v: Arc::new(v) })
+    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
+        unimplemented!()
+        // let core = try!();
+        // let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
+        // Ok(Counter { v: Arc::new(v) })
     }
+}
 
-    /// `inc_by` increments the given value to the counter. Error if the value is <
-    /// 0.
-    #[inline]
-    pub fn inc_by(&self, v: f64) -> Result<()> {
-        if v < 0.0 {
-            return Err(Error::DecreaseCounter(v));
-        }
-
-        Ok(self.v.inc_by(v))
+impl Histogram {
+    pub fn observe(v: f64) {
+        self.write().unwrap().observe(v)
     }
+}
 
-    /// `inc` increments the counter by 1.
-    #[inline]
-    pub fn inc(&self) {
-        self.inc_by(1.0).unwrap()
-    }
 
-    /// `get` returns the counter value.
-    #[inline]
-    pub fn get(&self) -> f64 {
-        self.v.get()
+impl Metric for Counter {
+    fn metric(&self) -> proto::Metric {
+        self.core.read().unwrap().metric()
     }
 }
 
 impl Collector for Counter {
     fn desc(&self) -> &Desc {
-        &self.v.desc
+        &self.desc
     }
 
     fn collect(&self) -> proto::MetricFamily {
-        self.v.collect()
-    }
-}
-
-impl Metric for Counter {
-    fn metric(&self) -> proto::Metric {
-        self.v.metric()
+        let mut m = MetricFamily::new();
+        m.set_name(self.desc.fq_name.clone());
+        m.set_help(self.desc.help.clone());
+        m.set_field_type(proto::Histogram);
+        m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
+        m
     }
 }
 
