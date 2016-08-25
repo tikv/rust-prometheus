@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use proto;
 use metrics::{Opts, Collector, Metric};
@@ -20,6 +20,62 @@ use value::{Value, ValueType};
 use desc::Desc;
 use errors::{Result, Error};
 use vec::{MetricVec, MetricVecBuilder};
+
+#[derive(Debug)]
+struct HistogramCore {
+    sum: f64,
+    count: u64,
+
+    upper_bounds: Vec<f64>,
+    counts: Vec<f64>,
+    label_pairs: Vec<proto::LabelPair>,
+}
+
+// HistogramOpts bundles the options for creating a Histogram metric. It is
+// mandatory to set Name and Help to a non-empty string. All other fields are
+// optional and can safely be left at their zero value.
+pub struct HistogramOpts {
+	// Namespace, Subsystem, and Name are components of the fully-qualified
+	// name of the Histogram (created by joining these components with
+	// "_"). Only Name is mandatory, the others merely help structuring the
+	// name. Note that the fully-qualified name of the Histogram must be a
+	// valid Prometheus metric name.
+	Namespace: string
+	Subsystem string
+	Name      string
+
+	// Help provides information about this Histogram. Mandatory!
+	//
+	// Metrics with the same fully-qualified name must have the same Help
+	// string.
+	Help string
+
+	// ConstLabels are used to attach fixed labels to this
+	// Histogram. Histograms with the same fully-qualified name must have the
+	// same label names in their ConstLabels.
+	//
+	// Note that in most cases, labels have a value that varies during the
+	// lifetime of a process. Those labels are usually managed with a
+	// HistogramVec. ConstLabels serve only special purposes. One is for the
+	// special case where the value of a label does not change during the
+	// lifetime of a process, e.g. if the revision of the running binary is
+	// put into a label. Another, more advanced purpose is if more than one
+	// Collector needs to collect Histograms with the same fully-qualified
+	// name. In that case, those Summaries must differ in the values of
+	// their ConstLabels. See the Collector examples.
+	//
+	// If the value of a label never changes (not even between binaries),
+	// that label most likely should not be a label at all (but part of the
+	// metric name).
+	ConstLabels Labels
+
+	// Buckets defines the buckets into which observations are counted. Each
+	// element in the slice is the upper inclusive bound of a bucket. The
+	// values must be sorted in strictly increasing order. There is no need
+	// to add a highest bucket with +Inf bound, it will be added
+	// implicitly. The default value is DefBuckets.
+	Buckets []float64
+}
 
 // A `Histogram` counts individual observations from an event or sample stream in
 // configurable buckets. Similar to a summary, it also provides a sum of
@@ -38,15 +94,10 @@ use vec::{MetricVec, MetricVecBuilder};
 // To create Histogram instances, use NewHistogram.
 #[derive(Clone)]
 pub struct Histogram {
-    v: Arc<Value>,
+    v: Arc<RwLock<HistogramCore>>,
 }
 
-impl Counter {
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Counter> {
-        let opts = Opts::new(name, help);
-        Counter::with_opts(opts)
-    }
-
+impl Histogram {
     pub fn with_opts(opts: Opts) -> Result<Counter> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
         Counter::with_desc(desc, &vec![])
