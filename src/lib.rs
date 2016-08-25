@@ -35,6 +35,6 @@ mod counter;
 #[allow(dead_code)]
 mod registry;
 
-pub use self::registry::Registry;
+pub use self::registry::{Registry, gather, register, unregister};
 pub use self::metrics::{Collector, Opts};
 pub use self::counter::Counter;
