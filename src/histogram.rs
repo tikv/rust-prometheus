@@ -267,29 +267,30 @@ impl Collector for Histogram {
 }
 
 // #[derive(Clone)]
-// pub struct CounterVecBuilder {}
+// pub struct HistogramVecBuilder {}
 
-// impl MetricVecBuilder for CounterVecBuilder {
-//     type Output = Counter;
+// impl MetricVecBuilder for HistogramVecBuilder {
+//     type Output = Histogram;
 
-//     fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Counter> {
-//         Counter::with_desc(desc.clone(), vals)
+//     fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Histogram> {
+//         Histogram::with_desc(desc.clone(), vals)
 //     }
 // }
 
-// /// `CounterVec` is a Collector that bundles a set of Counters that all share the
-// /// same Desc, but have different values for their variable labels. This is used
-// /// if you want to count the same thing partitioned by various dimensions
-// /// (e.g. number of HTTP requests, partitioned by response code and method).
-// pub type CounterVec = MetricVec<CounterVecBuilder>;
+// // `HistogramVec` is a Collector that bundles a set of Histograms that all share the
+// // same Desc, but have different values for their variable labels. This is used
+// // if you want to count the same thing partitioned by various dimensions
+// // (e.g. HTTP request latencies, partitioned by status code and method). Create
+// // instances with NewHistogramVec.
+// pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
-// impl CounterVec {
-//     pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
+// impl HistogramVec {
+//     pub fn new(opts: Opts, label_names: &[&str]) -> Result<HistogramVec> {
 //         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
 //         let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-//         let metric_vec = MetricVec::create(desc, proto::MetricType::COUNTER, CounterVecBuilder {});
+//         let metric_vec = MetricVec::create(desc, proto::MetricType::HISTOGRAM, HistogramVecVecBuilder {});
 
-//         Ok(metric_vec as CounterVec)
+//         Ok(metric_vec as HistogramVec)
 //     }
 // }
 
