@@ -129,6 +129,34 @@ impl Registry {
     }
 }
 
+
+// Default registry for rust-prometheus.
+lazy_static! {
+    static ref DEFAULT_REGISTRY: Registry = Registry::default();
+}
+
+/// `register` registers a new Collector to be included in metrics collection. It
+/// returns an error if the descriptors provided by the Collector are invalid or
+/// if they - in combination with descriptors of already registered Collectors -
+/// do not fulfill the consistency and uniqueness criteria described in the Desc
+/// documentation.
+pub fn register(c: Box<Collector>) -> Result<()> {
+    DEFAULT_REGISTRY.register(c)
+}
+
+/// `unregister` unregisters the Collector that equals the Collector passed in as
+/// an argument. (Two Collectors are considered equal if their Describe method
+/// yields the same set of descriptors.) The function returns an error if a
+/// Collector was not registered.
+pub fn unregister(c: Box<Collector>) -> Result<()> {
+    DEFAULT_REGISTRY.unregister(c)
+}
+
+/// `gather` returns all `MetricFamily` of `DEFAULT_REGISTRY`.
+pub fn gather() -> Vec<proto::MetricFamily> {
+    DEFAULT_REGISTRY.gather()
+}
+
 #[cfg(test)]
 mod tests {
     use std::thread;
@@ -157,5 +185,16 @@ mod tests {
 
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
+    }
+
+    #[test]
+    fn test_default_registry() {
+        let counter = Counter::new("test", "test help").unwrap();
+
+        assert!(register(Box::new(counter.clone())).is_ok());
+        assert_eq!(gather().len(), 1);
+
+        assert!(unregister(Box::new(counter.clone())).is_ok());
+        assert!(unregister(Box::new(counter.clone())).is_err());
     }
 }

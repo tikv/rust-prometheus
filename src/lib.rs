@@ -18,6 +18,8 @@
 extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod proto;
 pub mod errors;
