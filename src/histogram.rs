@@ -20,7 +20,7 @@ use protobuf::RepeatedField;
 use proto;
 use desc::Desc;
 use errors::{Result, Error};
-use value::{Value, make_label_pairs};
+use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 use metrics::{Collector, Metric, build_fq_name};
 
@@ -144,23 +144,25 @@ struct HistogramCore {
 }
 
 impl HistogramCore {
-    fn with_opts(mut opts: HistogramOpts) -> Result<HistogramCore> {
-        if opts.buckets.is_empty() {
-            opts.buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
+    fn new() -> HistogramCore {
+        HistogramCore::with_buckets(vec![]).unwrap()
+    }
+
+    fn with_buckets(mut buckets: Vec<f64>) -> Result<HistogramCore> {
+        if buckets.is_empty() {
+            buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
         }
 
         Ok(HistogramCore {
             sum: 0.0,
             count: 0,
-            counts: vec![0; opts.buckets.len()],
-            upper_bounds: opts.buckets,
+            counts: vec![0; buckets.len()],
+            upper_bounds: buckets,
         })
     }
 
     fn observe(&mut self, v: f64) {
-        let mut eq = self.upper_bounds.iter().enumerate().filter(|&(_, f)| *f == v);
-
-        if let Some((i, _)) = eq.next() {
+        if let Ok(i) = self.upper_bounds.binary_search_by(|probe| probe.partial_cmp(&v).unwrap()) {
             self.count += 1;
             self.counts[i] += 1;
             self.sum += v;
@@ -217,8 +219,12 @@ impl Histogram {
                                   vec![],
                                   opts.const_labels.clone()));
 
-        let pairs = make_label_pairs(&desc, &[]);
-        let core = try!(HistogramCore::with_opts(opts));
+        Histogram::with_desc(desc, &[])
+    }
+
+    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
+        let pairs = make_label_pairs(&desc, label_values);
+        let core = HistogramCore::new();
 
         Ok(Histogram {
             desc: desc,
@@ -266,37 +272,39 @@ impl Collector for Histogram {
     }
 }
 
-// #[derive(Clone)]
-// pub struct HistogramVecBuilder {}
+#[derive(Clone)]
+pub struct HistogramVecBuilder {}
 
-// impl MetricVecBuilder for HistogramVecBuilder {
-//     type Output = Histogram;
+impl MetricVecBuilder for HistogramVecBuilder {
+    type Output = Histogram;
 
-//     fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Histogram> {
-//         Histogram::with_desc(desc.clone(), vals)
-//     }
-// }
+    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Histogram> {
+        Histogram::with_desc(desc.clone(), vals)
+    }
+}
 
-// // `HistogramVec` is a Collector that bundles a set of Histograms that all share the
-// // same Desc, but have different values for their variable labels. This is used
-// // if you want to count the same thing partitioned by various dimensions
-// // (e.g. HTTP request latencies, partitioned by status code and method). Create
-// // instances with NewHistogramVec.
-// pub type HistogramVec = MetricVec<HistogramVecBuilder>;
+// `HistogramVec` is a Collector that bundles a set of Histograms that all share the
+// same Desc, but have different values for their variable labels. This is used
+// if you want to count the same thing partitioned by various dimensions
+// (e.g. HTTP request latencies, partitioned by status code and method). Create
+// instances with NewHistogramVec.
+pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
-// impl HistogramVec {
-//     pub fn new(opts: Opts, label_names: &[&str]) -> Result<HistogramVec> {
-//         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-//         let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-//         let metric_vec = MetricVec::create(desc, proto::MetricType::HISTOGRAM, HistogramVecVecBuilder {});
+impl HistogramVec {
+    pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
+        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
+        let metric_vec =
+            MetricVec::create(desc, proto::MetricType::HISTOGRAM, HistogramVecBuilder {});
 
-//         Ok(metric_vec as HistogramVec)
-//     }
-// }
+        Ok(metric_vec as HistogramVec)
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use metrics::Collector;
+    use std::f64::EPSILON;
 
     use super::*;
 
@@ -316,6 +324,6 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
-        assert_eq!(proto_histogram.get_sample_sum(), 1.5);
+        assert!((proto_histogram.get_sample_sum() - 1.5).abs() < EPSILON);
     }
 }
