@@ -19,11 +19,10 @@ quick_error!{
     pub enum Error {
         AlreadyReg {
             description("duplicate metrics collector registration attempted")
-            display("duplicate metrics collector registration attempted")
         }
-        InconsistentCardinality {
+        InconsistentCardinality(expect: usize, got: usize) {
             description("inconsistent label cardinality")
-            display("inconsistent label cardinality")
+            display("expect {} label values, but got {}", expect, got)
         }
         Msg(msg: String) {
             description(&msg)
