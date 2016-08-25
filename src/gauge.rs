@@ -15,10 +15,11 @@
 use std::sync::Arc;
 
 use proto;
-use metrics::{Opts, Collector, Metric};
-use value::{Value, ValueType};
 use desc::Desc;
 use errors::Result;
+use value::{Value, ValueType};
+use metrics::{Opts, Collector, Metric};
+use vec::{MetricVec, MetricVecBuilder};
 
 /// `Gauge` is a Metric that represents a single numerical value that can
 /// arbitrarily go up and down.
@@ -35,7 +36,11 @@ impl Gauge {
 
     pub fn with_opts(opts: Opts) -> Result<Gauge> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        let v = try!(Value::new(desc, ValueType::Gauge, 0.0, vec![]));
+        Gauge::with_desc(desc, &[])
+    }
+
+    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Gauge> {
+        let v = try!(Value::new(desc, ValueType::Gauge, 0.0, label_values));
         Ok(Gauge { v: Arc::new(v) })
     }
 }
@@ -93,6 +98,33 @@ impl Collector for Gauge {
 impl Metric for Gauge {
     fn metric(&self) -> proto::Metric {
         self.v.metric()
+    }
+}
+
+#[derive(Clone)]
+pub struct GaugeVecBuilder {}
+
+impl MetricVecBuilder for GaugeVecBuilder {
+    type Output = Gauge;
+
+    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Gauge> {
+        Gauge::with_desc(desc.clone(), vals)
+    }
+}
+
+/// `GaugeVec` is a Collector that bundles a set of Gauges that all share the same
+/// Desc, but have different values for their variable labels. This is used if
+/// you want to count the same thing partitioned by various dimensions
+/// (e.g. number of operations queued, partitioned by user and operation type).
+pub type GaugeVec = MetricVec<GaugeVecBuilder>;
+
+impl GaugeVec {
+    pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
+        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
+        let metric_vec = MetricVec::create(desc, proto::MetricType::COUNTER, GaugeVecBuilder {});
+
+        Ok(metric_vec as GaugeVec)
     }
 }
 
