@@ -34,6 +34,7 @@ mod counter;
 mod registry;
 #[allow(dead_code)]
 mod vec;
+mod histogram;
 
 pub use self::desc::Desc;
 pub use self::registry::Registry;
