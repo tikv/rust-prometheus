@@ -1,5 +1,5 @@
 [package]
-name = "prom"
+name = "prometheus"
 version = "0.1.0"
 keywords = ["prometheus", "metrics"]
 authors = ["overvenus@gmail.com", "siddontang@gmail.com"]
