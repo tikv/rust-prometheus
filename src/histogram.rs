@@ -27,6 +27,11 @@ use metrics::{Collector, Metric, build_fq_name};
 const DEFAULT_BUCKETS: &'static [f64; 11] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5,
                                               5.0, 10.0];
 
+// `BUCKET_LABEL` is used for the label that defines the upper bound of a
+// bucket of a histogram ("le" -> "less or equal").
+const BUCKET_LABEL: &'static str = "le";
+
+
 /// `HistogramOpts` bundles the options for creating a Histogram metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
@@ -96,17 +101,33 @@ impl HistogramOpts {
         self
     }
 
-    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
+    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Result<Self> {
+        for k in labels.keys() {
+            if k == BUCKET_LABEL {
+                return Err(Error::Msg("`le` is not allowed as label name in histograms"
+                    .to_owned()));
+            }
+        }
+
         self.const_labels = labels;
-        self
+        Ok(self)
     }
 
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
-        self.const_labels.insert(name.into(), value.into());
-        self
+    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Result<Self> {
+        let name = name.into();
+        if name == BUCKET_LABEL {
+            return Err(Error::Msg("`le` is not allowed as label name in histograms".to_owned()));
+        }
+
+        self.const_labels.insert(name, value.into());
+        Ok(self)
     }
 
-    pub fn buckets(mut self) {}
+    pub fn buckets(mut self, buckets: Vec<f64>) -> Result<Self> {
+        // TODO: check buckets order.
+        self.buckets = buckets;
+        Ok(self)
+    }
 
     pub fn fq_name(&self) -> String {
         build_fq_name(&self.namespace, &self.sub_system, &self.name)
@@ -123,22 +144,46 @@ struct HistogramCore {
 }
 
 impl HistogramCore {
-    fn new() -> HistogramCore {
-        HistogramCore {
+    fn with_opts(mut opts: HistogramOpts) -> Result<HistogramCore> {
+        if opts.buckets.is_empty() {
+            opts.buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
+        }
+
+        Ok(HistogramCore {
             sum: 0.0,
             count: 0,
-            upper_bounds: vec![],
-            counts: vec![],
-        }
+            counts: vec![0; opts.buckets.len()],
+            upper_bounds: opts.buckets,
+        })
     }
 
     fn observe(&mut self, v: f64) {
-        let mut eq = self.upper_bounds.iter().enumerate().filter(|&(i, f)| *f == v);
+        let mut eq = self.upper_bounds.iter().enumerate().filter(|&(_, f)| *f == v);
 
         if let Some((i, _)) = eq.next() {
+            self.count += 1;
             self.counts[i] += 1;
             self.sum += v;
         }
+    }
+
+    fn proto_histogram(&self) -> proto::Histogram {
+        let mut h = proto::Histogram::new();
+        h.set_sample_sum(self.sum);
+        h.set_sample_count(self.count);
+
+        let mut count = 0;
+        let mut buckets = Vec::with_capacity(self.upper_bounds.len());
+        for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
+            count += self.counts[i];
+            let mut b = proto::Bucket::new();
+            b.set_cumulative_count(count);
+            b.set_upper_bound(*upper_bound);
+            buckets.push(b);
+        }
+        h.set_bucket(RepeatedField::from_vec(buckets));
+
+        h
     }
 }
 
@@ -167,13 +212,13 @@ pub struct Histogram {
 
 impl Histogram {
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        Histogram::with_desc(desc, &[])
-    }
+        let desc = try!(Desc::new(opts.fq_name(),
+                                  opts.help.clone(),
+                                  vec![],
+                                  opts.const_labels.clone()));
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
-        let pairs = make_label_pairs(&desc, label_values);
-        let core = HistogramCore::new();
+        let pairs = make_label_pairs(&desc, &[]);
+        let core = try!(HistogramCore::with_opts(opts));
 
         Ok(Histogram {
             desc: desc,
@@ -193,27 +238,13 @@ impl Histogram {
 
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
-        let core = self.core.read().unwrap();
 
         let mut m = proto::Metric::new();
 
         m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
 
-        let mut h = proto::Histogram::new();
-        h.set_sample_sum(core.sum);
-        h.set_sample_count(core.count);
-
-        let mut count = 0;
-        let mut buckets = Vec::with_capacity(core.upper_bounds.len());
-        for (i, upper_bound) in core.upper_bounds.iter().enumerate() {
-            count += core.counts[i];
-            let mut b = proto::Bucket::new();
-            b.set_cumulative_count(count);
-            b.set_upper_bound(*upper_bound);
-            buckets.push(b);
-        }
-        h.set_bucket(RepeatedField::from_vec(buckets));
-
+        let core = self.core.read().unwrap();
+        let h = core.proto_histogram();
         m.set_histogram(h);
 
         m
@@ -262,23 +293,28 @@ impl Collector for Histogram {
 //     }
 // }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use metrics::{Opts, Collector};
+#[cfg(test)]
+mod tests {
+    use metrics::Collector;
 
-//     #[test]
-//     fn test_counter() {
-//         let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
-//         let counter = Counter::with_opts(opts).unwrap();
-//         counter.inc();
-//         assert_eq!(counter.get() as u64, 1);
-//         counter.inc_by(42.0).unwrap();
-//         assert_eq!(counter.get() as u64, 43);
+    use super::*;
 
-//         let mf = counter.collect();
-//         let m = mf.get_metric().as_ref().get(0).unwrap();
-//         assert_eq!(m.get_label().len(), 2);
-//         assert_eq!(m.get_counter().get_value() as u64, 43);
-//     }
-// }
+    #[test]
+    fn test_histogram() {
+        let opts = HistogramOpts::new("test", "test help")
+            .const_label("a", "1")
+            .unwrap()
+            .const_label("b", "2")
+            .unwrap();
+        let histogram = Histogram::with_opts(opts).unwrap();
+        histogram.observe(0.5);
+        histogram.observe(1.0);
+
+        let mf = histogram.collect();
+        let m = mf.get_metric().as_ref().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 2);
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert_eq!(proto_histogram.get_sample_sum(), 1.5);
+    }
+}
