@@ -162,11 +162,14 @@ impl HistogramCore {
     }
 
     fn observe(&mut self, v: f64) {
-        if let Ok(i) = self.upper_bounds.binary_search_by(|probe| probe.partial_cmp(&v).unwrap()) {
-            self.count += 1;
+        // Try find the bucket.
+        let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
+        if let Some((i, _)) = iter.next() {
             self.counts[i] += 1;
-            self.sum += v;
         }
+
+        self.count += 1;
+        self.sum += v;
     }
 
     fn proto_histogram(&self) -> proto::Histogram {

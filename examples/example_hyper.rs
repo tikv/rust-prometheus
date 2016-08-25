@@ -15,14 +15,14 @@ extern crate prom;
 extern crate hyper;
 
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
 use prom::encoder::{Encoder, TextEncoder};
-use prom::{Counter, Opts, Registry};
+use prom::{Counter, Opts, Registry, Histogram, HistogramOpts};
 
 fn main() {
     let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
@@ -58,13 +58,25 @@ fn main() {
 
 // run runs a http server with a Registry and a Encoder, it blocks current thread.
 pub fn run(addr: &str, registry: Registry, encoder: TextEncoder) {
+    // rpc_durations_histogram_microseconds
+    let opts = HistogramOpts::new("text_encoder_encode_durations_histogram_millisecond",
+                                  "test help");
+    let histogram = Histogram::with_opts(opts).unwrap();
+    registry.register(Box::new(histogram.clone())).unwrap();
+
     println!("listening addr {:?}", addr);
     Server::http(addr)
         .unwrap()
         .handle(move |_: Request, mut res: Response| {
+            let start = Instant::now();
+
             let metric_familys = registry.gather();
             let mut buffer = vec![];
             encoder.encode(&metric_familys, &mut buffer).unwrap();
+
+            let spend = (start.elapsed().subsec_nanos() as f64) / 1e6;
+            histogram.observe(spend);
+
             res.headers_mut()
                 .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
             res.send(&buffer).unwrap();
