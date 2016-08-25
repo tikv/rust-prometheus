@@ -188,7 +188,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// number of VariableLabels in Desc.
     ///
     /// Note that for more than one label value, this method is prone to mistakes
-    /// caused by an incorrect order of arguments. Consider GetMetricWith(Labels) as
+    /// caused by an incorrect order of arguments. Consider get_metric_with(labels) as
     /// an alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
@@ -234,7 +234,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// number of VariableLabels in Desc.
     ///
     /// Note that for more than one label value, this method is prone to mistakes
-    /// caused by an incorrect order of arguments. Consider Delete(Labels) as an
+    /// caused by an incorrect order of arguments. Consider delete(labels) as an
     /// alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
