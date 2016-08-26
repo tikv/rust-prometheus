@@ -58,7 +58,6 @@ fn main() {
 
 // run runs a http server with a Registry and a Encoder, it blocks current thread.
 pub fn run(addr: &str, registry: Registry, encoder: TextEncoder) {
-    // rpc_durations_histogram_microseconds
     let opts = HistogramOpts::new("text_encoder_encode_durations_histogram_millisecond",
                                   "test help");
     let histogram = Histogram::with_opts(opts).unwrap();
