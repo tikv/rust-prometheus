@@ -40,6 +40,29 @@ fn check_bucket_lable(label: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
+    if buckets.is_empty() {
+        buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
+    }
+
+    for (i, upper_bound) in buckets.iter().enumerate() {
+        if i < (buckets.len() - 1) && *upper_bound >= buckets[i + 1] {
+            return Err(Error::Msg(format!("histogram buckets must be in increasing \
+                                            order: {} >= {}",
+                                          upper_bound,
+                                          buckets[i + 1])));
+        }
+    }
+
+    let tail = *buckets.last().unwrap();
+    if tail.is_sign_positive() && tail.is_infinite() {
+        // The +Inf bucket is implicit. Remove it here.
+        buckets.pop();
+    }
+
+    Ok(buckets)
+}
+
 /// `HistogramOpts` bundles the options for creating a Histogram metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
@@ -106,28 +129,8 @@ impl HistogramCore {
         HistogramCore::with_buckets(vec![]).unwrap()
     }
 
-    fn with_buckets(mut buckets: Vec<f64>) -> Result<HistogramCore> {
-        if buckets.is_empty() {
-            buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
-        } else {
-            let mut tail_inf = false;
-            for (i, upper_bound) in buckets.iter().enumerate() {
-                if i < (buckets.len() - 1) {
-                    if *upper_bound >= buckets[i + 1] {
-                        return Err(Error::Msg(format!("histogram buckets must be in increasing \
-                                                       order: {} >= {}",
-                                                      upper_bound,
-                                                      buckets[i + 1])));
-                    } else if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
-                        tail_inf = true;
-                    }
-                }
-            }
-            if tail_inf {
-                // The +Inf bucket is implicit. Remove it here.
-                buckets.pop();
-            }
-        }
+    fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
+        let buckets = try!(check_and_adjust_buckets(buckets));
 
         Ok(HistogramCore {
             sum: 0.0,
@@ -148,7 +151,7 @@ impl HistogramCore {
         self.sum += v;
     }
 
-    fn proto_histogram(&self) -> proto::Histogram {
+    fn proto(&self) -> proto::Histogram {
         let mut h = proto::Histogram::new();
         h.set_sample_sum(self.sum);
         h.set_sample_count(self.count);
@@ -234,7 +237,7 @@ impl Metric for Histogram {
         m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
 
         let core = self.core.read().unwrap();
-        let h = core.proto_histogram();
+        let h = core.proto();
         m.set_histogram(h);
 
         m
@@ -320,13 +323,18 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
 /// or negative, or if 'factor' is less than or equal 1.
 pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<f64>> {
     if count < 1 {
-        return Err(Error::Msg("exponential_buckets needs a positive count".to_owned()));
+        return Err(Error::Msg(format!("exponential_buckets needs a positive count, count: {}",
+                                      count)));
     }
     if start <= 0.0 {
-        return Err(Error::Msg("exponential_buckets needs a positive start value".to_owned()));
+        return Err(Error::Msg(format!("exponential_buckets needs a positive start value, \
+                                       start: {}",
+                                      start)));
     }
     if factor <= 1.0 {
-        return Err(Error::Msg("exponential_buckets needs a factor greater than 1".to_owned()));
+        return Err(Error::Msg(format!("exponential_buckets needs a factor greater than 1, \
+                                       factor: {}",
+                                      factor)));
     }
 
     let mut next = start;
@@ -341,8 +349,9 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 
 #[cfg(test)]
 mod tests {
+    use std::f64::{EPSILON, INFINITY};
+
     use metrics::Collector;
-    use std::f64::EPSILON;
 
     use super::*;
 
@@ -361,5 +370,34 @@ mod tests {
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
         assert!((proto_histogram.get_sample_sum() - 1.5).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_buckets_invalidation() {
+        let table = vec![
+            (vec![], true, DEFAULT_BUCKETS.len()),
+            (vec![-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0], true, 7),
+            (vec![-2.0, -1.0, -0.5, 10.0, 0.5, 1.0, 2.0], false, 7),
+            (vec![-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, INFINITY], true, 6),
+        ];
+
+        for (buckets, is_ok, length) in table {
+            let got = check_and_adjust_buckets(buckets);
+            assert_eq!(got.is_ok(), is_ok);
+            if is_ok {
+                assert_eq!(got.unwrap().len(), length);
+            }
+        }
+    }
+
+    #[test]
+    fn test_buckets() {
+        let got = linear_buckets(-15.0, 5.0, 6);
+        assert!(got.is_ok());
+        assert_eq!(got.unwrap(), vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0]);
+
+        let got = exponential_buckets(100.0, 1.2, 3);
+        assert!(got.is_ok());
+        assert_eq!(got.unwrap(), vec![100.0, 120.0, 144.0]);
     }
 }

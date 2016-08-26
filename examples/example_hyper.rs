@@ -67,8 +67,8 @@ lazy_static! {
 
 fn main() {
     let encoder = TextEncoder::new();
-    let addr = "127.0.0.1:9897";
-    println!("check out {}!", addr);
+    let addr = "127.0.0.1:9898";
+    println!("listening addr {:?}", addr);
     Server::http(addr)
         .unwrap()
         .handle(move |_: Request, mut res: Response| {

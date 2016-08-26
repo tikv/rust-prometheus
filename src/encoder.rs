@@ -35,6 +35,8 @@ pub type Format = &'static str;
 
 pub const TEXT_FORMAT: Format = "text/plain; version=0.0.4";
 
+const POSITIVE_INF: &'static str = "+Inf";
+
 /// Implementation of an `Encoder` that converts a `MetricFamily` proto message
 /// into text format.
 #[derive(Debug, Default)]
@@ -81,9 +83,7 @@ impl Encoder for TextEncoder {
                         let mut inf_seen = false;
                         for b in h.get_bucket() {
                             let upper_bound = b.get_upper_bound();
-                            let mut name_bucket = name.to_owned();
-                            name_bucket.push_str("_bucket");
-                            try!(write_sample(&name_bucket,
+                            try!(write_sample(&format!("{}_bucket", name),
                                               m,
                                               BUCKET_LABEL,
                                               &format!("{}", upper_bound),
@@ -94,23 +94,22 @@ impl Encoder for TextEncoder {
                             }
                         }
                         if !inf_seen {
-                            let mut name_bucket = name.to_owned();
-                            name_bucket.push_str("_bucket");
-                            try!(write_sample(&name_bucket,
+                            try!(write_sample(&format!("{}_bucket", name),
                                               m,
                                               BUCKET_LABEL,
-                                              "+Inf",
+                                              POSITIVE_INF,
                                               h.get_sample_count() as f64,
                                               writer));
                         }
 
-                        let mut name_sum = name.to_owned();
-                        name_sum.push_str("_sum");
-                        try!(write_sample(&name_sum, m, "", "", h.get_sample_sum(), writer));
+                        try!(write_sample(&format!("{}_sum", name),
+                                          m,
+                                          "",
+                                          "",
+                                          h.get_sample_sum(),
+                                          writer));
 
-                        let mut name_count = name.to_owned();
-                        name_count.push_str("_count");
-                        try!(write_sample(&name_count,
+                        try!(write_sample(&format!("{}_count", name),
                                           m,
                                           "",
                                           "",
