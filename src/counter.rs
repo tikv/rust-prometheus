@@ -36,7 +36,7 @@ impl Counter {
 
     pub fn with_opts(opts: Opts) -> Result<Counter> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        Counter::with_desc(desc, &vec![])
+        Counter::with_desc(desc, &[])
     }
 
     fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Counter> {
