@@ -1,7 +1,17 @@
 [package]
-name = "prom"
+name = "prometheus"
 version = "0.1.0"
 keywords = ["prometheus", "metrics"]
+authors = ["overvenus@gmail.com", "siddontang@gmail.com"]
+
+description = "a rust Prometheus client"
+repository = "https://github.com/pingcap/rust-prometheus"
+license = "Apache-2.0"
+
+include = [
+    "src/*.rs",
+    "Cargo.toml",
+]
 
 [features]
 default = []
@@ -10,7 +20,7 @@ dev = ["clippy"]
 [dependencies]
 protobuf = "1.0"
 quick-error = "0.2"
-clippy = {version = "*", optional = true}
+clippy = {version = "^0", optional = true}
 fnv = "1.0.3"
 lazy_static = "0.2.1"
 
