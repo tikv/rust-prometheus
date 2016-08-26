@@ -55,7 +55,7 @@ lazy_static! {
             HistogramOpts::new(
                 "example_http_request_duration_microseconds",
                 "The HTTP request latencies in microseconds.")
-                .const_label("handler", "all").unwrap();
+                .const_label("handler", "all");
 
         let histogram = Histogram::with_opts(histogram_opts).unwrap();
 

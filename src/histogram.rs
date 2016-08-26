@@ -22,54 +22,29 @@ use desc::Desc;
 use errors::{Result, Error};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
-use metrics::{Collector, Metric, build_fq_name};
+use metrics::{Collector, Metric, Opts};
 
-const DEFAULT_BUCKETS: &'static [f64; 11] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5,
-                                              5.0, 10.0];
+pub const DEFAULT_BUCKETS: &'static [f64; 11] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
+                                                  2.5, 5.0, 10.0];
 
 // `BUCKET_LABEL` is used for the label that defines the upper bound of a
 // bucket of a histogram ("le" -> "less or equal").
-const BUCKET_LABEL: &'static str = "le";
+pub const BUCKET_LABEL: &'static str = "le";
 
+#[inline]
+fn check_bucket_lable(label: &str) -> Result<()> {
+    if label == BUCKET_LABEL {
+        return Err(Error::Msg("`le` is not allowed as label name in histograms".to_owned()));
+    }
+
+    Ok(())
+}
 
 /// `HistogramOpts` bundles the options for creating a Histogram metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
 pub struct HistogramOpts {
-    // namespace, sub_system, and name are components of the fully-qualified
-    // name of the Metric (created by joining these components with
-    // "_"). Only Name is mandatory, the others merely help structuring the
-    // name. Note that the fully-qualified name of the metric must be a
-    // valid Prometheus metric name.
-    pub namespace: String,
-    pub sub_system: String,
-    pub name: String,
-
-    // help provides information about this metric. Mandatory!
-    //
-    // Metrics with the same fully-qualified name must have the same Help
-    // string.
-    pub help: String,
-
-    // const_labels are used to attach fixed labels to this metric. Metrics
-    // with the same fully-qualified name must have the same label names in
-    // their ConstLabels.
-    //
-    // Note that in most cases, labels have a value that varies during the
-    // lifetime of a process. Those labels are usually managed with a metric
-    // vector collector (like CounterVec, GaugeVec, UntypedVec). ConstLabels
-    // serve only special purposes. One is for the special case where the
-    // value of a label does not change during the lifetime of a process,
-    // e.g. if the revision of the running binary is put into a
-    // label. Another, more advanced purpose is if more than one Collector
-    // needs to collect Metrics with the same fully-qualified name. In that
-    // case, those Metrics must differ in the values of their
-    // ConstLabels. See the Collector examples.
-    //
-    // If the value of a label never changes (not even between binaries),
-    // that label most likely should not be a label at all (but part of the
-    // metric name).
-    pub const_labels: HashMap<String, String>,
+    pub common_opts: Opts,
 
     // buckets defines the buckets into which observations are counted. Each
     // element in the slice is the upper inclusive bound of a bucket. The
@@ -82,55 +57,39 @@ pub struct HistogramOpts {
 impl HistogramOpts {
     pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
         HistogramOpts {
-            namespace: "".to_owned(),
-            sub_system: "".to_owned(),
-            name: name.into(),
-            help: help.into(),
-            const_labels: HashMap::new(),
+            common_opts: Opts::new(name, help),
             buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
         }
     }
 
     pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
-        self.namespace = namesapce.into();
+        self.common_opts.namespace = namesapce.into();
         self
     }
 
     pub fn sub_system<S: Into<String>>(mut self, sub_system: S) -> Self {
-        self.sub_system = sub_system.into();
+        self.common_opts.sub_system = sub_system.into();
         self
     }
 
-    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Result<Self> {
-        for k in labels.keys() {
-            if k == BUCKET_LABEL {
-                return Err(Error::Msg("`le` is not allowed as label name in histograms"
-                    .to_owned()));
-            }
-        }
-
-        self.const_labels = labels;
-        Ok(self)
+    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
+        self.common_opts = self.common_opts.const_labels(labels);
+        self
     }
 
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Result<Self> {
-        let name = name.into();
-        if name == BUCKET_LABEL {
-            return Err(Error::Msg("`le` is not allowed as label name in histograms".to_owned()));
-        }
+    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        self.common_opts = self.common_opts.const_label(name, value);
+        self
+    }
 
-        self.const_labels.insert(name, value.into());
-        Ok(self)
+    pub fn fq_name(&self) -> String {
+        self.common_opts.fq_name()
     }
 
     pub fn buckets(mut self, buckets: Vec<f64>) -> Result<Self> {
         // TODO: check buckets order.
         self.buckets = buckets;
         Ok(self)
-    }
-
-    pub fn fq_name(&self) -> String {
-        build_fq_name(&self.namespace, &self.sub_system, &self.name)
     }
 }
 
@@ -218,14 +177,21 @@ pub struct Histogram {
 impl Histogram {
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
         let desc = try!(Desc::new(opts.fq_name(),
-                                  opts.help.clone(),
+                                  opts.common_opts.help.clone(),
                                   vec![],
-                                  opts.const_labels.clone()));
+                                  opts.common_opts.const_labels.clone()));
 
         Histogram::with_desc(desc, &[])
     }
 
     fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
+        for name in &desc.variable_labels {
+            try!(check_bucket_lable(&name));
+        }
+        for pair in &desc.const_label_pairs {
+            try!(check_bucket_lable(pair.get_name()));
+        }
+
         let pairs = make_label_pairs(&desc, label_values);
         let core = HistogramCore::new();
 
@@ -296,12 +262,65 @@ pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 impl HistogramVec {
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
+        let desc = try!(Desc::new(opts.fq_name(),
+                                  opts.common_opts.help,
+                                  variable_names,
+                                  opts.common_opts.const_labels));
         let metric_vec =
             MetricVec::create(desc, proto::MetricType::HISTOGRAM, HistogramVecBuilder {});
 
         Ok(metric_vec as HistogramVec)
     }
+}
+
+/// `linear_buckets` creates 'count' buckets, each 'width' wide, where the lowest
+/// bucket has an upper bound of 'start'. The final +Inf bucket is not counted
+/// and not included in the returned slice. The returned slice is meant to be
+/// used for the Buckets field of `HistogramOpts`.
+///
+/// The function returns an error if 'count' is zero or negative.
+pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> {
+    if count < 1 {
+        return Err(Error::Msg("LinearBuckets needs a positive count".to_owned()));
+    }
+
+    let mut next = start;
+    let mut buckets = Vec::with_capacity(count);
+    for _ in 0..count {
+        buckets.push(next);
+        next += width;
+    }
+
+    Ok(buckets)
+}
+
+/// `exponential_buckets` creates 'count' buckets, where the lowest bucket has an
+/// upper bound of 'start' and each following bucket's upper bound is 'factor'
+/// times the previous bucket's upper bound. The final +Inf bucket is not counted
+/// and not included in the returned slice. The returned slice is meant to be
+/// used for the Buckets field of `HistogramOpts`.
+///
+/// The function returns an error if 'count' is 0 or negative, if 'start' is 0
+/// or negative, or if 'factor' is less than or equal 1.
+pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<f64>> {
+    if count < 1 {
+        return Err(Error::Msg("exponential_buckets needs a positive count".to_owned()));
+    }
+    if start <= 0.0 {
+        return Err(Error::Msg("exponential_buckets needs a positive start value".to_owned()));
+    }
+    if factor <= 1.0 {
+        return Err(Error::Msg("exponential_buckets needs a factor greater than 1".to_owned()));
+    }
+
+    let mut next = start;
+    let mut buckets = Vec::with_capacity(count);
+    for _ in 0..count {
+        buckets.push(next);
+        next *= factor;
+    }
+
+    Ok(buckets)
 }
 
 #[cfg(test)]
@@ -315,9 +334,7 @@ mod tests {
     fn test_histogram() {
         let opts = HistogramOpts::new("test", "test help")
             .const_label("a", "1")
-            .unwrap()
-            .const_label("b", "2")
-            .unwrap();
+            .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
         histogram.observe(0.5);
         histogram.observe(1.0);

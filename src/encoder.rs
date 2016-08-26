@@ -16,6 +16,7 @@ use std::io::Write;
 use errors::{Result, Error};
 use proto::MetricFamily;
 use proto::{self, MetricType};
+use histogram::BUCKET_LABEL;
 
 pub trait Encoder {
     /// `encode` converts a slice of MetricFamily proto messages into target
@@ -84,7 +85,7 @@ impl Encoder for TextEncoder {
                             name_bucket.push_str("_bucket");
                             try!(write_sample(&name_bucket,
                                               m,
-                                              "le",
+                                              BUCKET_LABEL,
                                               &format!("{}", upper_bound),
                                               b.get_cumulative_count() as f64,
                                               writer));
@@ -97,7 +98,7 @@ impl Encoder for TextEncoder {
                             name_bucket.push_str("_bucket");
                             try!(write_sample(&name_bucket,
                                               m,
-                                              "le",
+                                              BUCKET_LABEL,
                                               "+Inf",
                                               h.get_sample_count() as f64,
                                               writer));
@@ -287,7 +288,7 @@ test_gauge{a="1",b="2"} 42
 
     #[test]
     fn test_text_encoder_histogram() {
-        let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1").unwrap();
+        let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1");
         let histogram = Histogram::with_opts(opts).unwrap();
         histogram.observe(0.25);
 
