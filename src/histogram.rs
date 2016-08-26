@@ -86,10 +86,9 @@ impl HistogramOpts {
         self.common_opts.fq_name()
     }
 
-    pub fn buckets(mut self, buckets: Vec<f64>) -> Result<Self> {
-        // TODO: check buckets order.
+    pub fn buckets(mut self, buckets: Vec<f64>) -> Self {
         self.buckets = buckets;
-        Ok(self)
+        self
     }
 }
 
@@ -110,6 +109,24 @@ impl HistogramCore {
     fn with_buckets(mut buckets: Vec<f64>) -> Result<HistogramCore> {
         if buckets.is_empty() {
             buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
+        } else {
+            let mut tail_inf = false;
+            for (i, upper_bound) in buckets.iter().enumerate() {
+                if i < (buckets.len() - 1) {
+                    if *upper_bound >= buckets[i + 1] {
+                        return Err(Error::Msg(format!("histogram buckets must be in increasing \
+                                                       order: {} >= {}",
+                                                      upper_bound,
+                                                      buckets[i + 1])));
+                    } else if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
+                        tail_inf = true;
+                    }
+                }
+            }
+            if tail_inf {
+                // The +Inf bucket is implicit. Remove it here.
+                buckets.pop();
+            }
         }
 
         Ok(HistogramCore {
@@ -213,9 +230,7 @@ impl Histogram {
 
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
-
         let mut m = proto::Metric::new();
-
         m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
 
         let core = self.core.read().unwrap();
@@ -237,6 +252,7 @@ impl Collector for Histogram {
         m.set_help(self.desc.help.clone());
         m.set_field_type(proto::MetricType::HISTOGRAM);
         m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
+
         m
     }
 }
