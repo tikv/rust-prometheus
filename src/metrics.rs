@@ -28,7 +28,7 @@ pub trait Collector: Sync + Send {
     fn collect(&self) -> proto::MetricFamily;
 }
 
-pub trait Metric {
+pub trait Metric: Sync + Send + Clone {
     /// `metric` returns the protocol Metric.
     fn metric(&self) -> proto::Metric;
 }

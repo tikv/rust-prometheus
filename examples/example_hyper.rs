@@ -17,13 +17,10 @@ extern crate hyper;
 use std::thread;
 use std::time::Duration;
 
-use hyper::{StatusCode, Decoder, Next, Encoder as HyperEncoder};
-use hyper::header::{ContentLength, ContentType};
-use hyper::net::HttpStream;
-use hyper::server::{Server, Handler, Request, Response};
+use hyper::header::ContentType;
+use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
-use prom::errors::{Error, Result};
 use prom::encoder::{Encoder, TextEncoder};
 use prom::{Counter, Opts, Registry};
 
@@ -56,78 +53,21 @@ fn main() {
 
     let encoder = TextEncoder::new();
     // Http server
-    run("127.0.0.1:9898", &r, &encoder).unwrap();
+    run("127.0.0.1:9898", r, encoder);
 }
 
 // run runs a http server with a Registry and a Encoder, it blocks current thread.
-pub fn run<'a>(addr: &str, reg: &Registry, encoder: &'a Encoder) -> Result<()> {
-    let reg = reg.clone();
-
-    let addr = try!(addr.parse().or_else(|e| Err(Error::Msg(format!("{:?}", e)))));
-    let server = try!(Server::http(&addr).or_else(|e| Err(Error::Msg(format!("{:?}", e)))));
-    if let Ok((listener, server)) = server.handle(|_| HttpHandler::new(reg.clone(), encoder)) {
-        println!("listening {}", listener);
-
-        server.run();
-    }
-
-    Err(Error::Msg("http server error".to_owned()))
-}
-
-pub struct HttpHandler<'a> {
-    registry: Registry,
-    encoder: &'a (Encoder + 'a),
-    buffer: Vec<u8>,
-    write_pos: usize,
-}
-
-impl<'a> HttpHandler<'a> {
-    pub fn new(registry: Registry, encoder: &'a Encoder) -> HttpHandler<'a> {
-        HttpHandler {
-            registry: registry,
-            encoder: encoder,
-            buffer: Vec::new(),
-            write_pos: 0,
-        }
-    }
-}
-
-impl<'a> Handler<HttpStream> for HttpHandler<'a> {
-    fn on_request(&mut self, _: Request<HttpStream>) -> Next {
-        // TODO: route requests
-        Next::write()
-    }
-
-    fn on_request_readable(&mut self, _: &mut Decoder<HttpStream>) -> Next {
-        Next::write()
-    }
-
-    fn on_response(&mut self, res: &mut Response) -> Next {
-        let metric_familys = self.registry.gather();
-        if let Ok(_) = self.encoder.encode(&metric_familys, &mut self.buffer) {
-            res.headers_mut().set(ContentLength(self.buffer.len() as u64));
-        } else {
-            return Next::remove();
-        }
-
-        res.set_status(StatusCode::Ok);
-        res.headers_mut().set(ContentType((&self.encoder.format_type()).parse::<Mime>().unwrap()));
-        Next::write()
-    }
-
-    fn on_response_writable(&mut self, encoder: &mut HyperEncoder<HttpStream>) -> Next {
-        match encoder.try_write(&self.buffer[self.write_pos..]) {
-            Ok(Some(n)) => {
-                if (self.write_pos + n) == self.buffer.len() {
-                    Next::end()
-                } else {
-                    // a partial write
-                    self.write_pos += n;
-                    Next::write()
-                }
-            }
-            Ok(None) => Next::write(),
-            Err(_) => Next::remove(),
-        }
-    }
+pub fn run(addr: &str, registry: Registry, encoder: TextEncoder) {
+    println!("listening addr {:?}", addr);
+    Server::http(addr)
+        .unwrap()
+        .handle(move |_: Request, mut res: Response| {
+            let metric_familys = registry.gather();
+            let mut buffer = vec![];
+            encoder.encode(&metric_familys, &mut buffer).unwrap();
+            res.headers_mut()
+                .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
+            res.send(&buffer).unwrap();
+        })
+        .unwrap();
 }

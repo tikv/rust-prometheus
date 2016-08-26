@@ -15,4 +15,4 @@ fnv = "1.0.3"
 lazy_static = "0.2.1"
 
 [dev-dependencies.hyper]
-git = "https://github.com/hyperium/hyper.git"
+version = "0.9"

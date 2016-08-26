@@ -49,10 +49,11 @@ impl Value {
     pub fn new(desc: Desc,
                value_type: ValueType,
                val: f64,
-               label_values: Vec<String>)
+               label_values: &[&str])
                -> Result<Value> {
         if desc.variable_labels.len() != label_values.len() {
-            return Err(Error::InconsistentCardinality);
+            return Err(Error::InconsistentCardinality(desc.variable_labels.len(),
+                                                      label_values.len()));
         }
 
         let label_pairs = make_label_pairs(&desc, label_values);
@@ -131,7 +132,7 @@ impl Value {
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: Vec<String>) -> Vec<LabelPair> {
+pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
     let total_len = desc.variable_labels.len() + desc.const_label_pairs.len();
     if total_len == 0 {
         return vec![];
@@ -145,7 +146,7 @@ pub fn make_label_pairs(desc: &Desc, label_values: Vec<String>) -> Vec<LabelPair
     for (i, n) in desc.variable_labels.iter().enumerate() {
         let mut label_pair = LabelPair::new();
         label_pair.set_name(n.clone());
-        label_pair.set_value(label_values[i].clone());
+        label_pair.set_value(label_values[i].to_owned());
         label_pairs.push(label_pair);
     }
 

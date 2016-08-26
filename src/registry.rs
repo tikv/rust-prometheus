@@ -160,8 +160,8 @@ pub fn gather() -> Vec<proto::MetricFamily> {
 #[cfg(test)]
 mod tests {
     use std::thread;
-
-    use counter::Counter;
+    use counter::{Counter, CounterVec};
+    use metrics::Opts;
 
     use super::*;
 
@@ -179,12 +179,17 @@ mod tests {
             assert_eq!(metric_familys.len(), 1);
         });
 
-        assert!(r.register(Box::new(counter.clone())).is_err());
-
         assert!(handler.join().is_ok());
 
+        assert!(r.register(Box::new(counter.clone())).is_err());
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
+
+        let counter_vec = CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"])
+            .unwrap();
+
+        r.register(Box::new(counter_vec.clone())).unwrap();
+        counter_vec.with_label_values(&["1", "2"]).inc();
     }
 
     #[test]
