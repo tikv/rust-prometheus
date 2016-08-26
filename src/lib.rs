@@ -18,6 +18,8 @@
 extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod proto;
 pub mod errors;
@@ -36,6 +38,6 @@ mod registry;
 mod vec;
 
 pub use self::desc::Desc;
-pub use self::registry::Registry;
+pub use self::registry::{Registry, gather, register, unregister};
 pub use self::metrics::{Collector, Opts};
 pub use self::counter::{Counter, CounterVec};
