@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate prom;
+extern crate prometheus;
 
 use std::thread;
 use std::time::Duration;
 
-use prom::encoder::{TextEncoder, Encoder};
-use prom::{Opts, Registry, Counter, CounterVec, Gauge, GaugeVec};
+use prometheus::encoder::{TextEncoder, Encoder};
+use prometheus::{Opts, Registry, Counter, CounterVec, Gauge, GaugeVec};
 
 fn main() {
     let counter_opts =
