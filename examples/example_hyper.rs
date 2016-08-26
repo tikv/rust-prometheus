@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate prom;
+extern crate prometheus;
 extern crate hyper;
 
 use std::thread;
@@ -21,15 +21,20 @@ use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
-use prom::encoder::{Encoder, TextEncoder};
-use prom::{Counter, Opts, Registry, Histogram, HistogramOpts};
+use prometheus::encoder::{Encoder, TextEncoder};
+use prometheus::{Counter, Opts, Registry, Gauge, Histogram, HistogramOpts};
 
 fn main() {
-    let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
-    let counter = Counter::with_opts(opts).unwrap();
+    let counter_opts =
+        Opts::new("test_counter", "test help").const_label("a", "1").const_label("b", "2");
+    let counter = Counter::with_opts(counter_opts).unwrap();
+
+    let gauge_opts = Opts::new("test_gauge", "test help").const_label("answer", "42");
+    let gauge = Gauge::with_opts(gauge_opts).unwrap();
 
     let r = Registry::new();
     r.register(Box::new(counter.clone())).unwrap();
+    r.register(Box::new(gauge.clone())).unwrap();
 
     counter.inc();
     assert_eq!(counter.get() as u64, 1);
@@ -46,8 +51,14 @@ fn main() {
 
     thread::spawn(move || {
         loop {
-            thread::sleep(Duration::from_millis(1500));
-            counter.inc();
+            thread::sleep(Duration::from_millis(500));
+            gauge.inc();
+
+            thread::sleep(Duration::from_millis(500));
+            gauge.dec();
+
+            thread::sleep(Duration::from_millis(500));
+            gauge.set(42.0);
         }
     });
 

@@ -71,6 +71,9 @@ impl Encoder for TextEncoder {
                     MetricType::COUNTER => {
                         try!(write_sample(name, m, "", "", m.get_counter().get_value(), writer));
                     }
+                    MetricType::GAUGE => {
+                        try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
+                    }
                     MetricType::HISTOGRAM => {
                         let h = m.get_histogram();
 
@@ -113,7 +116,7 @@ impl Encoder for TextEncoder {
                                           h.get_sample_count() as f64,
                                           writer));
                     }
-                    MetricType::GAUGE | MetricType::SUMMARY | MetricType::UNTYPED => {
+                    MetricType::SUMMARY | MetricType::UNTYPED => {
                         unimplemented!();
                     }
                 }
@@ -225,6 +228,7 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
 #[cfg(test)]
 mod tests {
     use counter::Counter;
+    use gauge::Gauge;
     use metrics::{Opts, Collector};
     use histogram::{Histogram, HistogramOpts};
 
@@ -246,8 +250,9 @@ mod tests {
 
     #[test]
     fn test_text_encoder() {
-        let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
-        let counter = Counter::with_opts(opts).unwrap();
+        let counter_opts =
+            Opts::new("test_counter", "test help").const_label("a", "1").const_label("b", "2");
+        let counter = Counter::with_opts(counter_opts).unwrap();
         counter.inc();
 
         let mf = counter.collect();
@@ -256,12 +261,28 @@ mod tests {
         let txt = encoder.encode(&[mf], &mut writer);
         assert!(txt.is_ok());
 
-        let ans = r##"# HELP test test help
-# TYPE test counter
-test{a="1",b="2"} 1
+        let counter_ans = r##"# HELP test_counter test help
+# TYPE test_counter counter
+test_counter{a="1",b="2"} 1
 "##;
+        assert_eq!(counter_ans.as_bytes(), writer.as_slice());
 
-        assert_eq!(ans.as_bytes(), writer.as_slice());
+        let gauge_opts =
+            Opts::new("test_gauge", "test help").const_label("a", "1").const_label("b", "2");
+        let gauge = Gauge::with_opts(gauge_opts).unwrap();
+        gauge.inc();
+        gauge.set(42.0);
+
+        let mf = gauge.collect();
+        writer.clear();
+        let txt = encoder.encode(&[mf], &mut writer);
+        assert!(txt.is_ok());
+
+        let gauge_ans = r##"# HELP test_gauge test help
+# TYPE test_gauge gauge
+test_gauge{a="1",b="2"} 42
+"##;
+        assert_eq!(gauge_ans.as_bytes(), writer.as_slice());
     }
 
     #[test]

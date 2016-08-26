@@ -18,6 +18,8 @@
 extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod proto;
 pub mod errors;
@@ -31,6 +33,8 @@ mod value;
 #[allow(dead_code)]
 mod counter;
 #[allow(dead_code)]
+mod gauge;
+#[allow(dead_code)]
 mod registry;
 #[allow(dead_code)]
 mod vec;
@@ -38,7 +42,8 @@ mod vec;
 mod histogram;
 
 pub use self::desc::Desc;
-pub use self::registry::Registry;
+pub use self::registry::{Registry, gather, register, unregister};
 pub use self::metrics::{Collector, Opts};
 pub use self::counter::{Counter, CounterVec};
+pub use self::gauge::{Gauge, GaugeVec};
 pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
