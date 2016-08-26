@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate prom;
+extern crate prometheus;
 extern crate hyper;
 
 use std::thread;
@@ -21,8 +21,8 @@ use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
-use prom::encoder::{Encoder, TextEncoder};
-use prom::{Counter, Opts, Registry};
+use prometheus::encoder::{Encoder, TextEncoder};
+use prometheus::{Counter, Opts, Registry};
 
 fn main() {
     let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
