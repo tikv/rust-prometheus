@@ -125,10 +125,6 @@ struct HistogramCore {
 }
 
 impl HistogramCore {
-    fn new() -> HistogramCore {
-        HistogramCore::with_buckets(vec![]).unwrap()
-    }
-
     fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
         let buckets = try!(check_and_adjust_buckets(buckets));
 
@@ -171,21 +167,25 @@ impl HistogramCore {
     }
 }
 
-// A `Histogram` counts individual observations from an event or sample stream in
-// configurable buckets. Similar to a summary, it also provides a sum of
-// observations and an observation count.
-//
-// On the Prometheus server, quantiles can be calculated from a Histogram using
-// the histogram_quantile function in the query language.
-//
-// Note that Histograms, in contrast to Summaries, can be aggregated with the
-// Prometheus query language (see the documentation for detailed
-// procedures). However, Histograms require the user to pre-define suitable
-// buckets, and they are in general less accurate. The Observe method of a
-// Histogram has a very low performance overhead in comparison with the Observe
-// method of a Summary.
-//
-// To create Histogram instances, use NewHistogram.
+impl Default for HistogramCore {
+    fn default() -> HistogramCore {
+        HistogramCore::with_buckets(vec![]).unwrap()
+    }
+}
+
+/// A `Histogram` counts individual observations from an event or sample stream in
+/// configurable buckets. Similar to a summary, it also provides a sum of
+/// observations and an observation count.
+///
+/// On the Prometheus server, quantiles can be calculated from a Histogram using
+/// the `histogram_quantile` function in the query language.
+///
+/// Note that Histograms, in contrast to Summaries, can be aggregated with the
+/// Prometheus query language (see the documentation for detailed
+/// procedures). However, Histograms require the user to pre-define suitable
+/// buckets, and they are in general less accurate. The Observe method of a
+/// Histogram has a very low performance overhead in comparison with the Observe
+/// method of a Summary.
 #[derive(Clone)]
 pub struct Histogram {
     desc: Desc,
@@ -213,7 +213,7 @@ impl Histogram {
         }
 
         let pairs = make_label_pairs(&desc, label_values);
-        let core = HistogramCore::new();
+        let core = HistogramCore::default();
 
         Ok(Histogram {
             desc: desc,
@@ -300,7 +300,7 @@ impl HistogramVec {
 /// The function returns an error if 'count' is zero or negative.
 pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> {
     if count < 1 {
-        return Err(Error::Msg("LinearBuckets needs a positive count".to_owned()));
+        return Err(Error::Msg(format!("LinearBuckets needs a positive count, count: {}", count)));
     }
 
     let mut next = start;
