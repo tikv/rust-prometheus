@@ -292,15 +292,20 @@ impl HistogramVec {
     }
 }
 
-/// `linear_buckets` creates 'count' buckets, each 'width' wide, where the lowest
-/// bucket has an upper bound of 'start'. The final +Inf bucket is not counted
+/// `linear_buckets` creates `count` buckets, each `width` wide, where the lowest
+/// bucket has an upper bound of `start`. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
 /// used for the Buckets field of `HistogramOpts`.
 ///
-/// The function returns an error if 'count' is zero or negative.
+/// The function returns an error if `count` is zero or `width` is zero or
+/// negative.
 pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> {
     if count < 1 {
         return Err(Error::Msg(format!("LinearBuckets needs a positive count, count: {}", count)));
+    }
+    if width <= 0.0 {
+        return Err(Error::Msg(format!("LinearBuckets needs a width greater then 0, width: {}",
+                                      width)));
     }
 
     let mut next = start;
@@ -313,14 +318,14 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
     Ok(buckets)
 }
 
-/// `exponential_buckets` creates 'count' buckets, where the lowest bucket has an
-/// upper bound of 'start' and each following bucket's upper bound is 'factor'
-/// times the previous bucket's upper bound. The final +Inf bucket is not counted
+/// `exponential_buckets` creates `count` buckets, where the lowest bucket has an
+/// upper bound of `start` and each following bucket`s upper bound is `factor`
+/// times the previous bucket`s upper bound. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
 /// used for the Buckets field of `HistogramOpts`.
 ///
-/// The function returns an error if 'count' is 0 or negative, if 'start' is 0
-/// or negative, or if 'factor' is less than or equal 1.
+/// The function returns an error if `count` is zero, if `start` is zero or
+/// negative, or if `factor` is less than or equal 1.
 pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<f64>> {
     if count < 1 {
         return Err(Error::Msg(format!("exponential_buckets needs a positive count, count: {}",
@@ -391,13 +396,33 @@ mod tests {
     }
 
     #[test]
-    fn test_buckets() {
-        let got = linear_buckets(-15.0, 5.0, 6);
-        assert!(got.is_ok());
-        assert_eq!(got.unwrap(), vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0]);
+    fn test_buckets_functions() {
+        let linear_table = vec![
+            (-15.0, 5.0, 6, true, vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0]),
+            (-15.0, 0.0, 6, false, vec![]),
+            (-15.0, 5.0, 0, false, vec![]),
+        ];
 
-        let got = exponential_buckets(100.0, 1.2, 3);
-        assert!(got.is_ok());
-        assert_eq!(got.unwrap(), vec![100.0, 120.0, 144.0]);
+        for (param1, param2, param3, is_ok, vec) in linear_table {
+            let got = linear_buckets(param1, param2, param3);
+            assert_eq!(got.is_ok(), is_ok);
+            if got.is_ok() {
+                assert_eq!(got.unwrap(), vec);
+            }
+        }
+
+        let exponential_table = vec![
+            (100.0, 1.2, 3, true, vec![100.0, 120.0, 144.0]),
+            (100.0, 0.5, 3, false, vec![]),
+            (100.0, 1.2, 0, false, vec![]),
+        ];
+
+        for (param1, param2, param3, is_ok, vec) in exponential_table {
+            let got = exponential_buckets(param1, param2, param3);
+            assert_eq!(got.is_ok(), is_ok);
+            if got.is_ok() {
+                assert_eq!(got.unwrap(), vec);
+            }
+        }
     }
 }
