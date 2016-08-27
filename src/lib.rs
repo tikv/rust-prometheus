@@ -24,6 +24,8 @@ extern crate lazy_static;
 pub mod proto;
 pub mod errors;
 pub mod encoder;
+#[macro_export]
+pub mod macros;
 
 mod metrics;
 mod desc;
