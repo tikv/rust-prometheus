@@ -13,72 +13,78 @@
 
 extern crate prometheus;
 extern crate hyper;
+#[macro_use]
+extern crate lazy_static;
 
-use std::thread;
-use std::time::Duration;
+use std::time::Instant;
 
 use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
 use prometheus::encoder::{Encoder, TextEncoder};
-use prometheus::{Counter, Gauge, Opts, Registry};
+use prometheus::{Counter, Opts, Gauge, Histogram, HistogramOpts};
 
-fn main() {
-    let counter_opts =
-        Opts::new("test_counter", "test help").const_label("a", "1").const_label("b", "2");
-    let counter = Counter::with_opts(counter_opts).unwrap();
+lazy_static! {
+    static ref HTTP_COUNTER: Counter = {
+        let counter_opts =
+            Opts::new("example_http_requests_total", "Total number of HTTP requests made.")
+                .const_label("handler", "all");
 
-    let gauge_opts = Opts::new("test_gauge", "test help").const_label("answer", "42");
-    let gauge = Gauge::with_opts(gauge_opts).unwrap();
+        let counter = Counter::with_opts(counter_opts).unwrap();
 
-    let r = Registry::new();
-    r.register(Box::new(counter.clone())).unwrap();
-    r.register(Box::new(gauge.clone())).unwrap();
+        prometheus::register(Box::new(counter.clone())).unwrap();
 
-    counter.inc();
-    assert_eq!(counter.get() as u64, 1);
-    counter.inc_by(42.0).unwrap();
-    assert_eq!(counter.get() as u64, 43);
+        counter
+    };
 
-    let c2 = counter.clone();
-    thread::spawn(move || {
-        loop {
-            thread::sleep(Duration::from_millis(300));
-            c2.inc();
-        }
-    });
+    static ref HTTP_BODY_GAUGE: Gauge = {
+        let gauge_opts =
+            Opts::new("example_http_response_size_bytes", "The HTTP response sizes in bytes.")
+                .const_label("handler", "all");
 
-    thread::spawn(move || {
-        loop {
-            thread::sleep(Duration::from_millis(500));
-            gauge.inc();
+        let gauge = Gauge::with_opts(gauge_opts).unwrap();
 
-            thread::sleep(Duration::from_millis(500));
-            gauge.dec();
+        prometheus::register(Box::new(gauge.clone())).unwrap();
 
-            thread::sleep(Duration::from_millis(500));
-            gauge.set(42.0);
-        }
-    });
+        gauge
+    };
 
-    let encoder = TextEncoder::new();
-    // Http server
-    run("127.0.0.1:9898", r, encoder);
+    static ref HTTP_REQ_HISTOGRAM: Histogram = {
+        let histogram_opts =
+            HistogramOpts::new(
+                "example_http_request_duration_microseconds",
+                "The HTTP request latencies in microseconds.")
+                .const_label("handler", "all");
+
+        let histogram = Histogram::with_opts(histogram_opts).unwrap();
+
+        prometheus::register(Box::new(histogram.clone())).unwrap();
+
+        histogram
+    };
 }
 
-// run runs a http server with a Registry and a Encoder, it blocks current thread.
-pub fn run(addr: &str, registry: Registry, encoder: TextEncoder) {
+fn main() {
+    let encoder = TextEncoder::new();
+    let addr = "127.0.0.1:9898";
     println!("listening addr {:?}", addr);
     Server::http(addr)
         .unwrap()
         .handle(move |_: Request, mut res: Response| {
-            let metric_familys = registry.gather();
+            HTTP_COUNTER.inc();
+            let start = Instant::now();
+
+            let metric_familys = prometheus::gather();
             let mut buffer = vec![];
             encoder.encode(&metric_familys, &mut buffer).unwrap();
             res.headers_mut()
                 .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
             res.send(&buffer).unwrap();
+
+            let spend = (start.elapsed().subsec_nanos() as f64) / 1e6;
+            HTTP_REQ_HISTOGRAM.observe(spend);
+            HTTP_BODY_GAUGE.set(buffer.len() as f64);
         })
         .unwrap();
 }

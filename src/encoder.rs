@@ -16,6 +16,7 @@ use std::io::Write;
 use errors::{Result, Error};
 use proto::MetricFamily;
 use proto::{self, MetricType};
+use histogram::BUCKET_LABEL;
 
 pub trait Encoder {
     /// `encode` converts a slice of MetricFamily proto messages into target
@@ -33,6 +34,8 @@ pub trait Encoder {
 pub type Format = &'static str;
 
 pub const TEXT_FORMAT: Format = "text/plain; version=0.0.4";
+
+const POSITIVE_INF: &'static str = "+Inf";
 
 /// Implementation of an `Encoder` that converts a `MetricFamily` proto message
 /// into text format.
@@ -74,7 +77,46 @@ impl Encoder for TextEncoder {
                     MetricType::GAUGE => {
                         try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
                     }
-                    MetricType::SUMMARY | MetricType::HISTOGRAM | MetricType::UNTYPED => {
+                    MetricType::HISTOGRAM => {
+                        let h = m.get_histogram();
+
+                        let mut inf_seen = false;
+                        for b in h.get_bucket() {
+                            let upper_bound = b.get_upper_bound();
+                            try!(write_sample(&format!("{}_bucket", name),
+                                              m,
+                                              BUCKET_LABEL,
+                                              &format!("{}", upper_bound),
+                                              b.get_cumulative_count() as f64,
+                                              writer));
+                            if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
+                                inf_seen = true;
+                            }
+                        }
+                        if !inf_seen {
+                            try!(write_sample(&format!("{}_bucket", name),
+                                              m,
+                                              BUCKET_LABEL,
+                                              POSITIVE_INF,
+                                              h.get_sample_count() as f64,
+                                              writer));
+                        }
+
+                        try!(write_sample(&format!("{}_sum", name),
+                                          m,
+                                          "",
+                                          "",
+                                          h.get_sample_sum(),
+                                          writer));
+
+                        try!(write_sample(&format!("{}_count", name),
+                                          m,
+                                          "",
+                                          "",
+                                          h.get_sample_count() as f64,
+                                          writer));
+                    }
+                    MetricType::SUMMARY | MetricType::UNTYPED => {
                         unimplemented!();
                     }
                 }
@@ -188,6 +230,7 @@ mod tests {
     use counter::Counter;
     use gauge::Gauge;
     use metrics::{Opts, Collector};
+    use histogram::{Histogram, HistogramOpts};
 
     use super::*;
 
@@ -240,5 +283,37 @@ test_counter{a="1",b="2"} 1
 test_gauge{a="1",b="2"} 42
 "##;
         assert_eq!(gauge_ans.as_bytes(), writer.as_slice());
+    }
+
+    #[test]
+    fn test_text_encoder_histogram() {
+        let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1");
+        let histogram = Histogram::with_opts(opts).unwrap();
+        histogram.observe(0.25);
+
+        let mf = histogram.collect();
+        let mut writer = Vec::<u8>::new();
+        let encoder = TextEncoder::new();
+        let res = encoder.encode(&[mf], &mut writer);
+        assert!(res.is_ok());
+
+        let ans = r##"# HELP test_histogram test help
+# TYPE test_histogram histogram
+test_histogram_bucket{a="1",le="0.005"} 0
+test_histogram_bucket{a="1",le="0.01"} 0
+test_histogram_bucket{a="1",le="0.025"} 0
+test_histogram_bucket{a="1",le="0.05"} 0
+test_histogram_bucket{a="1",le="0.1"} 0
+test_histogram_bucket{a="1",le="0.25"} 1
+test_histogram_bucket{a="1",le="0.5"} 1
+test_histogram_bucket{a="1",le="1"} 1
+test_histogram_bucket{a="1",le="2.5"} 1
+test_histogram_bucket{a="1",le="5"} 1
+test_histogram_bucket{a="1",le="10"} 1
+test_histogram_bucket{a="1",le="+Inf"} 1
+test_histogram_sum{a="1"} 0.25
+test_histogram_count{a="1"} 1
+"##;
+        assert_eq!(ans.as_bytes(), writer.as_slice());
     }
 }
