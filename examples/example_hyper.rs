@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[macro_use]
 extern crate prometheus;
 extern crate hyper;
 #[macro_use]
@@ -23,46 +24,30 @@ use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
 use prometheus::encoder::{Encoder, TextEncoder};
-use prometheus::{Counter, Opts, Gauge, Histogram, HistogramOpts};
+use prometheus::{Counter, Gauge, Histogram};
 
 lazy_static! {
-    static ref HTTP_COUNTER: Counter = {
-        let counter_opts =
-            Opts::new("example_http_requests_total", "Total number of HTTP requests made.")
-                .const_label("handler", "all");
+    static ref HTTP_COUNTER: Counter = register_counter_with!(
+        opts!(
+            "example_http_requests_total",
+            "Total number of HTTP requests made.",
+            labels!{"handler"=> "all",}
+        )
+    ).unwrap();
 
-        let counter = Counter::with_opts(counter_opts).unwrap();
+    static ref HTTP_BODY_GAUGE: Gauge = register_gauge_with!(
+        "example_http_response_size_bytes",
+        "The HTTP response sizes in bytes.",
+        labels!{"handler"=> "all",}
+    ).unwrap();
 
-        prometheus::register(Box::new(counter.clone())).unwrap();
-
-        counter
-    };
-
-    static ref HTTP_BODY_GAUGE: Gauge = {
-        let gauge_opts =
-            Opts::new("example_http_response_size_bytes", "The HTTP response sizes in bytes.")
-                .const_label("handler", "all");
-
-        let gauge = Gauge::with_opts(gauge_opts).unwrap();
-
-        prometheus::register(Box::new(gauge.clone())).unwrap();
-
-        gauge
-    };
-
-    static ref HTTP_REQ_HISTOGRAM: Histogram = {
-        let histogram_opts =
-            HistogramOpts::new(
-                "example_http_request_duration_microseconds",
-                "The HTTP request latencies in microseconds.")
-                .const_label("handler", "all");
-
-        let histogram = Histogram::with_opts(histogram_opts).unwrap();
-
-        prometheus::register(Box::new(histogram.clone())).unwrap();
-
-        histogram
-    };
+    static ref HTTP_REQ_HISTOGRAM: Histogram = register_histogram_with!(
+        histogram_opts!(
+            "example_http_request_duration_microseconds",
+            "The HTTP request latencies in microseconds.",
+            labels!{"handler"=> "all",}
+        )
+    ).unwrap();
 }
 
 fn main() {

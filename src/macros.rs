@@ -13,15 +13,22 @@
 
 #[macro_export]
 macro_rules! labels {
-    ( $ ( $ KEY : expr => $ VALUE : expr , ) * ) => {
+    () => {
         {
             use std::collections::HashMap;
 
-            let lbs = HashMap::new();
+            HashMap::new()
+        }
+    };
+
+    ( $ ( $ KEY : expr => $ VALUE : expr , ) + ) => {
+        {
+            use std::collections::HashMap;
+
+            let mut lbs = HashMap::new();
             $(
-                let mut lbs = lbs;
                 lbs.insert($KEY, $VALUE);
-            )*
+            )+
 
             lbs
         }
