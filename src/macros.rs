@@ -30,19 +30,16 @@ macro_rules! labels {
 
 #[macro_export]
 macro_rules! opts {
-    ($NAME: expr, $HELP: expr) => {
-        $crate::Opts::new($NAME, $HELP)
-    };
-
-    ($NAME: expr, $HELP: expr $(, $LABELS: expr)+) => {
+    ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
         {
             use std::collections::HashMap;
 
-            let opts = opts!($NAME, $HELP);
-            let mut lbs = HashMap::<String, String>::new();
+            let opts = $crate::Opts::new($NAME, $HELP);
+            let lbs = HashMap::<String, String>::new();
             $(
+                let mut lbs = lbs;
                 lbs.extend($LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
-            )+
+            )*
 
             opts.const_labels(lbs)
         }
@@ -51,13 +48,9 @@ macro_rules! opts {
 
 #[macro_export]
 macro_rules! histogram_opts {
-    ($NAME: expr, $HELP: expr) => {
-        $crate::HistogramOpts::new($NAME, $HELP)
-    };
-
     ($NAME: expr, $HELP: expr, [ $($BUCKETS: expr), * ]) => {
         {
-            let his_opts = histogram_opts!($NAME, $HELP);
+            let his_opts = $crate::HistogramOpts::new($NAME, $HELP);
 
             let buckets = Vec::new();
             $(
@@ -81,15 +74,14 @@ macro_rules! histogram_opts {
         }
     };
 
-    ($NAME: expr, $HELP: expr $(, $LABELS: expr)+) => {
+    ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
         {
-            let opts = opts!($NAME, $HELP $(, $LABELS ) +);
+            let opts = opts!($NAME, $HELP $(, $LABELS ) *);
 
             $crate::HistogramOpts::from(opts)
         }
     }
 }
-
 
 #[macro_export]
 macro_rules! register_counter_with {
@@ -119,6 +111,28 @@ macro_rules! register_gauge_with {
     }
 }
 
+#[macro_export]
+macro_rules! register_histogram_with {
+    ($NAME: expr, $HELP: expr) => {
+        register_histogram_with!(histogram_opts!($NAME, $HELP))
+    };
+
+    ($NAME: expr, $HELP: expr, $LABELS: expr) => {
+        register_histogram_with!(histogram_opts!($NAME, $HELP, $LABELS))
+    };
+
+    ($NAME: expr, $HELP: expr, $LABELS: expr, [ $($BUCKETS: expr), + ]) => {
+        register_histogram_with!(
+            histogram_opts!($NAME, $HELP, $LABELS, [ $($BUCKETS), + ]))
+    };
+
+    ($OPTS: expr) => {
+        {
+            let histogram = $crate::Histogram::with_opts($OPTS).unwrap();
+            $crate::register(Box::new(histogram.clone())).map(|_| histogram)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -207,9 +221,7 @@ mod tests {
         assert!(opts.common_opts.const_labels.get("foo").is_some());
         assert_eq!(opts.common_opts.const_labels.get("foo").unwrap(), "bar");
 
-        let opts = histogram_opts!(name,
-                                   help,
-                                   labels!{"test" => "hello", "foo" => "bar",});
+        let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
         assert_eq!(opts.common_opts.const_labels.len(), 2);
         assert!(opts.common_opts.const_labels.get("test").is_some());
         assert_eq!(opts.common_opts.const_labels.get("test").unwrap(), "hello");
@@ -225,5 +237,27 @@ mod tests {
                                    labels!{"a" => "c",},
                                    [Vec::from(&[1.0, 2.0] as &[f64]), Vec::from(&[3.0] as &[f64])]);
         assert_eq!(opts.buckets.len(), 3);
+    }
+
+    #[test]
+    fn test_macro_histogram() {
+        let opts = histogram_opts!("test_macro_histogram",
+                                   "help",
+                                   labels!{"test" => "hello", "foo" => "bar",});
+
+        let res1 = register_histogram_with!(opts);
+        assert!(res1.is_ok());
+
+        let res2 = register_histogram_with!("test_macro_histogram_2", "help");
+        assert!(res2.is_ok());
+
+        let res3 = register_histogram_with!("test_macro_histogram_3", "help", labels!{"a" => "b",});
+        assert!(res3.is_ok());
+
+        let res4 = register_histogram_with!("test_macro_histogram_4",
+                                            "help",
+                                            labels!{"a" => "b",},
+                                            [Vec::from(&[1.0, 2.0] as &[f64])]);
+        assert!(res4.is_ok());
     }
 }

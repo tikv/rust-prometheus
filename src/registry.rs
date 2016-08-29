@@ -197,7 +197,7 @@ mod tests {
         let counter = Counter::new("test", "test help").unwrap();
 
         assert!(register(Box::new(counter.clone())).is_ok());
-        assert_eq!(gather().len(), 1);
+        assert!(gather().len() != 0);
 
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
