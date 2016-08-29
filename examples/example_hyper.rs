@@ -31,21 +31,21 @@ lazy_static! {
         opts!(
             "example_http_requests_total",
             "Total number of HTTP requests made.",
-            labels!{"handler"=> "all",}
+            labels!{"handler" => "all",}
         )
     ).unwrap();
 
     static ref HTTP_BODY_GAUGE: Gauge = register_gauge!(
         "example_http_response_size_bytes",
         "The HTTP response sizes in bytes.",
-        labels!{"handler"=> "all",}
+        labels!{"handler" => "all",}
     ).unwrap();
 
     static ref HTTP_REQ_HISTOGRAM: Histogram = register_histogram!(
         histogram_opts!(
             "example_http_request_duration_microseconds",
             "The HTTP request latencies in microseconds.",
-            labels!{"handler"=> "all",}
+            labels!{"handler" => "all",}
         )
     ).unwrap();
 }
