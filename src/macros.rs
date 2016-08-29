@@ -50,6 +50,48 @@ macro_rules! opts {
 }
 
 #[macro_export]
+macro_rules! histogram_opts {
+    ($NAME: expr, $HELP: expr) => {
+        $crate::HistogramOpts::new($NAME, $HELP)
+    };
+
+    ($NAME: expr, $HELP: expr, [ $($BUCKETS: expr), * ]) => {
+        {
+            let his_opts = histogram_opts!($NAME, $HELP);
+
+            let buckets = Vec::new();
+            $(
+                let mut buckets = buckets;
+                buckets.extend($BUCKETS);
+            )*;
+
+            his_opts.buckets(buckets)
+        }
+    };
+
+    ($NAME: expr, $HELP: expr , $LABELS: expr, [ $($BUCKETS: expr), + ]) => {
+        {
+            use std::collections::HashMap;
+            use std::iter::FromIterator;
+
+            let his_opts = histogram_opts!($NAME, $HELP, [ $( $BUCKETS ), + ]);
+
+            his_opts.const_labels(
+                HashMap::from_iter($LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into()))))
+        }
+    };
+
+    ($NAME: expr, $HELP: expr $(, $LABELS: expr)+) => {
+        {
+            let opts = opts!($NAME, $HELP $(, $LABELS ) +);
+
+            $crate::HistogramOpts::from(opts)
+        }
+    }
+}
+
+
+#[macro_export]
 macro_rules! register_counter_with {
     ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
         register_counter_with!(opts!($NAME, $HELP $(, $LABELS)*))
@@ -102,7 +144,6 @@ mod tests {
         let help = "test opts help";
 
         let opts = opts!(name, help);
-
         assert_eq!(opts.name, name);
         assert_eq!(opts.help, help);
 
@@ -150,5 +191,39 @@ mod tests {
 
         let res3 = register_gauge_with!("test_macro_gauge_3", "help", labels!{"a" => "b",});
         assert!(res3.is_ok());
+    }
+
+    #[test]
+    fn test_macro_histogram_opts() {
+        let name = "test_histogram_opts";
+        let help = "test opts help";
+
+        let opts = histogram_opts!(name, help);
+        assert_eq!(opts.common_opts.name, name);
+        assert_eq!(opts.common_opts.help, help);
+
+        let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
+        assert_eq!(opts.common_opts.const_labels.len(), 2);
+        assert!(opts.common_opts.const_labels.get("foo").is_some());
+        assert_eq!(opts.common_opts.const_labels.get("foo").unwrap(), "bar");
+
+        let opts = histogram_opts!(name,
+                                   help,
+                                   labels!{"test" => "hello", "foo" => "bar",});
+        assert_eq!(opts.common_opts.const_labels.len(), 2);
+        assert!(opts.common_opts.const_labels.get("test").is_some());
+        assert_eq!(opts.common_opts.const_labels.get("test").unwrap(), "hello");
+
+        let opts = histogram_opts!(name, help, []);
+        assert_eq!(opts.buckets.len(), 0);
+
+        let opts = histogram_opts!(name, help, [Vec::from(&[1.0, 2.0] as &[f64])]);
+        assert_eq!(opts.buckets.len(), 2);
+
+        let opts = histogram_opts!(name,
+                                   help,
+                                   labels!{"a" => "c",},
+                                   [Vec::from(&[1.0, 2.0] as &[f64]), Vec::from(&[3.0] as &[f64])]);
+        assert_eq!(opts.buckets.len(), 3);
     }
 }

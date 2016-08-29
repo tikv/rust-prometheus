@@ -115,6 +115,15 @@ impl HistogramOpts {
     }
 }
 
+impl From<Opts> for HistogramOpts {
+    fn from(opts: Opts) -> HistogramOpts {
+        HistogramOpts {
+            common_opts: opts,
+            buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct HistogramCore {
     sum: f64,
