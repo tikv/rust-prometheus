@@ -40,9 +40,20 @@ mod gauge;
 mod registry;
 #[allow(dead_code)]
 mod vec;
+#[allow(dead_code)]
+mod histogram;
 
+// Structs
 pub use self::desc::Desc;
-pub use self::registry::{Registry, gather, register, unregister};
+pub use self::registry::Registry;
 pub use self::metrics::{Collector, Opts};
 pub use self::counter::{Counter, CounterVec};
 pub use self::gauge::{Gauge, GaugeVec};
+pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
+
+// functions
+pub use self::registry::{gather, register, unregister};
+pub use self::histogram::{linear_buckets, exponential_buckets};
+
+// Constants
+pub use self::histogram::{DEFAULT_BUCKETS, BUCKET_LABEL};
