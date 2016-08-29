@@ -91,9 +91,9 @@ macro_rules! histogram_opts {
 }
 
 #[macro_export]
-macro_rules! register_counter_with {
+macro_rules! register_counter {
     ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
-        register_counter_with!(opts!($NAME, $HELP $(, $LABELS)*))
+        register_counter!(opts!($NAME, $HELP $(, $LABELS)*))
     };
 
     ( $ OPTS : expr ) => {
@@ -105,9 +105,9 @@ macro_rules! register_counter_with {
 }
 
 #[macro_export]
-macro_rules! register_gauge_with {
+macro_rules! register_gauge {
     ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
-        register_gauge_with!(opts!($NAME, $HELP $(, $LABELS)*))
+        register_gauge!(opts!($NAME, $HELP $(, $LABELS)*))
     };
 
     ( $ OPTS : expr ) => {
@@ -119,17 +119,17 @@ macro_rules! register_gauge_with {
 }
 
 #[macro_export]
-macro_rules! register_histogram_with {
+macro_rules! register_histogram {
     ( $ NAME : expr , $ HELP : expr ) => {
-        register_histogram_with!(histogram_opts!($NAME, $HELP))
+        register_histogram!(histogram_opts!($NAME, $HELP))
     };
 
     ( $ NAME : expr , $ HELP : expr , $ LABELS : expr ) => {
-        register_histogram_with!(histogram_opts!($NAME, $HELP, $LABELS))
+        register_histogram!(histogram_opts!($NAME, $HELP, $LABELS))
     };
 
     ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
-        register_histogram_with!(
+        register_histogram!(
             histogram_opts!($NAME, $HELP, $LABELS, [ $($BUCKETS), + ]))
     };
 
@@ -144,6 +144,7 @@ macro_rules! register_histogram_with {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use histogram::{linear_buckets, exponential_buckets};
 
     #[test]
     fn test_macro_labels() {
@@ -188,13 +189,13 @@ mod tests {
                          "help",
                          labels!{"test" => "hello", "foo" => "bar",});
 
-        let res1 = register_counter_with!(opts);
+        let res1 = register_counter!(opts);
         assert!(res1.is_ok());
 
-        let res2 = register_counter_with!("test_macro_counter_2", "help");
+        let res2 = register_counter!("test_macro_counter_2", "help");
         assert!(res2.is_ok());
 
-        let res3 = register_counter_with!("test_macro_counter_3", "help", labels!{ "a" => "b",});
+        let res3 = register_counter!("test_macro_counter_3", "help", labels!{ "a" => "b",});
         assert!(res3.is_ok());
     }
 
@@ -204,13 +205,13 @@ mod tests {
                          "help",
                          labels!{"test" => "hello", "foo" => "bar",});
 
-        let res1 = register_gauge_with!(opts);
+        let res1 = register_gauge!(opts);
         assert!(res1.is_ok());
 
-        let res2 = register_gauge_with!("test_macro_gauge_2", "help");
+        let res2 = register_gauge!("test_macro_gauge_2", "help");
         assert!(res2.is_ok());
 
-        let res3 = register_gauge_with!("test_macro_gauge_3", "help", labels!{"a" => "b",});
+        let res3 = register_gauge!("test_macro_gauge_3", "help", labels!{"a" => "b",});
         assert!(res3.is_ok());
     }
 
@@ -244,6 +245,13 @@ mod tests {
                                    labels!{"a" => "c",},
                                    [Vec::from(&[1.0, 2.0] as &[f64]), Vec::from(&[3.0] as &[f64])]);
         assert_eq!(opts.buckets.len(), 3);
+
+        let opts = histogram_opts!(name,
+                                   help,
+                                   labels!{"a" => "c",},
+                                   [linear_buckets(1.0, 0.5, 4).unwrap(),
+                                    exponential_buckets(4.0, 1.1, 4).unwrap()]);
+        assert_eq!(opts.buckets.len(), 8);
     }
 
     #[test]
@@ -252,19 +260,19 @@ mod tests {
                                    "help",
                                    labels!{"test" => "hello", "foo" => "bar",});
 
-        let res1 = register_histogram_with!(opts);
+        let res1 = register_histogram!(opts);
         assert!(res1.is_ok());
 
-        let res2 = register_histogram_with!("test_macro_histogram_2", "help");
+        let res2 = register_histogram!("test_macro_histogram_2", "help");
         assert!(res2.is_ok());
 
-        let res3 = register_histogram_with!("test_macro_histogram_3", "help", labels!{"a" => "b",});
+        let res3 = register_histogram!("test_macro_histogram_3", "help", labels!{"a" => "b",});
         assert!(res3.is_ok());
 
-        let res4 = register_histogram_with!("test_macro_histogram_4",
-                                            "help",
-                                            labels!{"a" => "b",},
-                                            [Vec::from(&[1.0, 2.0] as &[f64])]);
+        let res4 = register_histogram!("test_macro_histogram_4",
+                                       "help",
+                                       labels!{"a" => "b",},
+                                       [Vec::from(&[1.0, 2.0] as &[f64])]);
         assert!(res4.is_ok());
     }
 }

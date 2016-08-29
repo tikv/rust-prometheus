@@ -27,7 +27,7 @@ use prometheus::encoder::{Encoder, TextEncoder};
 use prometheus::{Counter, Gauge, Histogram};
 
 lazy_static! {
-    static ref HTTP_COUNTER: Counter = register_counter_with!(
+    static ref HTTP_COUNTER: Counter = register_counter!(
         opts!(
             "example_http_requests_total",
             "Total number of HTTP requests made.",
@@ -35,13 +35,13 @@ lazy_static! {
         )
     ).unwrap();
 
-    static ref HTTP_BODY_GAUGE: Gauge = register_gauge_with!(
+    static ref HTTP_BODY_GAUGE: Gauge = register_gauge!(
         "example_http_response_size_bytes",
         "The HTTP response sizes in bytes.",
         labels!{"handler"=> "all",}
     ).unwrap();
 
-    static ref HTTP_REQ_HISTOGRAM: Histogram = register_histogram_with!(
+    static ref HTTP_REQ_HISTOGRAM: Histogram = register_histogram!(
         histogram_opts!(
             "example_http_request_duration_microseconds",
             "The HTTP request latencies in microseconds.",
