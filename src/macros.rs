@@ -13,7 +13,7 @@
 
 #[macro_export]
 macro_rules! labels {
-    ($($KEY: expr => $VALUE: expr ,)*) => {
+    ( $ ( $ KEY : expr => $ VALUE : expr , ) * ) => {
         {
             use std::collections::HashMap;
 
@@ -30,7 +30,7 @@ macro_rules! labels {
 
 #[macro_export]
 macro_rules! opts {
-    ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
         {
             use std::collections::HashMap;
 
@@ -48,7 +48,7 @@ macro_rules! opts {
 
 #[macro_export]
 macro_rules! histogram_opts {
-    ($NAME: expr, $HELP: expr, [ $($BUCKETS: expr), * ]) => {
+    ( $ NAME : expr , $ HELP : expr , [ $ ( $ BUCKETS : expr ) , * ] ) => {
         {
             let his_opts = $crate::HistogramOpts::new($NAME, $HELP);
 
@@ -62,7 +62,7 @@ macro_rules! histogram_opts {
         }
     };
 
-    ($NAME: expr, $HELP: expr , $LABELS: expr, [ $($BUCKETS: expr), + ]) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
         {
             use std::collections::HashMap;
             use std::iter::FromIterator;
@@ -74,7 +74,7 @@ macro_rules! histogram_opts {
         }
     };
 
-    ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
         {
             let opts = opts!($NAME, $HELP $(, $LABELS ) *);
 
@@ -85,11 +85,11 @@ macro_rules! histogram_opts {
 
 #[macro_export]
 macro_rules! register_counter_with {
-    ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
         register_counter_with!(opts!($NAME, $HELP $(, $LABELS)*))
     };
 
-    ($OPTS: expr) => {
+    ( $ OPTS : expr ) => {
         {
             let counter = $crate::Counter::with_opts($OPTS).unwrap();
             $crate::register(Box::new(counter.clone())).map(|_| counter)
@@ -99,11 +99,11 @@ macro_rules! register_counter_with {
 
 #[macro_export]
 macro_rules! register_gauge_with {
-    ($NAME: expr, $HELP: expr $(, $LABELS: expr)*) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
         register_gauge_with!(opts!($NAME, $HELP $(, $LABELS)*))
     };
 
-    ($OPTS: expr) => {
+    ( $ OPTS : expr ) => {
         {
             let gauge = $crate::Gauge::with_opts($OPTS).unwrap();
             $crate::register(Box::new(gauge.clone())).map(|_| gauge)
@@ -113,20 +113,20 @@ macro_rules! register_gauge_with {
 
 #[macro_export]
 macro_rules! register_histogram_with {
-    ($NAME: expr, $HELP: expr) => {
+    ( $ NAME : expr , $ HELP : expr ) => {
         register_histogram_with!(histogram_opts!($NAME, $HELP))
     };
 
-    ($NAME: expr, $HELP: expr, $LABELS: expr) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr ) => {
         register_histogram_with!(histogram_opts!($NAME, $HELP, $LABELS))
     };
 
-    ($NAME: expr, $HELP: expr, $LABELS: expr, [ $($BUCKETS: expr), + ]) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
         register_histogram_with!(
             histogram_opts!($NAME, $HELP, $LABELS, [ $($BUCKETS), + ]))
     };
 
-    ($OPTS: expr) => {
+    ( $ OPTS : expr ) => {
         {
             let histogram = $crate::Histogram::with_opts($OPTS).unwrap();
             $crate::register(Box::new(histogram.clone())).map(|_| histogram)
