@@ -27,7 +27,7 @@ use errors::{Result, Error};
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
     type Output: Metric;
-    /// `build` builds a Metric with description and corresponding label names. 
+    /// `build` builds a Metric with description and corresponding label names.
     fn build(&self, &Desc, &[&str]) -> Result<Self::Output>;
 }
 
@@ -149,10 +149,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 }
 
-/// MetricVec is a Collector to bundle metrics of the same name that
-/// differ in their label values. MetricVec is usually not used directly but as a
+/// `MetricVec` is a Collector to bundle metrics of the same name that
+/// differ in their label values. `MetricVec` is usually not used directly but as a
 /// building block for implementations of vectors of a given metric
-/// type. GaugeVec, CounterVec, SummaryVec, and UntypedVec are examples already
+/// type. `GaugeVec`, `CounterVec`, `SummaryVec`, and `UntypedVec` are examples already
 /// provided in this package.
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
@@ -160,7 +160,7 @@ pub struct MetricVec<T: MetricVecBuilder> {
 }
 
 impl<T: MetricVecBuilder> MetricVec<T> {
-    /// `create` creates a MetricVec with description `desc`, a metric type `metric_type` and 
+    /// `create` creates a MetricVec with description `desc`, a metric type `metric_type` and
     /// a MetricVecBuilder `new_metric`.
     pub fn create(desc: Desc, metric_type: MetricType, new_metric: T) -> MetricVec<T> {
         let v = MetricVecCore {
