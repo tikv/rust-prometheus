@@ -29,11 +29,13 @@ pub struct Counter {
 }
 
 impl Counter {
+    /// `new` creates a `Counter` with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Counter> {
         let opts = Opts::new(name, help);
         Counter::with_opts(opts)
     }
 
+    /// `with_opts` creates a `Counter` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Counter> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
         Counter::with_desc(desc, &[])
@@ -116,8 +118,9 @@ impl CounterVec {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use metrics::{Opts, Collector};
+
+    use super::*;
 
     #[test]
     fn test_counter() {

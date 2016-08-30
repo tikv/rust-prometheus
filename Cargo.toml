@@ -17,6 +17,9 @@ include = [
 default = []
 dev = ["clippy"]
 
+[[bench]]
+name = "benches"
+
 [dependencies]
 protobuf = "1.0"
 quick-error = "0.2"

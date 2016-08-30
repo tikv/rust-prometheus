@@ -29,11 +29,13 @@ pub struct Gauge {
 }
 
 impl Gauge {
+    /// `new` create a `Guage` with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Gauge> {
         let opts = Opts::new(name, help);
         Gauge::with_opts(opts)
     }
 
+    /// `with_opts` create a `Guage` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Gauge> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
         Gauge::with_desc(desc, &[])

@@ -95,6 +95,8 @@ impl RegistryCore {
     }
 }
 
+/// `Registry` registers Prometheus collectors, collects their metrics, and gathers
+/// them into `MetricFamilies` for exposition.
 #[derive(Clone)]
 pub struct Registry {
     r: Arc<RwLock<RegistryCore>>,
@@ -112,18 +114,35 @@ impl Default for Registry {
 }
 
 impl Registry {
+    /// `new` creates a Registry.
     pub fn new() -> Registry {
         Registry::default()
     }
 
+    /// `register` registers a new Collector to be included in metrics
+    /// collection. It returns an error if the descriptors provided by the
+    /// Collector are invalid or if they — in combination with descriptors of
+    /// already registered Collectors — do not fulfill the consistency and
+    /// uniqueness criteria described in the documentation of `Desc`.
+    ///
+    /// If the provided Collector is equal to a Collector already registered
+    /// (which includes the case of re-registering the same Collector), the
+    /// AlreadyReg error returns.
     pub fn register(&self, c: Box<Collector>) -> Result<()> {
         self.r.write().unwrap().register(c)
     }
 
+    /// `unregister` unregisters the Collector that equals the Collector passed
+    /// in as an argument.  (Two Collectors are considered equal if their
+    /// Describe method yields the same set of descriptors.) The function
+    /// returns error when the Collector is not registered.
     pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
         self.r.write().unwrap().unregister(c)
     }
 
+    /// `gather` calls the Collect method of the registered Collectors and then
+    /// gathers the collected metrics into a lexicographically sorted slice
+    /// of MetricFamily protobufs.
     pub fn gather(&self) -> Vec<proto::MetricFamily> {
         self.r.read().unwrap().gather()
     }

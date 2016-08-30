@@ -20,6 +20,8 @@ use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType
 use desc::Desc;
 use errors::{Result, Error};
 
+/// `ValueType` is an enumeration of metric types that represent a simple value
+/// for `Counter`, `Gauge`, and `Untyped`.
 pub enum ValueType {
     Counter,
     Gauge,
@@ -27,6 +29,7 @@ pub enum ValueType {
 }
 
 impl ValueType {
+    /// `metric_type` returns the corresponding proto metric type.
     pub fn metric_type(&self) -> MetricType {
         match *self {
             ValueType::Counter => MetricType::COUNTER,
@@ -37,6 +40,9 @@ impl ValueType {
 }
 
 /// `Value` is a generic metric for Counter, Gauge and Untyped.
+/// Its effective type is determined by `ValueType`. This is a low-level
+/// building block used by the library to back the implementations of
+/// `Counter`, `Gauge`, and `Untyped`.
 pub struct Value {
     pub desc: Desc,
     // TODO: like prometheus client go, use atomic u64.
