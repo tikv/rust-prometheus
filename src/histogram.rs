@@ -288,6 +288,9 @@ impl MetricVecBuilder for HistogramVecBuilder {
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
+    /// `new` creates a new `HistogramVec` based on the provided `HistogramOpts` and
+    /// partitioned by the given label names. At least one label name must be
+    /// provided.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let desc = try!(Desc::new(opts.fq_name(),

@@ -102,6 +102,9 @@ impl MetricVecBuilder for CounterVecBuilder {
 pub type CounterVec = MetricVec<CounterVecBuilder>;
 
 impl CounterVec {
+    /// `new` creates a new `CounterVec` based on the provided `Opts` and
+    /// partitioned by the given label names. At least one label name must be
+    /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
