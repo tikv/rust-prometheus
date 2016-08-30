@@ -16,6 +16,7 @@ bench: format
 format:
 	cargo fmt -- --write-mode overwrite
 	rustfmt --write-mode overwrite examples/*.rs
+	rustfmt --write-mode overwrite benches/*.rs
 
 clean:
 	cargo clean

@@ -113,10 +113,9 @@ impl CounterVec {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use super::*;
     use metrics::{Opts, Collector};
-    use test::Bencher;
+
+    use super::*;
 
     #[test]
     fn test_counter() {
@@ -131,50 +130,5 @@ mod tests {
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
-    }
-
-    #[bench]
-    fn bench_counter_with_label_values(b: &mut Bencher) {
-        let counter = CounterVec::new(Opts::new("benchmark_counter", "A counter to benchmark it."),
-                                      &["one", "two", "three"])
-            .unwrap();
-        b.iter(|| counter.with_label_values(&["eins", "zwei", "drei"]).inc())
-    }
-
-    #[bench]
-    fn bench_counter_with_mapped_labels(b: &mut Bencher) {
-        let counter = CounterVec::new(Opts::new("benchmark_counter", "A counter to benchmark it."),
-                                      &["one", "two", "three"])
-            .unwrap();
-
-        b.iter(|| {
-            let mut labels = HashMap::with_capacity(3);
-            labels.insert("two", "zwei");
-            labels.insert("one", "eins");
-            labels.insert("three", "drei");
-            counter.with(&labels).inc();
-        })
-    }
-
-    #[bench]
-    fn bench_counter_with_prepared_mapped_labels(b: &mut Bencher) {
-        let counter = CounterVec::new(Opts::new("benchmark_counter", "A counter to benchmark it."),
-                                      &["one", "two", "three"])
-            .unwrap();
-
-        let mut labels = HashMap::with_capacity(3);
-        labels.insert("two", "zwei");
-        labels.insert("one", "eins");
-        labels.insert("three", "drei");
-
-        b.iter(|| {
-            counter.with(&labels).inc();
-        })
-    }
-
-    #[bench]
-    fn bench_counter_no_labels(b: &mut Bencher) {
-        let counter = Counter::new("benchmark_counter", "A counter to benchmark it.").unwrap();
-        b.iter(|| counter.inc())
     }
 }
