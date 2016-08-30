@@ -36,6 +36,8 @@ mod counter;
 #[allow(dead_code)]
 mod gauge;
 #[allow(dead_code)]
+mod untyped;
+#[allow(dead_code)]
 mod registry;
 #[allow(dead_code)]
 mod vec;
@@ -48,6 +50,7 @@ pub use self::registry::Registry;
 pub use self::metrics::{Collector, Opts};
 pub use self::counter::{Counter, CounterVec};
 pub use self::gauge::{Gauge, GaugeVec};
+pub use self::untyped::{Untyped, UntypedVec};
 pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
 
 // functions
