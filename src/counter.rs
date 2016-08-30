@@ -115,8 +115,9 @@ impl CounterVec {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use metrics::{Opts, Collector};
+
+    use super::*;
 
     #[test]
     fn test_counter() {
