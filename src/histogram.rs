@@ -233,7 +233,7 @@ impl Histogram {
 }
 
 impl Histogram {
-    /// `observe` adds a single observation to the histogram.
+    /// `observe` adds a single observation to the `Histogram`.
     pub fn observe(&self, v: f64) {
         self.core.write().unwrap().observe(v)
     }
