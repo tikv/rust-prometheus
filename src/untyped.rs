@@ -21,11 +21,11 @@ use value::{Value, ValueType};
 use metrics::{Opts, Collector, Metric};
 use vec::{MetricVec, MetricVecBuilder};
 
-// Untyped is a Metric that represents a single numerical value that can
-// arbitrarily go up and down.
-//
-// An Untyped metric works the same as a Gauge. The only difference is that to
-// no type information is implied.
+/// Untyped is a Metric that represents a single numerical value that can
+/// arbitrarily go up and down.
+///
+/// An Untyped metric works the same as a Gauge. The only difference is that to
+/// no type information is implied.
 #[derive(Clone)]
 pub struct Untyped {
     v: Arc<Value>,
@@ -38,7 +38,7 @@ impl Untyped {
         Untyped::with_opts(opts)
     }
 
-    /// `with_opts` creates a `Counter` with the `opts` options.
+    /// `with_opts` creates a `Untyped` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Untyped> {
         let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
         Untyped::with_desc(desc, &[])
@@ -51,7 +51,7 @@ impl Untyped {
 }
 
 impl Untyped {
-    // `set` sets the untyped to an arbitrary value.
+    /// `set` sets the untyped to an arbitrary value.
     #[inline]
     pub fn set(&self, v: f64) {
         self.v.set(v);
@@ -69,15 +69,15 @@ impl Untyped {
         self.sub(1.0);
     }
 
-    // `add` adds the given value to the untyped. (The value can be
-    // negative, resulting in a decrease.)
+    /// `add` adds the given value to the untyped. (The value can be
+    /// negative, resulting in a decrease.)
     #[inline]
     pub fn add(&self, v: f64) {
         self.v.inc_by(v);
     }
 
-    // `sub` subtracts the given value from the untyped. (The value can be
-    // negative, resulting in an increase.)
+    /// `sub` subtracts the given value from the untyped. (The value can be
+    /// negative, resulting in an increase.)
     #[inline]
     pub fn sub(&self, v: f64) {
         self.v.dec_by(v);
@@ -123,6 +123,9 @@ impl MetricVecBuilder for UntypedVecBuilder {
 pub type UntypedVec = MetricVec<UntypedVecBuilder>;
 
 impl UntypedVec {
+    /// `new` creates a new `UntypedVec` based on the provided `Opts` and
+    /// partitioned by the given label names. At least one label name must be
+    /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<UntypedVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));

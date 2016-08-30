@@ -369,7 +369,7 @@ mod tests {
     #[test]
     fn test_untyped_vec_with_label_values() {
         let vec = UntypedVec::new(Opts::new("test_untyped_vec", "test untyped vec help"),
-                                &["l1", "l2"])
+                                  &["l1", "l2"])
             .unwrap();
 
         assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
