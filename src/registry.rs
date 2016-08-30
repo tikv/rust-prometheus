@@ -258,4 +258,22 @@ mod tests {
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
     }
+
+    #[test]
+    fn test_gather_order() {
+        let r = Registry::new();
+
+        let counter_a = Counter::new("test_a_counter", "test help").unwrap();
+        let counter_b = Counter::new("test_b_counter", "test help").unwrap();
+        let counter_2 = Counter::new("test_2_counter", "test help").unwrap();
+        r.register(Box::new(counter_b.clone())).unwrap();
+        r.register(Box::new(counter_2.clone())).unwrap();
+        r.register(Box::new(counter_a.clone())).unwrap();
+
+        let mfs = r.gather();
+        assert_eq!(mfs.len(), 3);
+        assert_eq!(mfs[0].get_name(), "test_2_counter");
+        assert_eq!(mfs[1].get_name(), "test_a_counter");
+        assert_eq!(mfs[2].get_name(), "test_b_counter");
+    }
 }
