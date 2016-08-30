@@ -92,10 +92,42 @@ impl RegistryCore {
 
         // TODO: metric_family injection hook.
 
-        let mut kvs = Vec::from_iter(mf_by_name.into_iter());
-        // TODO: sort Metrics lexicographically by their label values.
-        kvs.sort_by(|&(ref k1, _), &(ref k2, _)| k1.cmp(k2));
+        // Now that MetricFamilies are all set, sort their Metrics
+        // lexicographically by their label values.
+        for (_, ref mut mf) in mf_by_name.iter_mut() {
+            mf.mut_metric().sort_by(|&ref m1, &ref m2| {
+                let lps1 = m1.get_label();
+                let lps2 = m2.get_label();
 
+                if lps1.len() != lps2.len() {
+                    // This should not happen. The metrics are
+                    // inconsistent. However, we have to deal with the fact, as
+                    // people might use custom collectors or metric family injection
+                    // to create inconsistent metrics. So let's simply compare the
+                    // number of labels in this case. That will still yield
+                    // reproducible sorting.
+                    return lps1.len().cmp(&lps2.len());
+                }
+
+                for (lp1, lp2) in lps1.iter().zip(lps2.iter()) {
+                    if lp1.get_value() != lp2.get_value() {
+                        return lp1.get_value().cmp(lp2.get_value());
+                    }
+                }
+
+                // We should never arrive here. Multiple metrics with the same
+                // label set in the same scrape will lead to undefined ingestion
+                // behavior. However, as above, we have to provide stable sorting
+                // here, even for inconsistent metrics. So sort equal metrics
+                // by their timestamp, with missing timestamps (implying "now")
+                // coming last.
+                m1.get_timestamp_ms().cmp(&m2.get_timestamp_ms())
+            });
+        }
+
+        // Write out MetricFamilies sorted by their name.
+        let mut kvs = Vec::from_iter(mf_by_name.into_iter());
+        kvs.sort_by(|&(ref k1, _), &(ref k2, _)| k1.cmp(k2));
         kvs.into_iter().map(|(_, m)| m).collect()
     }
 }
