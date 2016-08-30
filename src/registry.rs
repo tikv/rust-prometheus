@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::sync::{Arc, RwLock};
+use std::iter::FromIterator;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
@@ -66,7 +67,7 @@ impl RegistryCore {
     }
 
     fn gather(&self) -> Vec<proto::MetricFamily> {
-        let mut mf_by_name = HashMap::new();
+        let mut mf_by_name = HashMap::with_capacity(self.colloctors_by_id.len());
 
         for c in self.colloctors_by_id.values() {
             let mut mf = c.collect();
@@ -90,8 +91,12 @@ impl RegistryCore {
         }
 
         // TODO: metric_family injection hook.
-        // TODO: sort metrics.
-        mf_by_name.into_iter().map(|(_, m)| m).collect()
+
+        let mut kvs = Vec::from_iter(mf_by_name.into_iter());
+        // TODO: sort Metrics lexicographically by their label values.
+        kvs.sort_by(|&(ref k1, _), &(ref k2, _)| k1.cmp(k2));
+
+        kvs.into_iter().map(|(_, m)| m).collect()
     }
 }
 
