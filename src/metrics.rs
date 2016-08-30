@@ -20,6 +20,8 @@ use std::cmp::{Ord, Ordering, Eq, PartialOrd};
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
+/// `Collector` is the trait that can be used to collect metrics. 
+/// A Collector has to be registered for collection.
 pub trait Collector: Sync + Send {
     /// `desc` returns the descriptor for the metric collector.
     fn desc(&self) -> &Desc;
@@ -28,6 +30,8 @@ pub trait Collector: Sync + Send {
     fn collect(&self) -> proto::MetricFamily;
 }
 
+/// `Metric` is the trait that models a single sample value with its meta data being 
+/// exported to Prometheus.
 pub trait Metric: Sync + Send + Clone {
     /// `metric` returns the protocol Metric.
     fn metric(&self) -> proto::Metric;
@@ -72,6 +76,7 @@ pub struct Opts {
 }
 
 impl Opts {
+    /// `new` creates the Opts with `name` and `help`.
     pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
         Opts {
             namespace: "".to_owned(),
@@ -82,26 +87,31 @@ impl Opts {
         }
     }
 
+    /// `namespace` sets namespace.
     pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
         self.namespace = namesapce.into();
         self
     }
 
+    /// `sub_system` sets sub system.
     pub fn sub_system<S: Into<String>>(mut self, sub_system: S) -> Self {
         self.sub_system = sub_system.into();
         self
     }
 
+    /// `const_labels` sets const labels. 
     pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
         self.const_labels = labels;
         self
     }
 
+    /// `const_label` adds a const label. 
     pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
         self.const_labels.insert(name.into(), value.into());
         self
     }
 
+    /// `fq_name` returns the fq_name. 
     pub fn fq_name(&self) -> String {
         build_fq_name(&self.namespace, &self.sub_system, &self.name)
     }

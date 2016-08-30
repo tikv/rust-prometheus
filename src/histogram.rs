@@ -78,6 +78,7 @@ pub struct HistogramOpts {
 }
 
 impl HistogramOpts {
+    /// `new` creates a HistogramOpts with `name` and `help`.
     pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
         HistogramOpts {
             common_opts: Opts::new(name, help),
@@ -85,30 +86,36 @@ impl HistogramOpts {
         }
     }
 
+    /// `namespace` sets namespace.
     pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
         self.common_opts.namespace = namesapce.into();
         self
     }
 
+    /// `sub_system` sets sub system.
     pub fn sub_system<S: Into<String>>(mut self, sub_system: S) -> Self {
         self.common_opts.sub_system = sub_system.into();
         self
     }
 
+    /// `const_labels` sets the const labels.
     pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
         self.common_opts = self.common_opts.const_labels(labels);
         self
     }
 
+    /// `const_label` adds a const label. 
     pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
         self.common_opts = self.common_opts.const_label(name, value);
         self
     }
 
+    /// `fq_name` returns the fq_name.
     pub fn fq_name(&self) -> String {
         self.common_opts.fq_name()
     }
 
+    /// `buckets` set the buckets. 
     pub fn buckets(mut self, buckets: Vec<f64>) -> Self {
         self.buckets = buckets;
         self
@@ -195,6 +202,7 @@ pub struct Histogram {
 }
 
 impl Histogram {
+    /// `with_opts` creates a Histogram with options `opts`.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
         let desc = try!(Desc::new(opts.fq_name(),
                                   opts.common_opts.help.clone(),
@@ -225,6 +233,7 @@ impl Histogram {
 }
 
 impl Histogram {
+    /// `observe` adds a single observation to the histogram.
     pub fn observe(&self, v: f64) {
         self.core.write().unwrap().observe(v)
     }
@@ -279,6 +288,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
+    /// `new` creates a HistogramVec with options `opts` and label names `label_names`.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let desc = try!(Desc::new(opts.fq_name(),
