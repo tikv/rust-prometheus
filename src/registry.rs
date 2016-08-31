@@ -327,7 +327,6 @@ mod tests {
         let mfs = r.gather();
         assert_eq!(mfs.len(), 1);
         let ms = mfs[0].get_metric();
-        println!("{:?}", ms);
         assert_eq!(ms.len(), 4);
         assert_eq!(ms[0].get_counter().get_value() as u64, 2);
         assert_eq!(ms[1].get_counter().get_value() as u64, 1);
