@@ -104,6 +104,30 @@ macro_rules! register_counter {
     }
 }
 
+/// Create a CounterVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_counter_vec_1",
+///                   "help",
+///                   labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let counter_vec = register_counter_vec!(opts, &["a", "b"]);
+/// assert!(counter_vec.is_ok());
+///
+/// let counter_vec = register_counter_vec!("test_macro_counter_vec_2", "help", &["a", "b"]);
+/// assert!(counter_vec.is_ok());
+///
+/// let counter_vec = register_counter_vec!("test_macro_counter_vec_3",
+///                                         "help",
+///                                         labels!{"test" => "hello", "foo" => "bar",},
+///                                         &["a", "b"]);
+/// assert!(counter_vec.is_ok());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! register_counter_vec {
     ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
@@ -140,6 +164,30 @@ macro_rules! register_gauge {
     }
 }
 
+/// Create a GaugeVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_gauge_vec_1",
+///                  "help",
+///                  labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
+/// assert!(gauge_vec.is_ok());
+///
+/// let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2", "help", &["a", "b"]);
+/// assert!(gauge_vec.is_ok());
+///
+/// let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_3",
+///                                     "help",
+///                                     labels!{"test" => "hello", "foo" => "bar",},
+///                                     &["a", "b"]);
+/// assert!(gauge_vec.is_ok());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! register_gauge_vec {
     ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
@@ -185,6 +233,31 @@ macro_rules! register_histogram {
     }
 }
 
+/// Create a HistogramVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = histogram_opts!("test_macro_histogram_vec_1",
+///                            "help",
+///                            labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
+/// assert!(histogram_vec.is_ok());
+///
+/// let histogram_vec =
+///     register_histogram_vec!("test_macro_histogram_vec_2", "help", &["a", "b"]);
+/// assert!(histogram_vec.is_ok());
+///
+/// let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_3",
+///                                             "help",
+///                                             labels!{"test" => "hello", "foo" => "bar",},
+///                                             &["a", "b"]);
+/// assert!(histogram_vec.is_ok());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! register_histogram_vec {
     ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
@@ -266,25 +339,6 @@ mod tests {
     }
 
     #[test]
-    fn test_macro_counter_vec() {
-        let opts = opts!("test_macro_counter_vec_1",
-                         "help",
-                         labels!{"test" => "hello", "foo" => "bar",});
-
-        let counter_vec = register_counter_vec!(opts, &["a", "b"]);
-        assert!(counter_vec.is_ok());
-
-        let counter_vec = register_counter_vec!("test_macro_counter_vec_2", "help", &["a", "b"]);
-        assert!(counter_vec.is_ok());
-
-        let counter_vec = register_counter_vec!("test_macro_counter_vec_3",
-                                                "help",
-                                                labels!{"test" => "hello", "foo" => "bar",},
-                                                &["a", "b"]);
-        assert!(counter_vec.is_ok());
-    }
-
-    #[test]
     fn test_macro_gauge() {
         let opts = opts!("test_macro_gauge",
                          "help",
@@ -298,25 +352,6 @@ mod tests {
 
         let res3 = register_gauge!("test_macro_gauge_3", "help", labels!{"a" => "b",});
         assert!(res3.is_ok());
-    }
-
-    #[test]
-    fn test_macro_gauge_vec() {
-        let opts = opts!("test_macro_gauge_vec_1",
-                         "help",
-                         labels!{"test" => "hello", "foo" => "bar",});
-
-        let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
-        assert!(gauge_vec.is_ok());
-
-        let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2", "help", &["a", "b"]);
-        assert!(gauge_vec.is_ok());
-
-        let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_3",
-                                            "help",
-                                            labels!{"test" => "hello", "foo" => "bar",},
-                                            &["a", "b"]);
-        assert!(gauge_vec.is_ok());
     }
 
     #[test]
@@ -378,25 +413,5 @@ mod tests {
                                        labels!{"a" => "b",},
                                        [Vec::from(&[1.0, 2.0] as &[f64])]);
         assert!(res4.is_ok());
-    }
-
-    #[test]
-    fn test_macro_histogram_vec() {
-        let opts = histogram_opts!("test_macro_histogram_vec_1",
-                                   "help",
-                                   labels!{"test" => "hello", "foo" => "bar",});
-
-        let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
-        assert!(histogram_vec.is_ok());
-
-        let histogram_vec =
-            register_histogram_vec!("test_macro_histogram_vec_2", "help", &["a", "b"]);
-        assert!(histogram_vec.is_ok());
-
-        let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_3",
-                                                    "help",
-                                                    labels!{"test" => "hello", "foo" => "bar",},
-                                                    &["a", "b"]);
-        assert!(histogram_vec.is_ok());
     }
 }
