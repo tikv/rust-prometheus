@@ -55,4 +55,4 @@ pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
 
 // Constants
-pub use self::histogram::{DEFAULT_BUCKETS, BUCKET_LABEL};
+pub use self::histogram::DEFAULT_BUCKETS;
