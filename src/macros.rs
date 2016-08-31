@@ -11,6 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Initial labes with specify name-value pairs.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # use std::collections::HashMap;
+/// # fn main() {
+/// // empty labels
+/// let lbs: HashMap<&str, &str> = labels!{};
+/// assert!(lbs.is_empty());
+///
+/// // one initial name-value pairs.
+/// let lbs = labels!{"name" => "value",};
+/// assert_eq!(lbs.len(), 1);
+/// assert_eq!(lbs["name"], "value");
+///
+/// // initialize with multiple name-value pairs.
+/// let lbs = labels!{"name1" => "value1", "name2" => "value2",};
+/// assert_eq!(lbs.len(), 2);
+/// assert_eq!(lbs["name1"], "value1");
+/// assert_eq!(lbs["name2"], "value2");
+/// # }
 #[macro_export]
 macro_rules! labels {
     () => {
@@ -35,6 +58,18 @@ macro_rules! labels {
     }
 }
 
+/// Create a opts.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// // empty labels
+/// let opts = opts!{"name", "help"};
+/// assert_eq!(opts.name, "name");
+/// assert_eq!(opts.help, "help");
+/// # }
 #[macro_export]
 macro_rules! opts {
     ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
