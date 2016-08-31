@@ -282,6 +282,7 @@ mod tests {
 
     use counter::CounterVec;
     use gauge::GaugeVec;
+    use untyped::UntypedVec;
     use metrics::Opts;
 
     #[test]
@@ -353,6 +354,26 @@ mod tests {
     fn test_gauge_vec_with_label_values() {
         let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
                                 &["l1", "l2"])
+            .unwrap();
+
+        assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.delete_label_values(&["v1", "v2"]).is_ok());
+
+        vec.with_label_values(&["v1", "v2"]).inc();
+        vec.with_label_values(&["v1", "v2"]).dec();
+        vec.with_label_values(&["v1", "v2"]).add(42.0);
+        vec.with_label_values(&["v1", "v2"]).sub(42.0);
+        vec.with_label_values(&["v1", "v2"]).set(42.0);
+
+        assert!(vec.delete_label_values(&["v1"]).is_err());
+        assert!(vec.delete_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_untyped_vec_with_label_values() {
+        let vec = UntypedVec::new(Opts::new("test_untyped_vec", "test untyped vec help"),
+                                  &["l1", "l2"])
             .unwrap();
 
         assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
