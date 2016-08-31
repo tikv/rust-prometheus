@@ -1,6 +1,8 @@
 # Prometheus Rust client library
 
 [![Build Status](https://travis-ci.org/pingcap/rust-prometheus.svg?branch=master)](https://travis-ci.org/pingcap/rust-prometheus)
+[![docs.rs](https://docs.rs/prometheus/badge.svg?version=0.2)](https://docs.rs/prometheus)
+[![crates.io](http://meritbadge.herokuapp.com/prometheus)](https://crates.io/crates/prometheus)
 
 This is the [Rust](https://www.rust-lang.org) client library for [Prometheus](http://prometheus.io).
 The main Structures and APIs are ported from [Go client](https://github.com/prometheus/client_golang).
@@ -23,8 +25,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 ## Example
 
 ```rust
-use prometheus::encoder::{TextEncoder, Encoder};
-use prometheus::{Opts, Registry, Counter};
+use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
 
 // Create a Counter.
 let counter_opts = Opts::new("test_counter", "test counter help");
@@ -47,7 +48,4 @@ encoder.encode(&metric_familys, &mut buffer).unwrap();
 println!("{}", String::from_utf8(buffer).unwrap());
 ```
 
-### Next steps
-
-+ [API Document](https://docs.rs/prometheus)
-+ [More Examples](./examples)
+[More Examples](./examples)
