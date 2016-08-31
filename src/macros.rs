@@ -37,7 +37,7 @@ macro_rules! labels {
 
 #[macro_export]
 macro_rules! opts {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
         {
             use std::collections::HashMap;
 
@@ -45,7 +45,7 @@ macro_rules! opts {
             let lbs = HashMap::<String, String>::new();
             $(
                 let mut lbs = lbs;
-                lbs.extend($LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
+                lbs.extend($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
             )*
 
             opts.const_labels(lbs)
@@ -69,7 +69,7 @@ macro_rules! histogram_opts {
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
         {
             use std::collections::HashMap;
             use std::iter::FromIterator;
@@ -77,13 +77,13 @@ macro_rules! histogram_opts {
             let his_opts = histogram_opts!($NAME, $HELP, [ $( $BUCKETS ), + ]);
 
             his_opts.const_labels(
-                HashMap::from_iter($LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into()))))
+                HashMap::from_iter($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into()))))
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
         {
-            let opts = opts!($NAME, $HELP $(, $LABELS ) *);
+            let opts = opts!($NAME, $HELP $(, $CONST_LABELS ) *);
 
             $crate::HistogramOpts::from(opts)
         }
@@ -92,8 +92,8 @@ macro_rules! histogram_opts {
 
 #[macro_export]
 macro_rules! register_counter {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
-        register_counter!(opts!($NAME, $HELP $(, $LABELS)*))
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
+        register_counter!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
     };
 
     ( $ OPTS : expr ) => {
@@ -113,17 +113,23 @@ macro_rules! register_counter_vec {
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , $ LABELS_NAMES : expr ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
         {
-            register_counter_vec!(opts!($NAME, $HELP, $LABELS), $LABELS_NAMES)
+            register_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_counter_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
         }
     };
 }
 
 #[macro_export]
 macro_rules! register_gauge {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
-        register_gauge!(opts!($NAME, $HELP $(, $LABELS)*))
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
+        register_gauge!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
     };
 
     ( $ OPTS : expr ) => {
@@ -143,9 +149,15 @@ macro_rules! register_gauge_vec {
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , $ LABELS_NAMES : expr ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
         {
-            register_gauge_vec!(opts!($NAME, $HELP, $LABELS), $LABELS_NAMES)
+            register_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_gauge_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
         }
     };
 }
@@ -156,13 +168,13 @@ macro_rules! register_histogram {
         register_histogram!(histogram_opts!($NAME, $HELP))
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr ) => {
-        register_histogram!(histogram_opts!($NAME, $HELP, $LABELS))
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr ) => {
+        register_histogram!(histogram_opts!($NAME, $HELP, $CONST_LABELS))
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
         register_histogram!(
-            histogram_opts!($NAME, $HELP, $LABELS, [ $($BUCKETS), + ]))
+            histogram_opts!($NAME, $HELP, $CONST_LABELS, [ $($BUCKETS), + ]))
     };
 
     ( $ OPTS : expr ) => {
@@ -182,9 +194,15 @@ macro_rules! register_histogram_vec {
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , $ LABELS_NAMES : expr ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
         {
-            register_histogram_vec!(histogram_opts!($NAME, $HELP, $LABELS), $LABELS_NAMES)
+            register_histogram_vec!(histogram_opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_histogram_vec!(histogram_opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
         }
     };
 }
@@ -256,7 +274,10 @@ mod tests {
         let counter_vec = register_counter_vec!(opts, &["a", "b"]);
         assert!(counter_vec.is_ok());
 
-        let counter_vec = register_counter_vec!("test_macro_counter_vec_2",
+        let counter_vec = register_counter_vec!("test_macro_counter_vec_2", "help", &["a", "b"]);
+        assert!(counter_vec.is_ok());
+
+        let counter_vec = register_counter_vec!("test_macro_counter_vec_3",
                                                 "help",
                                                 labels!{"test" => "hello", "foo" => "bar",},
                                                 &["a", "b"]);
@@ -288,7 +309,10 @@ mod tests {
         let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
         assert!(gauge_vec.is_ok());
 
-        let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2",
+        let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2", "help", &["a", "b"]);
+        assert!(gauge_vec.is_ok());
+
+        let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_3",
                                             "help",
                                             labels!{"test" => "hello", "foo" => "bar",},
                                             &["a", "b"]);
@@ -365,7 +389,11 @@ mod tests {
         let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
         assert!(histogram_vec.is_ok());
 
-        let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_2",
+        let histogram_vec =
+            register_histogram_vec!("test_macro_histogram_vec_2", "help", &["a", "b"]);
+        assert!(histogram_vec.is_ok());
+
+        let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_3",
                                                     "help",
                                                     labels!{"test" => "hello", "foo" => "bar",},
                                                     &["a", "b"]);
