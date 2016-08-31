@@ -22,24 +22,22 @@ extern crate fnv;
 extern crate lazy_static;
 
 pub mod proto;
+/// Error types of prometheus.
 pub mod errors;
+/// Encoders of prometheus.
 pub mod encoder;
-pub mod macros;
 
+mod macros;
 mod metrics;
 mod desc;
 // TODO: remove dead_code later.
 #[allow(dead_code)]
 mod value;
-#[allow(dead_code)]
 mod counter;
-#[allow(dead_code)]
 mod gauge;
-#[allow(dead_code)]
 mod registry;
 #[allow(dead_code)]
 mod vec;
-#[allow(dead_code)]
 mod histogram;
 
 // Structs
