@@ -13,8 +13,9 @@
 // limitations under the License.
 
 use std::sync::{Arc, RwLock};
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
+use std::iter::FromIterator;
+use std::collections::{HashMap, BTreeMap};
+use std::collections::btree_map::Entry;
 
 use proto;
 use metrics::Collector;
@@ -66,7 +67,7 @@ impl RegistryCore {
     }
 
     fn gather(&self) -> Vec<proto::MetricFamily> {
-        let mut mf_by_name = HashMap::new();
+        let mut mf_by_name = BTreeMap::new();
 
         for c in self.colloctors_by_id.values() {
             let mut mf = c.collect();
@@ -90,8 +91,43 @@ impl RegistryCore {
         }
 
         // TODO: metric_family injection hook.
-        // TODO: sort metrics.
-        mf_by_name.into_iter().map(|(_, m)| m).collect()
+
+        // Now that MetricFamilies are all set, sort their Metrics
+        // lexicographically by their label values.
+        for (_, ref mut mf) in &mut mf_by_name {
+            mf.mut_metric().sort_by(|&ref m1, &ref m2| {
+                let lps1 = m1.get_label();
+                let lps2 = m2.get_label();
+
+                if lps1.len() != lps2.len() {
+                    // This should not happen. The metrics are
+                    // inconsistent. However, we have to deal with the fact, as
+                    // people might use custom collectors or metric family injection
+                    // to create inconsistent metrics. So let's simply compare the
+                    // number of labels in this case. That will still yield
+                    // reproducible sorting.
+                    return lps1.len().cmp(&lps2.len());
+                }
+
+                for (lp1, lp2) in lps1.iter().zip(lps2.iter()) {
+                    if lp1.get_value() != lp2.get_value() {
+                        return lp1.get_value().cmp(lp2.get_value());
+                    }
+                }
+
+                // We should never arrive here. Multiple metrics with the same
+                // label set in the same scrape will lead to undefined ingestion
+                // behavior. However, as above, we have to provide stable sorting
+                // here, even for inconsistent metrics. So sort equal metrics
+                // by their timestamp, with missing timestamps (implying "now")
+                // coming last.
+                m1.get_timestamp_ms().cmp(&m2.get_timestamp_ms())
+            });
+        }
+
+        // Write out MetricFamilies sorted by their name.
+        let kvs = Vec::from_iter(mf_by_name.into_iter());
+        kvs.into_iter().map(|(_, m)| m).collect()
     }
 }
 
@@ -179,6 +215,8 @@ pub fn gather() -> Vec<proto::MetricFamily> {
 #[cfg(test)]
 mod tests {
     use std::thread;
+    use std::collections::HashMap;
+
     use counter::{Counter, CounterVec};
     use metrics::Opts;
 
@@ -220,5 +258,78 @@ mod tests {
 
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
+    }
+
+    #[test]
+    fn test_gather_order() {
+        let r = Registry::new();
+
+        let counter_a = Counter::new("test_a_counter", "test help").unwrap();
+        let counter_b = Counter::new("test_b_counter", "test help").unwrap();
+        let counter_2 = Counter::new("test_2_counter", "test help").unwrap();
+        r.register(Box::new(counter_b.clone())).unwrap();
+        r.register(Box::new(counter_2.clone())).unwrap();
+        r.register(Box::new(counter_a.clone())).unwrap();
+
+        let mfs = r.gather();
+        assert_eq!(mfs.len(), 3);
+        assert_eq!(mfs[0].get_name(), "test_2_counter");
+        assert_eq!(mfs[1].get_name(), "test_a_counter");
+        assert_eq!(mfs[2].get_name(), "test_b_counter");
+
+        let r = Registry::new();
+        let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
+        let counter_vec = CounterVec::new(opts, &["cc", "c1", "a2", "c0"]).unwrap();
+        r.register(Box::new(counter_vec.clone())).unwrap();
+
+        let mut map1 = HashMap::new();
+        map1.insert("cc", "12");
+        map1.insert("c1", "a1");
+        map1.insert("a2", "0");
+        map1.insert("c0", "hello");
+        counter_vec.with(&map1).inc();
+
+        let mut map2 = HashMap::new();
+        map2.insert("cc", "12");
+        map2.insert("c1", "0");
+        map2.insert("a2", "0");
+        map2.insert("c0", "hello");
+        counter_vec.with(&map2).inc();
+        counter_vec.with(&map2).inc();
+
+        let mut map3 = HashMap::new();
+        map3.insert("cc", "12");
+        map3.insert("c1", "0");
+        map3.insert("a2", "da");
+        map3.insert("c0", "hello");
+        counter_vec.with(&map3).inc();
+        counter_vec.with(&map3).inc();
+        counter_vec.with(&map3).inc();
+
+        let mut map4 = HashMap::new();
+        map4.insert("cc", "12");
+        map4.insert("c1", "0");
+        map4.insert("a2", "da");
+        map4.insert("c0", "你好");
+        counter_vec.with(&map4).inc();
+        counter_vec.with(&map4).inc();
+        counter_vec.with(&map4).inc();
+        counter_vec.with(&map4).inc();
+
+        // # HELP test test help
+        // # TYPE test counter
+        // test{a="1",a2="0",b="2",c0="hello",c1="0",cc="12"} 2
+        // test{a="1",a2="0",b="2",c0="hello",c1="a1",cc="12"} 1
+        // test{a="1",a2="da",b="2",c0="hello",c1="0",cc="12"} 3
+        // test{a="1",a2="da",b="2",c0="你好",c1="0",cc="12"} 4
+
+        let mfs = r.gather();
+        assert_eq!(mfs.len(), 1);
+        let ms = mfs[0].get_metric();
+        assert_eq!(ms.len(), 4);
+        assert_eq!(ms[0].get_counter().get_value() as u64, 2);
+        assert_eq!(ms[1].get_counter().get_value() as u64, 1);
+        assert_eq!(ms[2].get_counter().get_value() as u64, 3);
+        assert_eq!(ms[3].get_counter().get_value() as u64, 4);
     }
 }

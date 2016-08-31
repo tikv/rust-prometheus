@@ -72,7 +72,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let vals: Vec<_> = labels.values().map(|v| v.as_ref()).collect();
+        let mut vals: Vec<&str> = labels.values().map(|v| v.as_ref()).collect();
+        vals.sort_by(|v1, v2| v1.cmp(v2));
         self.get_or_create_metric(h, &vals)
     }
 
