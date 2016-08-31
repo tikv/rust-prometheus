@@ -14,8 +14,8 @@
 
 use std::sync::{Arc, RwLock};
 use std::iter::FromIterator;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
+use std::collections::{HashMap, BTreeMap};
+use std::collections::btree_map::Entry;
 
 use proto;
 use metrics::Collector;
@@ -67,7 +67,7 @@ impl RegistryCore {
     }
 
     fn gather(&self) -> Vec<proto::MetricFamily> {
-        let mut mf_by_name = HashMap::with_capacity(self.colloctors_by_id.len());
+        let mut mf_by_name = BTreeMap::new();
 
         for c in self.colloctors_by_id.values() {
             let mut mf = c.collect();
@@ -126,8 +126,7 @@ impl RegistryCore {
         }
 
         // Write out MetricFamilies sorted by their name.
-        let mut kvs = Vec::from_iter(mf_by_name.into_iter());
-        kvs.sort_by(|&(ref k1, _), &(ref k2, _)| k1.cmp(k2));
+        let kvs = Vec::from_iter(mf_by_name.into_iter());
         kvs.into_iter().map(|(_, m)| m).collect()
     }
 }
