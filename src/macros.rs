@@ -85,7 +85,7 @@ macro_rules! labels {
 /// ```
 #[macro_export]
 macro_rules! opts {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
         {
             use std::collections::HashMap;
 
@@ -93,7 +93,7 @@ macro_rules! opts {
             let lbs = HashMap::<String, String>::new();
             $(
                 let mut lbs = lbs;
-                lbs.extend($LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
+                lbs.extend($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
             )*
 
             opts.const_labels(lbs)
@@ -162,7 +162,7 @@ macro_rules! histogram_opts {
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
         {
             use std::collections::HashMap;
             use std::iter::FromIterator;
@@ -170,20 +170,20 @@ macro_rules! histogram_opts {
             let his_opts = histogram_opts!($NAME, $HELP, [ $( $BUCKETS ), + ]);
 
             his_opts.const_labels(
-                HashMap::from_iter($LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into()))))
+                HashMap::from_iter($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into()))))
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
         {
-            let opts = opts!($NAME, $HELP $(, $LABELS ) *);
+            let opts = opts!($NAME, $HELP $(, $CONST_LABELS ) *);
 
             $crate::HistogramOpts::from(opts)
         }
     }
 }
 
-/// Create a counter and register to default registry.
+/// Create a Counter and register to default registry.
 ///
 /// # Examples
 ///
@@ -206,8 +206,8 @@ macro_rules! histogram_opts {
 /// ```
 #[macro_export]
 macro_rules! register_counter {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
-        register_counter!(opts!($NAME, $HELP $(, $LABELS)*))
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
+        register_counter!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
     };
 
     ( $ OPTS : expr ) => {
@@ -218,7 +218,53 @@ macro_rules! register_counter {
     }
 }
 
-/// Create a gauge and register to default registry.
+/// Create a CounterVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_counter_vec_1",
+///                   "help",
+///                   labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let counter_vec = register_counter_vec!(opts, &["a", "b"]);
+/// assert!(counter_vec.is_ok());
+///
+/// let counter_vec = register_counter_vec!("test_macro_counter_vec_2", "help", &["a", "b"]);
+/// assert!(counter_vec.is_ok());
+///
+/// let counter_vec = register_counter_vec!("test_macro_counter_vec_3",
+///                                         "help",
+///                                         labels!{"test" => "hello", "foo" => "bar",},
+///                                         &["a", "b"]);
+/// assert!(counter_vec.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_counter_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let counter_vec = $crate::CounterVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_counter_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
+        }
+    };
+}
+
+/// Create a Gauge and register to default registry.
 ///
 /// # Examples
 ///
@@ -241,8 +287,8 @@ macro_rules! register_counter {
 /// ```
 #[macro_export]
 macro_rules! register_gauge {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
-        register_gauge!(opts!($NAME, $HELP $(, $LABELS)*))
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
+        register_gauge!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
     };
 
     ( $ OPTS : expr ) => {
@@ -253,7 +299,134 @@ macro_rules! register_gauge {
     }
 }
 
-/// Create a histogram and register to default registry.
+/// Create a GaugeVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_gauge_vec_1",
+///                  "help",
+///                  labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
+/// assert!(gauge_vec.is_ok());
+///
+/// let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2", "help", &["a", "b"]);
+/// assert!(gauge_vec.is_ok());
+///
+/// let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_3",
+///                                     "help",
+///                                     labels!{"test" => "hello", "foo" => "bar",},
+///                                     &["a", "b"]);
+/// assert!(gauge_vec.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_gauge_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let gauge_vec = $crate::GaugeVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_gauge_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
+        }
+    };
+}
+
+/// Create a Untyped and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_untyped",
+///                  "help",
+///                  labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let res1 = register_untyped!(opts);
+/// assert!(res1.is_ok());
+///
+/// let res2 = register_untyped!("test_macro_untyped_2", "help");
+/// assert!(res2.is_ok());
+///
+/// let res3 = register_untyped!("test_macro_untyped_3", "help", labels!{"a" => "b",});
+/// assert!(res3.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_untyped {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
+        register_untyped!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
+    };
+
+    ( $ OPTS : expr ) => {
+        {
+            let untyped = $crate::Untyped::with_opts($OPTS).unwrap();
+            $crate::register(Box::new(untyped.clone())).map(|_| untyped)
+        }
+    }
+}
+
+/// Create a UntypedVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_untyped_vec_1",
+///                  "help",
+///                  labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let untyped_vec = register_untyped_vec!(opts, &["a", "b"]);
+/// assert!(untyped_vec.is_ok());
+///
+/// let untyped_vec = register_untyped_vec!("test_macro_untyped_vec_2", "help", &["a", "b"]);
+/// assert!(untyped_vec.is_ok());
+///
+/// let untyped_vec = register_untyped_vec!("test_macro_untyped_vec_3",
+///                                         "help",
+///                                         labels!{"test" => "hello", "foo" => "bar",},
+///                                         &["a", "b"]);
+/// assert!(untyped_vec.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_untyped_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let untyped_vec = $crate::UntypedVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(untyped_vec.clone())).map(|_| untyped_vec)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_untyped_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_untyped_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
+        }
+    };
+}
+
+/// Create a Histogram and register to default registry.
 ///
 /// # Examples
 ///
@@ -286,13 +459,13 @@ macro_rules! register_histogram {
         register_histogram!(histogram_opts!($NAME, $HELP))
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr ) => {
-        register_histogram!(histogram_opts!($NAME, $HELP, $LABELS))
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr ) => {
+        register_histogram!(histogram_opts!($NAME, $HELP, $CONST_LABELS))
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
         register_histogram!(
-            histogram_opts!($NAME, $HELP, $LABELS, [ $($BUCKETS), + ]))
+            histogram_opts!($NAME, $HELP, $CONST_LABELS, [ $($BUCKETS), + ]))
     };
 
     ( $ OPTS : expr ) => {
@@ -301,4 +474,51 @@ macro_rules! register_histogram {
             $crate::register(Box::new(histogram.clone())).map(|_| histogram)
         }
     }
+}
+
+/// Create a HistogramVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = histogram_opts!("test_macro_histogram_vec_1",
+///                            "help",
+///                            labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
+/// assert!(histogram_vec.is_ok());
+///
+/// let histogram_vec =
+///     register_histogram_vec!("test_macro_histogram_vec_2", "help", &["a", "b"]);
+/// assert!(histogram_vec.is_ok());
+///
+/// let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_3",
+///                                             "help",
+///                                             labels!{"test" => "hello", "foo" => "bar",},
+///                                             &["a", "b"]);
+/// assert!(histogram_vec.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_histogram_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let histogram_vec = $crate::HistogramVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_histogram_vec!(histogram_opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_histogram_vec!(histogram_opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
+        }
+    };
 }
