@@ -77,6 +77,9 @@ impl Encoder for TextEncoder {
                     MetricType::GAUGE => {
                         try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
                     }
+                    MetricType::UNTYPED => {
+                        try!(write_sample(name, m, "", "", m.get_untyped().get_value(), writer));
+                    }
                     MetricType::HISTOGRAM => {
                         let h = m.get_histogram();
 
@@ -116,7 +119,7 @@ impl Encoder for TextEncoder {
                                           h.get_sample_count() as f64,
                                           writer));
                     }
-                    MetricType::SUMMARY | MetricType::UNTYPED => {
+                    MetricType::SUMMARY => {
                         unimplemented!();
                     }
                 }
@@ -229,6 +232,7 @@ pub fn escape_string(v: &str, include_double_quote: bool) -> String {
 mod tests {
     use counter::Counter;
     use gauge::Gauge;
+    use untyped::Untyped;
     use metrics::{Opts, Collector};
     use histogram::{Histogram, HistogramOpts};
 
@@ -283,6 +287,23 @@ test_counter{a="1",b="2"} 1
 test_gauge{a="1",b="2"} 42
 "##;
         assert_eq!(gauge_ans.as_bytes(), writer.as_slice());
+
+        let untyped_opts =
+            Opts::new("test_untyped", "test help").const_label("a", "1").const_label("b", "2");
+        let untyped = Untyped::with_opts(untyped_opts).unwrap();
+        untyped.inc();
+        untyped.add(1.0);
+
+        let mf = untyped.collect();
+        writer.clear();
+        let txt = encoder.encode(&[mf], &mut writer);
+        assert!(txt.is_ok());
+
+        let untyped_ans = r##"# HELP test_untyped test help
+# TYPE test_untyped untyped
+test_untyped{a="1",b="2"} 2
+"##;
+        assert_eq!(untyped_ans.as_bytes(), writer.as_slice());
     }
 
     #[test]

@@ -16,9 +16,12 @@ extern crate prometheus;
 use std::thread;
 use std::time::Duration;
 
-use prometheus::{Opts, Registry, Counter, CounterVec, Gauge, GaugeVec, TextEncoder, Encoder};
+use prometheus::{Opts, Registry, Counter, CounterVec, Gauge, GaugeVec, Untyped, UntypedVec,
+                 TextEncoder, Encoder};
 
 fn main() {
+    let r = Registry::new();
+
     let counter_opts =
         Opts::new("test_counter", "test counter help").const_label("a", "1").const_label("b", "2");
     let counter = Counter::with_opts(counter_opts).unwrap();
@@ -26,6 +29,9 @@ fn main() {
         .const_label("a", "1")
         .const_label("b", "2");
     let counter_vec = CounterVec::new(counter_vec_opts, &["c", "d"]).unwrap();
+
+    r.register(Box::new(counter.clone())).unwrap();
+    r.register(Box::new(counter_vec.clone())).unwrap();
 
     let gauge_opts =
         Opts::new("test_gauge", "test gauge help").const_label("a", "1").const_label("b", "2");
@@ -35,12 +41,19 @@ fn main() {
         .const_label("b", "2");
     let gauge_vec = GaugeVec::new(gauge_vec_opts, &["c", "d"]).unwrap();
 
-    let r = Registry::new();
-    r.register(Box::new(counter.clone())).unwrap();
-    r.register(Box::new(counter_vec.clone())).unwrap();
-
     r.register(Box::new(gauge.clone())).unwrap();
     r.register(Box::new(gauge_vec.clone())).unwrap();
+
+    let untyped_opts =
+        Opts::new("test_untyped", "test untyped help").const_label("a", "1").const_label("b", "2");
+    let untyped = Untyped::with_opts(untyped_opts).unwrap();
+    let untyped_vec_opts = Opts::new("test_untyped_vec", "test untyped vector help")
+        .const_label("a", "1")
+        .const_label("b", "2");
+    let untyped_vec = UntypedVec::new(untyped_vec_opts, &["c", "d"]).unwrap();
+
+    r.register(Box::new(untyped.clone())).unwrap();
+    r.register(Box::new(untyped_vec.clone())).unwrap();
 
     counter.inc();
     assert_eq!(counter.get() as u64, 1);
@@ -64,10 +77,15 @@ fn main() {
     gauge_vec.with_label_values(&["3", "4"]).set(42.0);
     assert_eq!(gauge_vec.with_label_values(&["3", "4"]).get() as u64, 42);
 
+    untyped_vec.with_label_values(&["3", "4"]).set(42.0);
+    assert_eq!(untyped_vec.with_label_values(&["3", "4"]).get() as u64, 42);
+
     let c2 = counter.clone();
     let cv2 = counter_vec.clone();
     let g2 = gauge.clone();
     let gv2 = gauge_vec.clone();
+    let u2 = untyped.clone();
+    let uv2 = untyped_vec.clone();
     thread::spawn(move || {
         for _ in 0..10 {
             thread::sleep(Duration::from_millis(500));
@@ -75,6 +93,8 @@ fn main() {
             cv2.with_label_values(&["3", "4"]).inc();
             g2.inc();
             gv2.with_label_values(&["3", "4"]).inc();
+            u2.inc();
+            uv2.with_label_values(&["3", "4"]).inc();
         }
     });
 
@@ -85,6 +105,8 @@ fn main() {
             counter_vec.with_label_values(&["3", "4"]).inc();
             gauge.dec();
             gauge_vec.with_label_values(&["3", "4"]).set(42.0);
+            untyped.dec();
+            untyped_vec.with_label_values(&["3", "4"]).set(77.0);
         }
     });
 
