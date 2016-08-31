@@ -201,8 +201,8 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
     Ok(())
 }
 
-/// `escape_string` replaces `\` by `\\`, new line character by `\n`, and - if
-/// `include_double_quote` is true - `"` by `\"`.
+/// `escape_string` replaces `\` by `\\`, new line character by `\n`, and `"` by `\"` if
+/// `include_double_quote` is true.
 pub fn escape_string(v: &str, include_double_quote: bool) -> String {
     let mut escaped = String::with_capacity(v.len() * 2);
 

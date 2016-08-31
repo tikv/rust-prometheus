@@ -293,11 +293,10 @@ impl MetricVecBuilder for HistogramVecBuilder {
     }
 }
 
-// `HistogramVec` is a Collector that bundles a set of Histograms that all share the
-// same Desc, but have different values for their variable labels. This is used
-// if you want to count the same thing partitioned by various dimensions
-// (e.g. HTTP request latencies, partitioned by status code and method). Create
-// instances with NewHistogramVec.
+/// `HistogramVec` is a Collector that bundles a set of Histograms that all share the
+/// same Desc, but have different values for their variable labels. This is used
+/// if you want to count the same thing partitioned by various dimensions
+/// (e.g. HTTP request latencies, partitioned by status code and method).
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
