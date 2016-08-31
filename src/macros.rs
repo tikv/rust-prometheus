@@ -113,12 +113,11 @@ macro_rules! register_counter_vec {
         }
     };
 
-    ( $ OPTS : expr , $ ( $ LABELS_NAME : expr) , + ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , $ LABELS_NAMES : expr ) => {
         {
-            let counter_vec = $crate::CounterVec::new($OPTS, &[ $($LABELS_NAME),+ ]).unwrap();
-            $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+            register_counter_vec!(opts!($NAME, $HELP, $LABELS), $LABELS_NAMES)
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -144,12 +143,11 @@ macro_rules! register_gauge_vec {
         }
     };
 
-    ( $ OPTS : expr , $ ( $ LABELS_NAME : expr) , + ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , $ LABELS_NAMES : expr ) => {
         {
-            let gauge_vec = $crate::GaugeVec::new($OPTS, &[ $($LABELS_NAME),+ ]).unwrap();
-            $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+            register_gauge_vec!(opts!($NAME, $HELP, $LABELS), $LABELS_NAMES)
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -184,12 +182,11 @@ macro_rules! register_histogram_vec {
         }
     };
 
-    ( $ OPTS : expr , $ ( $ LABELS_NAME : expr) , + ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS : expr , $ LABELS_NAMES : expr ) => {
         {
-            let histogram_vec = $crate::HistogramVec::new($OPTS, &[ $($LABELS_NAME),+ ]).unwrap();
-            $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
+            register_histogram_vec!(histogram_opts!($NAME, $HELP, $LABELS), $LABELS_NAMES)
         }
-    }
+    };
 }
 
 #[cfg(test)]
@@ -259,11 +256,10 @@ mod tests {
         let counter_vec = register_counter_vec!(opts, &["a", "b"]);
         assert!(counter_vec.is_ok());
 
-        let opts = opts!("test_macro_counter_vec_2",
-                         "help",
-                         labels!{"test" => "hello", "foo" => "bar",});
-
-        let counter_vec = register_counter_vec!(opts, "a", "b");
+        let counter_vec = register_counter_vec!("test_macro_counter_vec_2",
+                                                "help",
+                                                labels!{"test" => "hello", "foo" => "bar",},
+                                                &["a", "b"]);
         assert!(counter_vec.is_ok());
     }
 
@@ -292,11 +288,10 @@ mod tests {
         let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
         assert!(gauge_vec.is_ok());
 
-        let opts = opts!("test_macro_gauge_vec_2",
-                         "help",
-                         labels!{"test" => "hello", "foo" => "bar",});
-
-        let gauge_vec = register_gauge_vec!(opts, "a", "b", "c");
+        let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2",
+                                            "help",
+                                            labels!{"test" => "hello", "foo" => "bar",},
+                                            &["a", "b"]);
         assert!(gauge_vec.is_ok());
     }
 
@@ -370,11 +365,10 @@ mod tests {
         let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
         assert!(histogram_vec.is_ok());
 
-        let opts = histogram_opts!("test_macro_histogram_vec_2",
-                                   "help",
-                                   labels!{"test" => "hello", "foo" => "bar",});
-
-        let histogram_vec = register_histogram_vec!(opts, "a", "b");
+        let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_2",
+                                                    "help",
+                                                    labels!{"test" => "hello", "foo" => "bar",},
+                                                    &["a", "b"]);
         assert!(histogram_vec.is_ok());
     }
 }
