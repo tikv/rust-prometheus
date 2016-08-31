@@ -105,6 +105,23 @@ macro_rules! register_counter {
 }
 
 #[macro_export]
+macro_rules! register_counter_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let counter_vec = $crate::CounterVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+        }
+    };
+
+    ( $ OPTS : expr , $ ( $ LABELS_NAME : expr) , + ) => {
+        {
+            let counter_vec = $crate::CounterVec::new($OPTS, &[ $($LABELS_NAME),+ ]).unwrap();
+            $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! register_gauge {
     ( $ NAME : expr , $ HELP : expr $ ( , $ LABELS : expr ) * ) => {
         register_gauge!(opts!($NAME, $HELP $(, $LABELS)*))
@@ -114,6 +131,23 @@ macro_rules! register_gauge {
         {
             let gauge = $crate::Gauge::with_opts($OPTS).unwrap();
             $crate::register(Box::new(gauge.clone())).map(|_| gauge)
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! register_gauge_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let gauge_vec = $crate::GaugeVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+        }
+    };
+
+    ( $ OPTS : expr , $ ( $ LABELS_NAME : expr) , + ) => {
+        {
+            let gauge_vec = $crate::GaugeVec::new($OPTS, &[ $($LABELS_NAME),+ ]).unwrap();
+            $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
         }
     }
 }
@@ -137,6 +171,23 @@ macro_rules! register_histogram {
         {
             let histogram = $crate::Histogram::with_opts($OPTS).unwrap();
             $crate::register(Box::new(histogram.clone())).map(|_| histogram)
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! register_histogram_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let histogram_vec = $crate::HistogramVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
+        }
+    };
+
+    ( $ OPTS : expr , $ ( $ LABELS_NAME : expr) , + ) => {
+        {
+            let histogram_vec = $crate::HistogramVec::new($OPTS, &[ $($LABELS_NAME),+ ]).unwrap();
+            $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
         }
     }
 }
@@ -200,6 +251,23 @@ mod tests {
     }
 
     #[test]
+    fn test_macro_counter_vec() {
+        let opts = opts!("test_macro_counter_vec_1",
+                         "help",
+                         labels!{"test" => "hello", "foo" => "bar",});
+
+        let counter_vec = register_counter_vec!(opts, &["a", "b"]);
+        assert!(counter_vec.is_ok());
+
+        let opts = opts!("test_macro_counter_vec_2",
+                         "help",
+                         labels!{"test" => "hello", "foo" => "bar",});
+
+        let counter_vec = register_counter_vec!(opts, "a", "b");
+        assert!(counter_vec.is_ok());
+    }
+
+    #[test]
     fn test_macro_gauge() {
         let opts = opts!("test_macro_gauge",
                          "help",
@@ -213,6 +281,23 @@ mod tests {
 
         let res3 = register_gauge!("test_macro_gauge_3", "help", labels!{"a" => "b",});
         assert!(res3.is_ok());
+    }
+
+    #[test]
+    fn test_macro_gauge_vec() {
+        let opts = opts!("test_macro_gauge_vec_1",
+                         "help",
+                         labels!{"test" => "hello", "foo" => "bar",});
+
+        let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
+        assert!(gauge_vec.is_ok());
+
+        let opts = opts!("test_macro_gauge_vec_2",
+                         "help",
+                         labels!{"test" => "hello", "foo" => "bar",});
+
+        let gauge_vec = register_gauge_vec!(opts, "a", "b", "c");
+        assert!(gauge_vec.is_ok());
     }
 
     #[test]
@@ -274,5 +359,22 @@ mod tests {
                                        labels!{"a" => "b",},
                                        [Vec::from(&[1.0, 2.0] as &[f64])]);
         assert!(res4.is_ok());
+    }
+
+    #[test]
+    fn test_macro_histogram_vec() {
+        let opts = histogram_opts!("test_macro_histogram_vec_1",
+                                   "help",
+                                   labels!{"test" => "hello", "foo" => "bar",});
+
+        let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
+        assert!(histogram_vec.is_ok());
+
+        let opts = histogram_opts!("test_macro_histogram_vec_2",
+                                   "help",
+                                   labels!{"test" => "hello", "foo" => "bar",});
+
+        let histogram_vec = register_histogram_vec!(opts, "a", "b");
+        assert!(histogram_vec.is_ok());
     }
 }
