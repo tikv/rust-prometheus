@@ -48,7 +48,7 @@ impl Gauge {
 }
 
 impl Gauge {
-    // `set` sets the gauge to an arbitrary value.
+    /// `set` sets the gauge to an arbitrary value.
     #[inline]
     pub fn set(&self, v: f64) {
         self.v.set(v);
@@ -66,15 +66,15 @@ impl Gauge {
         self.sub(1.0);
     }
 
-    // `add` adds the given value to the gauge. (The value can be
-    // negative, resulting in a decrease of the gauge.)
+    /// `add` adds the given value to the gauge. (The value can be
+    /// negative, resulting in a decrease of the gauge.)
     #[inline]
     pub fn add(&self, v: f64) {
         self.v.inc_by(v);
     }
 
-    // `sub` subtracts the given value from the gauge. (The value can be
-    // negative, resulting in an increase of the gauge.)
+    /// `sub` subtracts the given value from the gauge. (The value can be
+    /// negative, resulting in an increase of the gauge.)
     #[inline]
     pub fn sub(&self, v: f64) {
         self.v.dec_by(v);

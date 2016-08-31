@@ -21,19 +21,15 @@ extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod proto;
-pub mod errors;
-pub mod encoder;
-pub mod macros;
-
+mod errors;
+mod encoder;
+mod macros;
 mod metrics;
 mod desc;
 // TODO: remove dead_code later.
 #[allow(dead_code)]
 mod value;
-#[allow(dead_code)]
 mod counter;
-#[allow(dead_code)]
 mod gauge;
 #[allow(dead_code)]
 mod untyped;
@@ -41,21 +37,31 @@ mod untyped;
 mod registry;
 #[allow(dead_code)]
 mod vec;
-#[allow(dead_code)]
 mod histogram;
 
+// Mods
+// Protocol buffers format of metrics.
+pub mod proto;
+
+// Traits
+pub use self::encoder::Encoder;
+pub use self::metrics::Collector;
+
 // Structs
+pub use self::errors::{Result, Error};
+pub use self::encoder::TextEncoder;
 pub use self::desc::Desc;
 pub use self::registry::Registry;
-pub use self::metrics::{Collector, Opts};
+pub use self::metrics::Opts;
 pub use self::counter::{Counter, CounterVec};
 pub use self::gauge::{Gauge, GaugeVec};
 pub use self::untyped::{Untyped, UntypedVec};
 pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
 
-// functions
+// Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
 
 // Constants
-pub use self::histogram::{DEFAULT_BUCKETS, BUCKET_LABEL};
+pub use self::encoder::TEXT_FORMAT;
+pub use self::histogram::DEFAULT_BUCKETS;

@@ -21,45 +21,44 @@ use proto::LabelPair;
 use errors::{Result, Error};
 use metrics::SEPARATOR_BYTE;
 
-// Desc is the descriptor used by every Prometheus Metric. It is essentially
-// the immutable meta-data of a Metric. The normal Metric implementations
-// included in this package manage their Desc under the hood. Users only have to
-// deal with Desc if they use advanced features like the ExpvarCollector or
-// custom Collectors and Metrics.
-//
-// Descriptors registered with the same registry have to fulfill certain
-// consistency and uniqueness criteria if they share the same fully-qualified
-// name: They must have the same help string and the same label names (aka label
-// dimensions) in each, constLabels and variableLabels, but they must differ in
-// the values of the constLabels.
-//
-// Descriptors that share the same fully-qualified names and the same label
-// values of their constLabels are considered equal.
-//
-// Use NewDesc to create new Desc instances.
+/// Desc is the descriptor used by every Prometheus Metric. It is essentially
+/// the immutable meta-data of a Metric. The normal Metric implementations
+/// included in this package manage their Desc under the hood.
+///
+/// Descriptors registered with the same registry have to fulfill certain
+/// consistency and uniqueness criteria if they share the same fully-qualified
+/// name: They must have the same help string and the same label names (aka label
+/// dimensions) in each, constLabels and variableLabels, but they must differ in
+/// the values of the constLabels.
+///
+/// Descriptors that share the same fully-qualified names and the same label
+/// values of their constLabels are considered equal.
 #[derive(Clone, Debug)]
 pub struct Desc {
-    // fq_name has been built from Namespace, Subsystem, and Name.
+    /// fq_name has been built from Namespace, Subsystem, and Name.
     pub fq_name: String,
-    // help provides some helpful information about this metric.
+    /// help provides some helpful information about this metric.
     pub help: String,
-    // const_label_pairs contains precalculated DTO label pairs based on
-    // the constant labels.
+    /// const_label_pairs contains precalculated DTO label pairs based on
+    /// the constant labels.
     pub const_label_pairs: Vec<LabelPair>,
-    // variable_labels contains names of labels for which the metric
-    // maintains variable values.
+    /// variable_labels contains names of labels for which the metric
+    /// maintains variable values.
     pub variable_labels: Vec<String>,
-    // id is a hash of the values of the ConstLabels and fqName. This
-    // must be unique among all registered descriptors and can therefore be
-    // used as an identifier of the descriptor.
+    /// id is a hash of the values of the ConstLabels and fqName. This
+    /// must be unique among all registered descriptors and can therefore be
+    /// used as an identifier of the descriptor.
     pub id: u64,
-    // dim_hash is a hash of the label names (preset and variable) and the
-    // Help string. Each Desc with the same fqName must have the same
-    // dimHash.
+    /// dim_hash is a hash of the label names (preset and variable) and the
+    /// Help string. Each Desc with the same fqName must have the same
+    /// dimHash.
     pub dim_hash: u64,
 }
 
 impl Desc {
+    /// Initializes a new Desc. Errors are recorded in the Desc
+    /// and will be reported on registration time. variableLabels and constLabels can
+    /// be nil if no such labels should be set. fqName and help must not be empty.
     pub fn new(fq_name: String,
                help: String,
                variable_labels: Vec<String>,

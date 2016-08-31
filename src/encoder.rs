@@ -18,6 +18,7 @@ use proto::MetricFamily;
 use proto::{self, MetricType};
 use histogram::BUCKET_LABEL;
 
+/// `Encoder` types encode metric families into an underlying wire protocol.
 pub trait Encoder {
     /// `encode` converts a slice of MetricFamily proto messages into target
     /// format and writes the resulting lines to `writer`. It returns the number
@@ -31,9 +32,8 @@ pub trait Encoder {
     fn format_type(&self) -> &str;
 }
 
-pub type Format = &'static str;
-
-pub const TEXT_FORMAT: Format = "text/plain; version=0.0.4";
+/// The text format of metric family.
+pub const TEXT_FORMAT: &'static str = "text/plain; version=0.0.4";
 
 const POSITIVE_INF: &'static str = "+Inf";
 
@@ -204,8 +204,8 @@ fn label_pairs_to_text(pairs: &[proto::LabelPair],
     Ok(())
 }
 
-/// `escape_string` replaces '\' by '\\', new line character by '\n', and - if
-/// `include_double_quote` is true - '"' by '\"'.
+/// `escape_string` replaces `\` by `\\`, new line character by `\n`, and `"` by `\"` if
+/// `include_double_quote` is true.
 pub fn escape_string(v: &str, include_double_quote: bool) -> String {
     let mut escaped = String::with_capacity(v.len() * 2);
 

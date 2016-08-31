@@ -11,6 +11,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Create labes with specify name-value pairs.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # use std::collections::HashMap;
+/// # fn main() {
+/// let labels = labels!{
+///     "test" => "hello",
+///     "foo" => "bar",
+/// };
+/// assert_eq!(labels.len(), 2);
+/// assert!(labels.get("test").is_some());
+/// assert_eq!(*(labels.get("test").unwrap()), "hello");
+///
+/// let labels: HashMap<&str, &str> = labels!{};
+/// assert!(labels.is_empty());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! labels {
     () => {
@@ -35,6 +55,34 @@ macro_rules! labels {
     }
 }
 
+/// Create an Opts.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let name = "test_opts";
+/// let help = "test opts help";
+///
+/// let opts = opts!(name, help);
+/// assert_eq!(opts.name, name);
+/// assert_eq!(opts.help, help);
+///
+/// let opts = opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
+/// assert_eq!(opts.const_labels.len(), 2);
+/// assert!(opts.const_labels.get("foo").is_some());
+/// assert_eq!(opts.const_labels.get("foo").unwrap(), "bar");
+///
+/// let opts = opts!(name,
+///                  help,
+///                  labels!{"test" => "hello", "foo" => "bar",},
+///                  labels!{"ans" => "42",});
+/// assert_eq!(opts.const_labels.len(), 3);
+/// assert!(opts.const_labels.get("ans").is_some());
+/// assert_eq!(opts.const_labels.get("ans").unwrap(), "42");
+/// # }
+/// ```
 #[macro_export]
 macro_rules! opts {
     ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
@@ -53,6 +101,51 @@ macro_rules! opts {
     }
 }
 
+/// Create a HistogramOpts
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{linear_buckets, exponential_buckets};
+/// # fn main() {
+/// let name = "test_histogram_opts";
+/// let help = "test opts help";
+///
+/// let opts = histogram_opts!(name, help);
+/// assert_eq!(opts.common_opts.name, name);
+/// assert_eq!(opts.common_opts.help, help);
+///
+/// let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
+/// assert_eq!(opts.common_opts.const_labels.len(), 2);
+/// assert!(opts.common_opts.const_labels.get("foo").is_some());
+/// assert_eq!(opts.common_opts.const_labels.get("foo").unwrap(), "bar");
+///
+/// let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
+/// assert_eq!(opts.common_opts.const_labels.len(), 2);
+/// assert!(opts.common_opts.const_labels.get("test").is_some());
+/// assert_eq!(opts.common_opts.const_labels.get("test").unwrap(), "hello");
+///
+/// let opts = histogram_opts!(name, help, []);
+/// assert_eq!(opts.buckets.len(), 0);
+///
+/// let opts = histogram_opts!(name, help, [Vec::from(&[1.0, 2.0] as &[f64])]);
+/// assert_eq!(opts.buckets.len(), 2);
+///
+/// let opts = histogram_opts!(name,
+///                             help,
+///                             labels!{"a" => "c",},
+///                             [Vec::from(&[1.0, 2.0] as &[f64]), Vec::from(&[3.0] as &[f64])]);
+/// assert_eq!(opts.buckets.len(), 3);
+///
+/// let opts = histogram_opts!(name,
+///                             help,
+///                             labels!{"a" => "c",},
+///                             [linear_buckets(1.0, 0.5, 4).unwrap(),
+///                             exponential_buckets(4.0, 1.1, 4).unwrap()]);
+/// assert_eq!(opts.buckets.len(), 8);
+/// # }
+/// ```
 #[macro_export]
 macro_rules! histogram_opts {
     ( $ NAME : expr , $ HELP : expr , [ $ ( $ BUCKETS : expr ) , * ] ) => {
@@ -90,6 +183,27 @@ macro_rules! histogram_opts {
     }
 }
 
+/// Create a Counter and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_counter_1",
+///                     "help",
+///                     labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let res1 = register_counter!(opts);
+/// assert!(res1.is_ok());
+///
+/// let res2 = register_counter!("test_macro_counter_2", "help");
+/// assert!(res2.is_ok());
+///
+/// let res3 = register_counter!("test_macro_counter_3", "help", labels!{ "a" => "b",});
+/// assert!(res3.is_ok());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! register_counter {
     ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
@@ -150,6 +264,27 @@ macro_rules! register_counter_vec {
     };
 }
 
+/// Create a Gauge and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_gauge",
+///                     "help",
+///                     labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let res1 = register_gauge!(opts);
+/// assert!(res1.is_ok());
+///
+/// let res2 = register_gauge!("test_macro_gauge_2", "help");
+/// assert!(res2.is_ok());
+///
+/// let res3 = register_gauge!("test_macro_gauge_3", "help", labels!{"a" => "b",});
+/// assert!(res3.is_ok());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! register_gauge {
     ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
@@ -291,6 +426,33 @@ macro_rules! register_untyped_vec {
     };
 }
 
+/// Create a Histogram and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = histogram_opts!("test_macro_histogram",
+///                             "help",
+///                             labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let res1 = register_histogram!(opts);
+/// assert!(res1.is_ok());
+///
+/// let res2 = register_histogram!("test_macro_histogram_2", "help");
+/// assert!(res2.is_ok());
+///
+/// let res3 = register_histogram!("test_macro_histogram_3", "help", labels!{"a" => "b",});
+/// assert!(res3.is_ok());
+///
+/// let res4 = register_histogram!("test_macro_histogram_4",
+///                                 "help",
+///                                 labels!{"a" => "b",},
+///                                 [Vec::from(&[1.0, 2.0] as &[f64])]);
+/// assert!(res4.is_ok());
+/// # }
+/// ```
 #[macro_export]
 macro_rules! register_histogram {
     ( $ NAME : expr , $ HELP : expr ) => {
@@ -359,140 +521,4 @@ macro_rules! register_histogram_vec {
             register_histogram_vec!(histogram_opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
         }
     };
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use histogram::{linear_buckets, exponential_buckets};
-
-    #[test]
-    fn test_macro_labels() {
-        let labels = labels!{
-            "test" => "hello",
-            "foo" => "bar",
-        };
-        assert_eq!(labels.len(), 2);
-        assert!(labels.get("test").is_some());
-        assert_eq!(*(labels.get("test").unwrap()), "hello");
-
-        let labels: HashMap<&str, &str> = labels!{};
-        assert!(labels.is_empty());
-    }
-
-    #[test]
-    fn test_macro_opts() {
-        let name = "test_opts";
-        let help = "test opts help";
-
-        let opts = opts!(name, help);
-        assert_eq!(opts.name, name);
-        assert_eq!(opts.help, help);
-
-        let opts = opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
-        assert_eq!(opts.const_labels.len(), 2);
-        assert!(opts.const_labels.get("foo").is_some());
-        assert_eq!(opts.const_labels.get("foo").unwrap(), "bar");
-
-        let opts = opts!(name,
-                         help,
-                         labels!{"test" => "hello", "foo" => "bar",},
-                         labels!{"ans" => "42",});
-        assert_eq!(opts.const_labels.len(), 3);
-        assert!(opts.const_labels.get("ans").is_some());
-        assert_eq!(opts.const_labels.get("ans").unwrap(), "42");
-    }
-
-    #[test]
-    fn test_macro_counter() {
-        let opts = opts!("test_macro_counter_1",
-                         "help",
-                         labels!{"test" => "hello", "foo" => "bar",});
-
-        let res1 = register_counter!(opts);
-        assert!(res1.is_ok());
-
-        let res2 = register_counter!("test_macro_counter_2", "help");
-        assert!(res2.is_ok());
-
-        let res3 = register_counter!("test_macro_counter_3", "help", labels!{ "a" => "b",});
-        assert!(res3.is_ok());
-    }
-
-    #[test]
-    fn test_macro_gauge() {
-        let opts = opts!("test_macro_gauge",
-                         "help",
-                         labels!{"test" => "hello", "foo" => "bar",});
-
-        let res1 = register_gauge!(opts);
-        assert!(res1.is_ok());
-
-        let res2 = register_gauge!("test_macro_gauge_2", "help");
-        assert!(res2.is_ok());
-
-        let res3 = register_gauge!("test_macro_gauge_3", "help", labels!{"a" => "b",});
-        assert!(res3.is_ok());
-    }
-
-    #[test]
-    fn test_macro_histogram_opts() {
-        let name = "test_histogram_opts";
-        let help = "test opts help";
-
-        let opts = histogram_opts!(name, help);
-        assert_eq!(opts.common_opts.name, name);
-        assert_eq!(opts.common_opts.help, help);
-
-        let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
-        assert_eq!(opts.common_opts.const_labels.len(), 2);
-        assert!(opts.common_opts.const_labels.get("foo").is_some());
-        assert_eq!(opts.common_opts.const_labels.get("foo").unwrap(), "bar");
-
-        let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
-        assert_eq!(opts.common_opts.const_labels.len(), 2);
-        assert!(opts.common_opts.const_labels.get("test").is_some());
-        assert_eq!(opts.common_opts.const_labels.get("test").unwrap(), "hello");
-
-        let opts = histogram_opts!(name, help, []);
-        assert_eq!(opts.buckets.len(), 0);
-
-        let opts = histogram_opts!(name, help, [Vec::from(&[1.0, 2.0] as &[f64])]);
-        assert_eq!(opts.buckets.len(), 2);
-
-        let opts = histogram_opts!(name,
-                                   help,
-                                   labels!{"a" => "c",},
-                                   [Vec::from(&[1.0, 2.0] as &[f64]), Vec::from(&[3.0] as &[f64])]);
-        assert_eq!(opts.buckets.len(), 3);
-
-        let opts = histogram_opts!(name,
-                                   help,
-                                   labels!{"a" => "c",},
-                                   [linear_buckets(1.0, 0.5, 4).unwrap(),
-                                    exponential_buckets(4.0, 1.1, 4).unwrap()]);
-        assert_eq!(opts.buckets.len(), 8);
-    }
-
-    #[test]
-    fn test_macro_histogram() {
-        let opts = histogram_opts!("test_macro_histogram",
-                                   "help",
-                                   labels!{"test" => "hello", "foo" => "bar",});
-
-        let res1 = register_histogram!(opts);
-        assert!(res1.is_ok());
-
-        let res2 = register_histogram!("test_macro_histogram_2", "help");
-        assert!(res2.is_ok());
-
-        let res3 = register_histogram!("test_macro_histogram_3", "help", labels!{"a" => "b",});
-        assert!(res3.is_ok());
-
-        let res4 = register_histogram!("test_macro_histogram_4",
-                                       "help",
-                                       labels!{"a" => "b",},
-                                       [Vec::from(&[1.0, 2.0] as &[f64])]);
-        assert!(res4.is_ok());
-    }
 }
