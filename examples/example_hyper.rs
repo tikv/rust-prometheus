@@ -23,8 +23,7 @@ use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
-use prometheus::encoder::{Encoder, TextEncoder};
-use prometheus::{Counter, Gauge, Histogram};
+use prometheus::{Counter, Gauge, Histogram, Encoder, TextEncoder};
 
 lazy_static! {
     static ref HTTP_COUNTER: Counter = register_counter!(

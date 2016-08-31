@@ -40,39 +40,39 @@ pub trait Metric: Sync + Send + Clone {
 /// `Opts` bundles the options for creating most Metric types.
 #[derive(Debug)]
 pub struct Opts {
-    // namespace, sub_system, and name are components of the fully-qualified
-    // name of the Metric (created by joining these components with
-    // "_"). Only Name is mandatory, the others merely help structuring the
-    // name. Note that the fully-qualified name of the metric must be a
-    // valid Prometheus metric name.
+    /// namespace, sub_system, and name are components of the fully-qualified
+    /// name of the Metric (created by joining these components with
+    /// "_"). Only Name is mandatory, the others merely help structuring the
+    /// name. Note that the fully-qualified name of the metric must be a
+    /// valid Prometheus metric name.
     pub namespace: String,
     pub sub_system: String,
     pub name: String,
 
-    // help provides information about this metric. Mandatory!
-    //
-    // Metrics with the same fully-qualified name must have the same Help
-    // string.
+    /// help provides information about this metric. Mandatory!
+    ///
+    /// Metrics with the same fully-qualified name must have the same Help
+    /// string.
     pub help: String,
 
-    // const_labels are used to attach fixed labels to this metric. Metrics
-    // with the same fully-qualified name must have the same label names in
-    // their ConstLabels.
-    //
-    // Note that in most cases, labels have a value that varies during the
-    // lifetime of a process. Those labels are usually managed with a metric
-    // vector collector (like CounterVec, GaugeVec, UntypedVec). ConstLabels
-    // serve only special purposes. One is for the special case where the
-    // value of a label does not change during the lifetime of a process,
-    // e.g. if the revision of the running binary is put into a
-    // label. Another, more advanced purpose is if more than one Collector
-    // needs to collect Metrics with the same fully-qualified name. In that
-    // case, those Metrics must differ in the values of their
-    // ConstLabels. See the Collector examples.
-    //
-    // If the value of a label never changes (not even between binaries),
-    // that label most likely should not be a label at all (but part of the
-    // metric name).
+    /// const_labels are used to attach fixed labels to this metric. Metrics
+    /// with the same fully-qualified name must have the same label names in
+    /// their ConstLabels.
+    ///
+    /// Note that in most cases, labels have a value that varies during the
+    /// lifetime of a process. Those labels are usually managed with a metric
+    /// vector collector (like CounterVec, GaugeVec, UntypedVec). ConstLabels
+    /// serve only special purposes. One is for the special case where the
+    /// value of a label does not change during the lifetime of a process,
+    /// e.g. if the revision of the running binary is put into a
+    /// label. Another, more advanced purpose is if more than one Collector
+    /// needs to collect Metrics with the same fully-qualified name. In that
+    /// case, those Metrics must differ in the values of their
+    /// ConstLabels. See the Collector examples.
+    ///
+    /// If the value of a label never changes (not even between binaries),
+    /// that label most likely should not be a label at all (but part of the
+    /// metric name).
     pub const_labels: HashMap<String, String>,
 }
 

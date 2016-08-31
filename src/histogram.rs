@@ -24,11 +24,15 @@ use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 use metrics::{Collector, Metric, Opts};
 
+/// `DEFAULT_BUCKETS` are the default Histogram buckets. The default buckets are
+/// tailored to broadly measure the response time (in seconds) of a
+/// network service. Most likely, however, you will be required to define
+/// buckets customized to your use case.
 pub const DEFAULT_BUCKETS: &'static [f64; 11] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
                                                   2.5, 5.0, 10.0];
 
-// `BUCKET_LABEL` is used for the label that defines the upper bound of a
-// bucket of a histogram ("le" -> "less or equal").
+/// `BUCKET_LABEL` is used for the label that defines the upper bound of a
+/// bucket of a histogram ("le" -> "less or equal").
 pub const BUCKET_LABEL: &'static str = "le";
 
 #[inline]
@@ -289,11 +293,10 @@ impl MetricVecBuilder for HistogramVecBuilder {
     }
 }
 
-// `HistogramVec` is a Collector that bundles a set of Histograms that all share the
-// same Desc, but have different values for their variable labels. This is used
-// if you want to count the same thing partitioned by various dimensions
-// (e.g. HTTP request latencies, partitioned by status code and method). Create
-// instances with NewHistogramVec.
+/// `HistogramVec` is a Collector that bundles a set of Histograms that all share the
+/// same Desc, but have different values for their variable labels. This is used
+/// if you want to count the same thing partitioned by various dimensions
+/// (e.g. HTTP request latencies, partitioned by status code and method).
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
