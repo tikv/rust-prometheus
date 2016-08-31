@@ -15,6 +15,7 @@ use std::result;
 use std::io::Error as IoError;
 
 quick_error!{
+    /// The error types for prometheus.
     #[derive(Debug)]
     pub enum Error {
         AlreadyReg {
@@ -41,5 +42,5 @@ quick_error!{
     }
 }
 
-
+/// A specialized Result type for prometheus.
 pub type Result<T> = result::Result<T, Error>;

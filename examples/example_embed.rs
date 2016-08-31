@@ -16,8 +16,7 @@ extern crate prometheus;
 use std::thread;
 use std::time::Duration;
 
-use prometheus::encoder::{TextEncoder, Encoder};
-use prometheus::{Opts, Registry, Counter, CounterVec, Gauge, GaugeVec};
+use prometheus::{Opts, Registry, Counter, CounterVec, Gauge, GaugeVec, TextEncoder, Encoder};
 
 fn main() {
     let counter_opts =

@@ -21,13 +21,8 @@ extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
 
-/// Protocol buffers format of metrics.
-pub mod proto;
-/// Error types of prometheus.
-pub mod errors;
-/// Encoders of prometheus.
-pub mod encoder;
-
+mod errors;
+mod encoder;
 mod macros;
 mod metrics;
 mod desc;
@@ -41,17 +36,28 @@ mod registry;
 mod vec;
 mod histogram;
 
+// Mods
+/// Protocol buffers format of metrics.
+pub mod proto;
+
+// Traits
+pub use self::encoder::Encoder;
+pub use self::metrics::Collector;
+
 // Structs
+pub use self::errors::{Result, Error};
+pub use self::encoder::TextEncoder;
 pub use self::desc::Desc;
 pub use self::registry::Registry;
-pub use self::metrics::{Collector, Opts};
+pub use self::metrics::Opts;
 pub use self::counter::{Counter, CounterVec};
 pub use self::gauge::{Gauge, GaugeVec};
 pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
 
-// functions
+// Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
 
 // Constants
+pub use self::encoder::TEXT_FORMAT;
 pub use self::histogram::DEFAULT_BUCKETS;
