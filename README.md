@@ -44,7 +44,7 @@ let metric_familys = r.gather();
 encoder.encode(&metric_familys, &mut buffer).unwrap();
 
 // Output to the standard output.
-println!("{}", String::from_utf8(buffer.clone()).unwrap());
+println!("{}", String::from_utf8(buffer).unwrap());
 ```
 
 ### Next steps
