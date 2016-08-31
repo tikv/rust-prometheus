@@ -210,6 +210,87 @@ macro_rules! register_gauge_vec {
     };
 }
 
+/// Create a Untyped and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_untyped",
+///                     "help",
+///                     labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let res1 = register_untyped!(opts);
+/// assert!(res1.is_ok());
+///
+/// let res2 = register_untyped!("test_macro_untyped_2", "help");
+/// assert!(res2.is_ok());
+///
+/// let res3 = register_untyped!("test_macro_untyped_3", "help", labels!{"a" => "b",});
+/// assert!(res3.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_untyped {
+    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
+        register_gauge!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
+    };
+
+    ( $ OPTS : expr ) => {
+        {
+            let gauge = $crate::Untyped::with_opts($OPTS).unwrap();
+            $crate::register(Box::new(gauge.clone())).map(|_| gauge)
+        }
+    }
+}
+
+/// Create a UntypedVec and register to default registry.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate prometheus;
+/// # fn main() {
+/// let opts = opts!("test_macro_untyped_vec_1",
+///                  "help",
+///                  labels!{"test" => "hello", "foo" => "bar",});
+///
+/// let untyped_vec = register_untyped_vec!(opts, &["a", "b"]);
+/// assert!(untyped_vec.is_ok());
+///
+/// let untyped_vec = register_untyped_vec!("test_macro_untyped_vec_2", "help", &["a", "b"]);
+/// assert!(untyped_vec.is_ok());
+///
+/// let untyped_vec = register_untyped_vec!("test_macro_untyped_vec_3",
+///                                     "help",
+///                                     labels!{"test" => "hello", "foo" => "bar",},
+///                                     &["a", "b"]);
+/// assert!(untyped_vec.is_ok());
+/// # }
+/// ```
+#[macro_export]
+macro_rules! register_untyped_vec {
+    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            let gauge_vec = $crate::UntypedVec::new($OPTS, $LABELS_NAMES).unwrap();
+            $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+        {
+            register_gauge_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! register_histogram {
     ( $ NAME : expr , $ HELP : expr ) => {
