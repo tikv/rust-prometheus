@@ -21,6 +21,7 @@ extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
 
+/// Protocol buffers format of metrics.
 pub mod proto;
 /// Error types of prometheus.
 pub mod errors;
