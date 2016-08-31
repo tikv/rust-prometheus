@@ -1,7 +1,7 @@
 # Prometheus Rust client library
 
 [![Build Status](https://travis-ci.org/pingcap/rust-prometheus.svg?branch=master)](https://travis-ci.org/pingcap/rust-prometheus)
-[![docs.rs](https://docs.rs/prometheus/badge.svg?version=0.2)](https://docs.rs/prometheus)
+[![docs.rs](https://docs.rs/prometheus/badge.svg?version=0.2.1)](https://docs.rs/prometheus)
 [![crates.io](http://meritbadge.herokuapp.com/prometheus)](https://crates.io/crates/prometheus)
 
 This is the [Rust](https://www.rust-lang.org) client library for [Prometheus](http://prometheus.io).
@@ -13,7 +13,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 
     ```toml
     [dependencies]
-    prometheus = "0.2"
+    prometheus = "0.2.1"
     ```
 
 + Add this to your crate in `lib.rs`:
