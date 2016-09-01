@@ -247,12 +247,13 @@ impl Histogram {
 }
 
 impl Histogram {
-    /// `observe` adds a single observation (with seconds) to the `Histogram`.
+    /// `observe` adds a single observation to the `Histogram`.
     pub fn observe(&self, v: f64) {
         self.core.write().unwrap().observe(v)
     }
 
-    /// `observe_duration` adds a single observation (with Duration) to the `Histogram`.
+    /// `observe_duration` adds a single observation (the seconds of the Duration)
+    ///  to the `Histogram`.
     pub fn observe_duration(&self, d: Duration) {
         let v = duration_to_seconds(d);
         self.core.write().unwrap().observe(v)
@@ -383,23 +384,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
     Ok(buckets)
 }
 
-/// Convert Duration to seconds.
-///
-/// # Examples
-///
-/// ```
-/// use std::time::Duration;
-/// use std::f64::EPSILON;
-///
-/// use prometheus::duration_to_seconds;
-///
-/// let tbls = vec![(1000, 1.0), (1100, 1.1), (100111, 100.111)];
-/// for (millis, seconds) in tbls {
-///     let d = Duration::from_millis(millis);
-///     let v = duration_to_seconds(d);
-///     assert!((v - seconds).abs() < EPSILON);
-/// }
-/// ```
+/// `duration_to_seconds` converts Duration to seconds.
 pub fn duration_to_seconds(d: Duration) -> f64 {
     let nanos = d.subsec_nanos() as f64 / 1e9;
     d.as_secs() as f64 + nanos
@@ -477,6 +462,16 @@ mod tests {
             if got.is_ok() {
                 assert_eq!(got.unwrap(), vec);
             }
+        }
+    }
+
+    #[test]
+    fn test_duration_to_seconds() {
+        let tbls = vec![(1000, 1.0), (1100, 1.1), (100111, 100.111)];
+        for (millis, seconds) in tbls {
+            let d = Duration::from_millis(millis);
+            let v = duration_to_seconds(d);
+            assert!((v - seconds).abs() < EPSILON);
         }
     }
 }

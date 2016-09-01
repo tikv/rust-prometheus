@@ -60,7 +60,7 @@ pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
 
 // Functions
 pub use self::registry::{gather, register, unregister};
-pub use self::histogram::{linear_buckets, exponential_buckets, duration_to_seconds};
+pub use self::histogram::{linear_buckets, exponential_buckets};
 
 // Constants
 pub use self::encoder::TEXT_FORMAT;
