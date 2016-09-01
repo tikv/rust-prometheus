@@ -40,13 +40,13 @@ pub trait Metric: Sync + Send + Clone {
 /// `Opts` bundles the options for creating most Metric types.
 #[derive(Debug)]
 pub struct Opts {
-    /// namespace, sub_system, and name are components of the fully-qualified
+    /// namespace, subsystem, and name are components of the fully-qualified
     /// name of the Metric (created by joining these components with
     /// "_"). Only Name is mandatory, the others merely help structuring the
     /// name. Note that the fully-qualified name of the metric must be a
     /// valid Prometheus metric name.
     pub namespace: String,
-    pub sub_system: String,
+    pub subsystem: String,
     pub name: String,
 
     /// help provides information about this metric. Mandatory!
@@ -81,7 +81,7 @@ impl Opts {
     pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
         Opts {
             namespace: "".to_owned(),
-            sub_system: "".to_owned(),
+            subsystem: "".to_owned(),
             name: name.into(),
             help: help.into(),
             const_labels: HashMap::new(),
@@ -94,9 +94,9 @@ impl Opts {
         self
     }
 
-    /// `sub_system` sets the sub system.
-    pub fn sub_system<S: Into<String>>(mut self, sub_system: S) -> Self {
-        self.sub_system = sub_system.into();
+    /// `subsystem` sets the sub system.
+    pub fn subsystem<S: Into<String>>(mut self, subsystem: S) -> Self {
+        self.subsystem = subsystem.into();
         self
     }
 
@@ -114,7 +114,7 @@ impl Opts {
 
     /// `fq_name` returns the fq_name.
     pub fn fq_name(&self) -> String {
-        build_fq_name(&self.namespace, &self.sub_system, &self.name)
+        build_fq_name(&self.namespace, &self.subsystem, &self.name)
     }
 }
 
@@ -139,17 +139,17 @@ impl PartialOrd for LabelPair {
 /// name from the name component in their Opts. Users of the library will only
 /// need this function if they implement their own Metric or instantiate a Desc
 /// directly.
-pub fn build_fq_name(namespace: &str, sub_system: &str, name: &str) -> String {
+pub fn build_fq_name(namespace: &str, subsystem: &str, name: &str) -> String {
     if name.is_empty() {
         return "".to_owned();
     }
 
-    if !namespace.is_empty() && !sub_system.is_empty() {
-        return format!("{}_{}_{}", namespace, sub_system, name);
+    if !namespace.is_empty() && !subsystem.is_empty() {
+        return format!("{}_{}_{}", namespace, subsystem, name);
     } else if !namespace.is_empty() {
         return format!("{}_{}", namespace, name);
-    } else if !sub_system.is_empty() {
-        return format!("{}_{}", sub_system, name);
+    } else if !subsystem.is_empty() {
+        return format!("{}_{}", subsystem, name);
     }
 
     name.to_owned()
@@ -196,8 +196,8 @@ mod tests {
         (" ", "", "", ""),
         ];
 
-        for (namespace, sub_system, name, res) in tbl {
-            assert_eq!(&build_fq_name(namespace, sub_system, name), res);
+        for (namespace, subsystem, name, res) in tbl {
+            assert_eq!(&build_fq_name(namespace, subsystem, name), res);
         }
     }
 }
