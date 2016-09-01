@@ -97,9 +97,9 @@ impl HistogramOpts {
         self
     }
 
-    /// `sub_system` sets the sub system.
-    pub fn sub_system<S: Into<String>>(mut self, sub_system: S) -> Self {
-        self.common_opts.sub_system = sub_system.into();
+    /// `subsystem` sets the sub system.
+    pub fn subsystem<S: Into<String>>(mut self, subsystem: S) -> Self {
+        self.common_opts.subsystem = subsystem.into();
         self
     }
 

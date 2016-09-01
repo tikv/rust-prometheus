@@ -231,7 +231,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         self.get_metric_with(labels).unwrap()
     }
 
-    /// `delete_label_values` removes the metric where the variable labels are the same
+    /// `remove_label_values` removes the metric where the variable labels are the same
     /// as those passed in as labels (same order as the VariableLabels in Desc). It
     /// returns true if a metric was deleted.
     ///
@@ -243,11 +243,11 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
-    pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
+    pub fn remove_label_values(&self, vals: &[&str]) -> Result<()> {
         self.v.delete_label_values(vals)
     }
 
-    /// `delete` deletes the metric where the variable labels are the same as those
+    /// `remove` removes the metric where the variable labels are the same as those
     /// passed in as labels. It returns true if a metric was deleted.
     ///
     /// It returns an error if the number and names of the Labels are inconsistent
@@ -255,7 +255,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     ///
     /// This method is used for the same purpose as `delete_label_values`. See
     /// there for pros and cons of the two methods.
-    pub fn delete(&self, labels: &HashMap<&str, &str>) -> Result<()> {
+    pub fn remove(&self, labels: &HashMap<&str, &str>) -> Result<()> {
         self.v.delete(labels)
     }
 
@@ -295,24 +295,24 @@ mod tests {
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
         labels.insert("l2", "v2");
-        assert!(vec.delete(&labels).is_err());
+        assert!(vec.remove(&labels).is_err());
 
         vec.with(&labels).inc();
-        assert!(vec.delete(&labels).is_ok());
-        assert!(vec.delete(&labels).is_err());
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
 
         let mut labels2 = HashMap::new();
         labels2.insert("l1", "v2");
         labels2.insert("l2", "v1");
 
         vec.with(&labels).inc();
-        assert!(vec.delete(&labels2).is_err());
+        assert!(vec.remove(&labels2).is_err());
 
         vec.with(&labels).inc();
 
         let mut labels3 = HashMap::new();
         labels3.insert("l1", "v1");
-        assert!(vec.delete(&labels3).is_err());
+        assert!(vec.remove(&labels3).is_err());
     }
 
     #[test]
@@ -321,13 +321,13 @@ mod tests {
                                   &["l1", "l2"])
             .unwrap();
 
-        assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.delete_label_values(&["v1", "v2"]).is_ok());
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
 
         vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.delete_label_values(&["v1"]).is_err());
-        assert!(vec.delete_label_values(&["v1", "v3"]).is_err());
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
     }
 
     #[test]
@@ -339,7 +339,7 @@ mod tests {
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
         labels.insert("l2", "v2");
-        assert!(vec.delete(&labels).is_err());
+        assert!(vec.remove(&labels).is_err());
 
         vec.with(&labels).inc();
         vec.with(&labels).dec();
@@ -347,8 +347,8 @@ mod tests {
         vec.with(&labels).sub(42.0);
         vec.with(&labels).set(42.0);
 
-        assert!(vec.delete(&labels).is_ok());
-        assert!(vec.delete(&labels).is_err());
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
     }
 
     #[test]
@@ -357,9 +357,9 @@ mod tests {
                                 &["l1", "l2"])
             .unwrap();
 
-        assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.delete_label_values(&["v1", "v2"]).is_ok());
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
 
         vec.with_label_values(&["v1", "v2"]).inc();
         vec.with_label_values(&["v1", "v2"]).dec();
@@ -367,8 +367,8 @@ mod tests {
         vec.with_label_values(&["v1", "v2"]).sub(42.0);
         vec.with_label_values(&["v1", "v2"]).set(42.0);
 
-        assert!(vec.delete_label_values(&["v1"]).is_err());
-        assert!(vec.delete_label_values(&["v1", "v3"]).is_err());
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
     }
 
     #[test]
@@ -377,9 +377,9 @@ mod tests {
                                   &["l1", "l2"])
             .unwrap();
 
-        assert!(vec.delete_label_values(&["v1", "v2"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.delete_label_values(&["v1", "v2"]).is_ok());
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
 
         vec.with_label_values(&["v1", "v2"]).inc();
         vec.with_label_values(&["v1", "v2"]).dec();
@@ -387,7 +387,7 @@ mod tests {
         vec.with_label_values(&["v1", "v2"]).sub(42.0);
         vec.with_label_values(&["v1", "v2"]).set(42.0);
 
-        assert!(vec.delete_label_values(&["v1"]).is_err());
-        assert!(vec.delete_label_values(&["v1", "v3"]).is_err());
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
     }
 }
