@@ -66,7 +66,7 @@ fn main() {
                 .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
             res.send(&buffer).unwrap();
 
-            HTTP_REQ_HISTOGRAM.observe_duration(start.elapsed());
+            HTTP_REQ_HISTOGRAM.observe(start.elapsed());
             HTTP_BODY_GAUGE.set(buffer.len() as f64);
         })
         .unwrap();
