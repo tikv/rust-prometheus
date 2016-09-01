@@ -17,8 +17,6 @@ extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
 
-use std::time::Instant;
-
 use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
@@ -57,7 +55,7 @@ fn main() {
         .unwrap()
         .handle(move |_: Request, mut res: Response| {
             HTTP_COUNTER.inc();
-            let start = Instant::now();
+            let timer = HTTP_REQ_HISTOGRAM.start_timer();
 
             let metric_familys = prometheus::gather();
             let mut buffer = vec![];
@@ -66,7 +64,7 @@ fn main() {
                 .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
             res.send(&buffer).unwrap();
 
-            HTTP_REQ_HISTOGRAM.observe_duration(start.elapsed());
+            timer.observe_duration();
             HTTP_BODY_GAUGE.set(buffer.len() as f64);
         })
         .unwrap();
