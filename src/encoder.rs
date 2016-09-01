@@ -310,7 +310,7 @@ test_untyped{a="1",b="2"} 2
     fn test_text_encoder_histogram() {
         let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1");
         let histogram = Histogram::with_opts(opts).unwrap();
-        histogram.observe(0.25);
+        histogram.observe_seconds(0.25);
 
         let mf = histogram.collect();
         let mut writer = Vec::<u8>::new();

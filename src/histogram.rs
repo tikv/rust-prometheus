@@ -15,6 +15,7 @@
 use std::convert::From;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
+use std::time::Duration;
 
 use protobuf::RepeatedField;
 use proto;
@@ -246,8 +247,14 @@ impl Histogram {
 }
 
 impl Histogram {
-    /// `observe` adds a single observation to the `Histogram`.
-    pub fn observe(&self, v: f64) {
+    /// `observe_seconds` adds a single observation (with seconds) to the `Histogram`.
+    pub fn observe_seconds(&self, v: f64) {
+        self.core.write().unwrap().observe(v)
+    }
+
+    /// `observe` adds a single observation (with Duration) to the `Histogram`.
+    pub fn observe(&self, d: Duration) {
+        let v = duration_to_seconds(d);
         self.core.write().unwrap().observe(v)
     }
 }
@@ -376,9 +383,16 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
     Ok(buckets)
 }
 
+/// `duration_to_seconds` converts Duration to seconds.
+pub fn duration_to_seconds(d: Duration) -> f64 {
+    let nanos = d.subsec_nanos() as f64 / 1e9;
+    d.as_secs() as f64 + nanos
+}
+
 #[cfg(test)]
 mod tests {
     use std::f64::{EPSILON, INFINITY};
+    use std::time::Duration;
 
     use metrics::Collector;
 
@@ -390,8 +404,8 @@ mod tests {
             .const_label("a", "1")
             .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
-        histogram.observe(0.5);
-        histogram.observe(1.0);
+        histogram.observe_seconds(0.5);
+        histogram.observe(Duration::from_secs(1));
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
@@ -447,6 +461,16 @@ mod tests {
             if got.is_ok() {
                 assert_eq!(got.unwrap(), vec);
             }
+        }
+    }
+
+    #[test]
+    fn test_duration_to_seconds() {
+        let tbls = vec![(1000, 1.0), (1100, 1.1), (100111, 100.111)];
+        for (millis, seconds) in tbls {
+            let d = Duration::from_millis(millis);
+            let v = duration_to_seconds(d);
+            assert!((v - seconds).abs() < EPSILON);
         }
     }
 }
