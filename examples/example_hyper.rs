@@ -42,8 +42,8 @@ lazy_static! {
 
     static ref HTTP_REQ_HISTOGRAM: Histogram = register_histogram!(
         histogram_opts!(
-            "example_http_request_duration_microseconds",
-            "The HTTP request latencies in microseconds.",
+            "example_http_request_duration_seconds",
+            "The HTTP request latencies in seconds.",
             labels!{"handler" => "all",}
         )
     ).unwrap();
@@ -66,8 +66,7 @@ fn main() {
                 .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
             res.send(&buffer).unwrap();
 
-            let spend = (start.elapsed().subsec_nanos() as f64) / 1e6;
-            HTTP_REQ_HISTOGRAM.observe(spend);
+            HTTP_REQ_HISTOGRAM.observe_duration(start.elapsed());
             HTTP_BODY_GAUGE.set(buffer.len() as f64);
         })
         .unwrap();
