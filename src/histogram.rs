@@ -195,18 +195,24 @@ impl Default for HistogramCore {
 }
 
 /// `HistogramTimer` represents an event being timed.
-pub struct HistogramTimer<'a>(&'a Histogram, Instant);
+pub struct HistogramTimer<'a> {
+    histogram: &'a Histogram,
+    start: Instant,
+}
 
 impl<'a> HistogramTimer<'a> {
     fn new(histogram: &'a Histogram) -> HistogramTimer {
-        HistogramTimer(histogram, Instant::now())
+        HistogramTimer {
+            histogram: histogram,
+            start: Instant::now(),
+        }
     }
 
     /// `observe_duration` observes the amount of time in seconds since
     /// `Histogram.start_timer` was called.
     pub fn observe_duration(&self) {
-        let v = duration_to_seconds(self.1.elapsed());
-        self.0.observe(v)
+        let v = duration_to_seconds(self.start.elapsed());
+        self.histogram.observe(v)
     }
 }
 
@@ -430,7 +436,7 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
-        assert!(proto_histogram.get_sample_sum() > 1.5);
+        assert!(proto_histogram.get_sample_sum() >= 1.5);
     }
 
     #[test]
