@@ -15,7 +15,7 @@
 use std::convert::From;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Instant, Duration};
 
 use protobuf::RepeatedField;
 use proto;
@@ -194,6 +194,28 @@ impl Default for HistogramCore {
     }
 }
 
+/// `HistogramTimer` represents an event being timed.
+pub struct HistogramTimer<'a> {
+    histogram: &'a Histogram,
+    start: Instant,
+}
+
+impl<'a> HistogramTimer<'a> {
+    fn new(histogram: &'a Histogram) -> HistogramTimer {
+        HistogramTimer {
+            histogram: histogram,
+            start: Instant::now(),
+        }
+    }
+
+    /// `observe_duration` observes the amount of time in seconds since
+    /// `Histogram.start_timer` was called.
+    pub fn observe_duration(&self) {
+        let v = duration_to_seconds(self.start.elapsed());
+        self.histogram.observe(v)
+    }
+}
+
 /// A `Histogram` counts individual observations from an event or sample stream in
 /// configurable buckets. Similar to a summary, it also provides a sum of
 /// observations and an observation count.
@@ -252,11 +274,9 @@ impl Histogram {
         self.core.write().unwrap().observe(v)
     }
 
-    /// `observe_duration` adds a single observation (the seconds of the Duration)
-    ///  to the `Histogram`.
-    pub fn observe_duration(&self, d: Duration) {
-        let v = duration_to_seconds(d);
-        self.core.write().unwrap().observe(v)
+    /// `start_timer` returns a `HistogramTimer` to track a duration.
+    pub fn start_timer(&self) -> HistogramTimer {
+        HistogramTimer::new(self)
     }
 }
 
@@ -392,6 +412,7 @@ pub fn duration_to_seconds(d: Duration) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
     use std::f64::{EPSILON, INFINITY};
     use std::time::Duration;
 
@@ -406,14 +427,16 @@ mod tests {
             .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
         histogram.observe(0.5);
-        histogram.observe_duration(Duration::from_secs(1));
+        let timer = histogram.start_timer();
+        thread::sleep(Duration::from_secs(1));
+        timer.observe_duration();
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
-        assert!((proto_histogram.get_sample_sum() - 1.5).abs() < EPSILON);
+        assert!(proto_histogram.get_sample_sum() >= 1.5);
     }
 
     #[test]
