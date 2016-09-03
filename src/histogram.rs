@@ -245,10 +245,17 @@ impl Histogram {
                                   vec![],
                                   opts.common_opts.const_labels.clone()));
 
-        Histogram::with_desc(desc, &[])
+        Histogram::with_all(desc, &[], Some(opts))
     }
 
     fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
+        Histogram::with_all(desc, label_values, None)
+    }
+
+    fn with_all(desc: Desc,
+                label_values: &[&str],
+                opts: Option<HistogramOpts>)
+                -> Result<Histogram> {
         for name in &desc.variable_labels {
             try!(check_bucket_lable(&name));
         }
@@ -257,7 +264,8 @@ impl Histogram {
         }
 
         let pairs = make_label_pairs(&desc, label_values);
-        let core = HistogramCore::default();
+        let core = try!(opts.map_or(Ok(HistogramCore::default()),
+                                    |opts| HistogramCore::with_buckets(opts.buckets)));
 
         Ok(Histogram {
             desc: desc,
@@ -422,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_histogram() {
-        let opts = HistogramOpts::new("test", "test help")
+        let opts = HistogramOpts::new("test1", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
@@ -437,6 +445,18 @@ mod tests {
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
         assert!(proto_histogram.get_sample_sum() >= 1.5);
+        assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
+
+        let buckets = vec![1.0, 2.0, 3.0];
+        let opts = HistogramOpts::new("test2", "test help").buckets(buckets.clone());
+        let histogram = Histogram::with_opts(opts).unwrap();
+        let mf = histogram.collect();
+        let m = mf.get_metric().as_ref().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 0);
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 0);
+        assert!((proto_histogram.get_sample_sum() - 0.0) < EPSILON);
+        assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
     }
 
     #[test]
