@@ -245,17 +245,17 @@ impl Histogram {
                                   vec![],
                                   opts.common_opts.const_labels.clone()));
 
-        Histogram::with_all(desc, &[], Some(opts))
+        Histogram::with_desc_and_buckets(desc, &[], Some(opts.buckets))
     }
 
     fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
-        Histogram::with_all(desc, label_values, None)
+        Histogram::with_desc_and_buckets(desc, label_values, None)
     }
 
-    fn with_all(desc: Desc,
-                label_values: &[&str],
-                opts: Option<HistogramOpts>)
-                -> Result<Histogram> {
+    fn with_desc_and_buckets(desc: Desc,
+                             label_values: &[&str],
+                             buckets: Option<Vec<f64>>)
+                             -> Result<Histogram> {
         for name in &desc.variable_labels {
             try!(check_bucket_lable(&name));
         }
@@ -264,8 +264,7 @@ impl Histogram {
         }
 
         let pairs = make_label_pairs(&desc, label_values);
-        let core = try!(opts.map_or(Ok(HistogramCore::default()),
-                                    |opts| HistogramCore::with_buckets(opts.buckets)));
+        let core = try!(buckets.map_or(Ok(HistogramCore::default()), HistogramCore::with_buckets));
 
         Ok(Histogram {
             desc: desc,
