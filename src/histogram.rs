@@ -194,7 +194,9 @@ impl Default for HistogramCore {
     }
 }
 
-/// `HistogramTimer` represents an event being timed.
+/// `HistogramTimer` represents an event being timed. When the timer goes out of
+/// scope, the duration will be observed, or call `observe_duration` to manually
+/// observe.
 pub struct HistogramTimer<'a> {
     histogram: Option<&'a Histogram>,
     start: Instant,
@@ -210,7 +212,11 @@ impl<'a> HistogramTimer<'a> {
 
     /// `observe_duration` observes the amount of time in seconds since
     /// `Histogram.start_timer` was called.
-    pub fn observe_duration(&mut self) {
+    pub fn observe_duration(mut self) {
+        self.observe();
+    }
+
+    fn observe(&mut self) {
         if let Some(histogram) = self.histogram.take() {
             let v = duration_to_seconds(self.start.elapsed());
             histogram.observe(v)
@@ -220,7 +226,7 @@ impl<'a> HistogramTimer<'a> {
 
 impl<'a> Drop for HistogramTimer<'a> {
     fn drop(&mut self) {
-        self.observe_duration();
+        self.observe();
     }
 }
 
@@ -443,16 +449,12 @@ mod tests {
         let histogram = Histogram::with_opts(opts).unwrap();
         histogram.observe(1.0);
 
-        let mut timer = histogram.start_timer();
+        let timer = histogram.start_timer();
         thread::sleep(Duration::from_millis(100));
         timer.observe_duration();
 
-        // Observes nothing
-        thread::sleep(Duration::from_millis(200));
-        timer.observe_duration();
-
         {
-            let timer = histogram.start_timer();
+            let _timer = histogram.start_timer();
             thread::sleep(Duration::from_millis(400));
         }
 
@@ -462,7 +464,6 @@ mod tests {
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
         assert!(proto_histogram.get_sample_sum() >= 1.5);
-        assert!(proto_histogram.get_sample_sum() <= 1.7);
         assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
 
         let buckets = vec![1.0, 2.0, 3.0];

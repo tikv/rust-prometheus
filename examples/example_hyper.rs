@@ -55,7 +55,7 @@ fn main() {
         .unwrap()
         .handle(move |_: Request, mut res: Response| {
             HTTP_COUNTER.inc();
-            let mut timer = HTTP_REQ_HISTOGRAM.start_timer();
+            let timer = HTTP_REQ_HISTOGRAM.start_timer();
 
             let metric_familys = prometheus::gather();
             let mut buffer = vec![];
