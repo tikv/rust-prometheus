@@ -196,23 +196,31 @@ impl Default for HistogramCore {
 
 /// `HistogramTimer` represents an event being timed.
 pub struct HistogramTimer<'a> {
-    histogram: &'a Histogram,
+    histogram: Option<&'a Histogram>,
     start: Instant,
 }
 
 impl<'a> HistogramTimer<'a> {
     fn new(histogram: &'a Histogram) -> HistogramTimer {
         HistogramTimer {
-            histogram: histogram,
+            histogram: Some(histogram),
             start: Instant::now(),
         }
     }
 
     /// `observe_duration` observes the amount of time in seconds since
     /// `Histogram.start_timer` was called.
-    pub fn observe_duration(&self) {
-        let v = duration_to_seconds(self.start.elapsed());
-        self.histogram.observe(v)
+    pub fn observe_duration(&mut self) {
+        if let Some(histogram) = self.histogram.take() {
+            let v = duration_to_seconds(self.start.elapsed());
+            histogram.observe(v)
+        }
+    }
+}
+
+impl<'a> Drop for HistogramTimer<'a> {
+    fn drop(&mut self) {
+        self.observe_duration();
     }
 }
 
@@ -433,17 +441,28 @@ mod tests {
             .const_label("a", "1")
             .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
-        histogram.observe(0.5);
-        let timer = histogram.start_timer();
-        thread::sleep(Duration::from_secs(1));
+        histogram.observe(1.0);
+
+        let mut timer = histogram.start_timer();
+        thread::sleep(Duration::from_millis(100));
         timer.observe_duration();
+
+        // Observes nothing
+        thread::sleep(Duration::from_millis(200));
+        timer.observe_duration();
+
+        {
+            let timer = histogram.start_timer();
+            thread::sleep(Duration::from_millis(400));
+        }
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert_eq!(proto_histogram.get_sample_count(), 3);
         assert!(proto_histogram.get_sample_sum() >= 1.5);
+        assert!(proto_histogram.get_sample_sum() <= 1.7);
         assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
 
         let buckets = vec![1.0, 2.0, 3.0];
