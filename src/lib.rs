@@ -35,12 +35,10 @@ mod counter;
 mod gauge;
 #[allow(dead_code)]
 mod untyped;
-#[allow(dead_code)]
 mod registry;
 #[allow(dead_code)]
 mod vec;
 mod histogram;
-#[allow(dead_code)]
 mod push;
 
 // Mods

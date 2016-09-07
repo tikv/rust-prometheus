@@ -19,7 +19,7 @@ use hyper::client::Client;
 use hyper::client::pool::Config;
 use hyper::method::Method;
 use hyper::status::StatusCode;
-use hyper::header::{Headers, ContentType};
+use hyper::header::ContentType;
 
 use proto;
 use errors::{Result, Error};
@@ -33,9 +33,22 @@ lazy_static!{
         );
 }
 
-const CONTENT_TYPE_HEADER: &'static str = "Content-Type";
-const CONTENT_LENGTH_HEADER: &'static str = "Content-Length";
-
+/// `push_from_gather` triggers a metric collection by the provided Gatherer (which is
+/// usually implemented by a prometheus.Registry) and pushes all gathered metrics
+/// to the Pushgateway specified by url, using the provided job name and the
+/// (optional) further grouping labels (the grouping map may be nil). See the
+/// Pushgateway documentation for detailed implications of the job and other
+/// grouping labels. Neither the job name nor any grouping label value may
+/// contain a "/". The metrics pushed must not contain a job label of their own
+/// nor any of the grouping labels.
+///
+/// You can use just host:port or ip:port as url, in which case 'http://' is
+/// added automatically. You can also include the schema in the URL. However, do
+/// not include the '/metrics/jobs/...' part.
+///
+/// Note that all previously pushed metrics with the same job and other grouping
+/// labels will be replaced with the metrics pushed by this call. (It uses HTTP
+/// method 'PUT' to push to the Pushgateway.)
 pub fn push_from_gather(job: &str,
                         grouping: HashMap<String, String>,
                         url: &str,
@@ -84,15 +97,11 @@ fn push(job: &str,
     let mut buf = Vec::new();
     try!(encoder.encode(&mfs, &mut buf));
 
-    let mut request = HTTP_CLIENT.request(Method::from_str(method).unwrap(), &push_url);
-    request = request.body(buf.as_slice());
-
-    let mut headers = Headers::new();
-    headers.set(ContentType(encoder.format_type().parse().unwrap()));
-    request = request.headers(headers);
+    let request = HTTP_CLIENT.request(Method::from_str(method).unwrap(), &push_url)
+        .header(ContentType(encoder.format_type().parse().unwrap()))
+        .body(buf.as_slice());
 
     let response = try!(request.send().map_err(|e| Error::Msg(format!("{}", e))));
-
     if response.status == StatusCode::Accepted {
         Ok(())
     } else {

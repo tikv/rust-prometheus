@@ -48,6 +48,7 @@ fn main() {
         prometheus::push_from_gather("example_push",
                                      labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
                                      "127.0.0.1:9091",
-                                     metric_familys);
+                                     metric_familys)
+            .unwrap();
     }
 }
