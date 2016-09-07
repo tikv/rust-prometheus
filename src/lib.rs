@@ -56,7 +56,7 @@ pub use self::metrics::Opts;
 pub use self::counter::{Counter, CounterVec};
 pub use self::gauge::{Gauge, GaugeVec};
 pub use self::untyped::{Untyped, UntypedVec};
-pub use self::histogram::{Histogram, HistogramVec, HistogramOpts};
+pub use self::histogram::{Histogram, HistogramVec, HistogramOpts, HistogramTimer};
 
 // Functions
 pub use self::registry::{gather, register, unregister};
