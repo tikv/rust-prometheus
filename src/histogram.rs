@@ -194,7 +194,11 @@ impl Default for HistogramCore {
     }
 }
 
-/// `HistogramTimer` represents an event being timed.
+/// `HistogramTimer` represents an event being timed. When the timer goes out of
+/// scope, the duration will be observed, or call `observe_duration` to manually
+/// observe.
+///
+/// NOTICE: A timer can be observed only once (automatically or manually).
 pub struct HistogramTimer<'a> {
     histogram: &'a Histogram,
     start: Instant,
@@ -210,9 +214,19 @@ impl<'a> HistogramTimer<'a> {
 
     /// `observe_duration` observes the amount of time in seconds since
     /// `Histogram.start_timer` was called.
-    pub fn observe_duration(&self) {
+    pub fn observe_duration(self) {
+        drop(self);
+    }
+
+    fn observe(&mut self) {
         let v = duration_to_seconds(self.start.elapsed());
         self.histogram.observe(v)
+    }
+}
+
+impl<'a> Drop for HistogramTimer<'a> {
+    fn drop(&mut self) {
+        self.observe();
     }
 }
 
@@ -433,16 +447,22 @@ mod tests {
             .const_label("a", "1")
             .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
-        histogram.observe(0.5);
+        histogram.observe(1.0);
+
         let timer = histogram.start_timer();
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(100));
         timer.observe_duration();
+
+        {
+            let _timer = histogram.start_timer();
+            thread::sleep(Duration::from_millis(400));
+        }
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert_eq!(proto_histogram.get_sample_count(), 3);
         assert!(proto_histogram.get_sample_sum() >= 1.5);
         assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
 
