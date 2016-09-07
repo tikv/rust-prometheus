@@ -20,9 +20,11 @@ extern crate protobuf;
 extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
+extern crate hyper;
 
 mod errors;
 mod encoder;
+#[macro_use]
 mod macros;
 mod metrics;
 mod desc;
@@ -38,6 +40,8 @@ mod registry;
 #[allow(dead_code)]
 mod vec;
 mod histogram;
+#[allow(dead_code)]
+mod push;
 
 // Mods
 // Protocol buffers format of metrics.
@@ -61,6 +65,7 @@ pub use self::histogram::{Histogram, HistogramVec, HistogramOpts, HistogramTimer
 // Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
+pub use self::push::push_from_gather;
 
 // Constants
 pub use self::encoder::TEXT_FORMAT;
