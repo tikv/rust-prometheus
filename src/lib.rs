@@ -21,6 +21,7 @@ extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
 extern crate hyper;
+extern crate libc;
 
 mod errors;
 mod encoder;
@@ -63,7 +64,7 @@ pub use self::histogram::{Histogram, HistogramVec, HistogramOpts, HistogramTimer
 // Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
-pub use self::push::push_from_gather;
+pub use self::push::{push_from_gather, hostname_grouping_key};
 
 // Constants
 pub use self::encoder::TEXT_FORMAT;

@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::str::FromStr;
+use std::str::{self, FromStr};
 use std::collections::HashMap;
 
+use libc::{self, gethostname};
 use hyper::client::Client;
 use hyper::client::pool::Config;
 use hyper::method::Method;
@@ -108,5 +109,40 @@ fn push(job: &str,
         Err(Error::Msg(format!("unexpected status code {} while pushing to {}",
                                response.status,
                                push_url)))
+    }
+}
+
+/// `hostname_grouping_key` returns a label map with the only entry
+/// {instance="<hostname>"}. This can be conveniently used as the grouping
+/// parameter if metrics should be pushed with the hostname as label. The
+/// returned map is created upon each call so that the caller is free to add more
+/// labels to the map.
+pub fn hostname_grouping_key() -> HashMap<String, String> {
+    // Host names are limited to 255 bytes.
+    //   ref: http://pubs.opengroup.org/onlinepubs/7908799/xns/gethostname.html
+    let max_len = 256;
+    let mut name = vec![0u8; max_len];
+    match unsafe {
+        gethostname(name.as_mut_ptr() as *mut libc::c_char,
+                    max_len as libc::size_t)
+    } {
+        0 => {
+            let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
+            labels!{
+                "instance".to_owned() => str::from_utf8(&name[..last_char]).unwrap().to_owned(),
+            }
+        }
+        _ => labels!{"instance".to_owned() => "unknown".to_owned(),},
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hostname_grouping_key() {
+        let map = hostname_grouping_key();
+        assert!(!map.is_empty());
     }
 }
