@@ -198,29 +198,27 @@ impl Default for HistogramCore {
 /// scope, the duration will be observed, or call `observe_duration` to manually
 /// observe.
 pub struct HistogramTimer<'a> {
-    histogram: Option<&'a Histogram>,
+    histogram: &'a Histogram,
     start: Instant,
 }
 
 impl<'a> HistogramTimer<'a> {
     fn new(histogram: &'a Histogram) -> HistogramTimer {
         HistogramTimer {
-            histogram: Some(histogram),
+            histogram: histogram,
             start: Instant::now(),
         }
     }
 
     /// `observe_duration` observes the amount of time in seconds since
     /// `Histogram.start_timer` was called.
-    pub fn observe_duration(mut self) {
-        self.observe();
+    pub fn observe_duration(self) {
+        drop(self);
     }
 
     fn observe(&mut self) {
-        if let Some(histogram) = self.histogram.take() {
-            let v = duration_to_seconds(self.start.elapsed());
-            histogram.observe(v)
-        }
+        let v = duration_to_seconds(self.start.elapsed());
+        self.histogram.observe(v)
     }
 }
 
