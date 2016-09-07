@@ -197,6 +197,8 @@ impl Default for HistogramCore {
 /// `HistogramTimer` represents an event being timed. When the timer goes out of
 /// scope, the duration will be observed, or call `observe_duration` to manually
 /// observe.
+///
+/// NOTICE: A timer can be observed only once (automatically or manually).
 pub struct HistogramTimer<'a> {
     histogram: &'a Histogram,
     start: Instant,
