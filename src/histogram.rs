@@ -458,7 +458,7 @@ mod tests {
             let _timer = timer;
             thread::sleep(Duration::from_millis(400));
         });
-        handler.join().unwrap();
+        assert!(handler.join().is_ok());
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
