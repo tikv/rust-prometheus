@@ -90,10 +90,10 @@ impl Metric for Counter {
 pub struct CounterVecBuilder {}
 
 impl MetricVecBuilder for CounterVecBuilder {
-    type Output = Counter;
+    type M = Counter;
     type P = Opts;
 
-    fn build(&self, desc: &Desc, _: Opts, vals: &[&str]) -> Result<Counter> {
+    fn build(&self, desc: &Desc, _: &Opts, vals: &[&str]) -> Result<Counter> {
         Counter::with_desc(desc.clone(), vals)
     }
 }

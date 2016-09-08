@@ -26,14 +26,16 @@ use errors::{Result, Error};
 
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
-    type Output: Metric;
+    type M: Metric;
     type P: Sync + Send + Clone;
-    /// `build` builds a Metric with description and corresponding label names.
-    fn build(&self, &Desc, Self::P, &[&str]) -> Result<Self::Output>;
+
+    /// `build` builds a Metric with description, option and corresponding
+    /// label names.
+    fn build(&self, &Desc, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
 struct MetricVecCore<T: MetricVecBuilder> {
-    pub children: RwLock<HashMap<u64, T::Output>>,
+    pub children: RwLock<HashMap<u64, T::M>>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
@@ -60,13 +62,13 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         m
     }
 
-    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::Output> {
+    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
         let h = try!(self.hash_label_values(&vals));
 
         self.get_or_create_metric(h, vals)
     }
 
-    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::Output> {
+    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
         let h = try!(self.hash_labels(labels));
 
         // Avoid to create vector values, check hash first.
@@ -140,13 +142,13 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::Output> {
+    fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
         let mut children = self.children.write().unwrap();
         if let Some(metric) = children.get(&hash).cloned() {
             return Ok(metric);
         }
 
-        let metric = try!(self.new_metric.build(&self.desc, self.opts.clone(), label_values));
+        let metric = try!(self.new_metric.build(&self.desc, &self.opts, label_values));
         children.insert(hash, metric.clone());
         Ok(metric)
     }
@@ -200,7 +202,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// an alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
-    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::Output> {
+    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
         self.v.get_metric_with_label_values(vals)
     }
 
@@ -216,21 +218,21 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// This method is used for the same purpose as
     /// `get_metric_with_label_values`. See there for pros and cons of the two
     /// methods.
-    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::Output> {
+    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
         self.v.get_metric_with(labels)
     }
 
     /// `with_label_values` works as `get_metric_with_label_values`, but panics if an error
     /// occurs. The method allows neat syntax like:
     ///     httpReqs.with_label_values("404", "POST").inc()
-    pub fn with_label_values(&self, vals: &[&str]) -> T::Output {
+    pub fn with_label_values(&self, vals: &[&str]) -> T::M {
         self.get_metric_with_label_values(vals).unwrap()
     }
 
     /// `with` works as `get_metric_with`, but panics if an error occurs. The method allows
     /// neat syntax like:
     ///     httpReqs.with(Labels{"status":"404", "method":"POST"}).inc()
-    pub fn with(&self, labels: &HashMap<&str, &str>) -> T::Output {
+    pub fn with(&self, labels: &HashMap<&str, &str>) -> T::M {
         self.get_metric_with(labels).unwrap()
     }
 

@@ -332,11 +332,11 @@ impl Collector for Histogram {
 pub struct HistogramVecBuilder {}
 
 impl MetricVecBuilder for HistogramVecBuilder {
-    type Output = Histogram;
+    type M = Histogram;
     type P = HistogramOpts;
 
-    fn build(&self, desc: &Desc, opts: HistogramOpts, vals: &[&str]) -> Result<Histogram> {
-        Histogram::with_desc_and_buckets(desc.clone(), vals, Some(opts.buckets))
+    fn build(&self, desc: &Desc, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
+        Histogram::with_desc_and_buckets(desc.clone(), vals, Some(opts.buckets.clone()))
     }
 }
 

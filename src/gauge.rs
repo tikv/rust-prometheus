@@ -107,10 +107,10 @@ impl Metric for Gauge {
 pub struct GaugeVecBuilder {}
 
 impl MetricVecBuilder for GaugeVecBuilder {
-    type Output = Gauge;
+    type M = Gauge;
     type P = Opts;
 
-    fn build(&self, desc: &Desc, _: Opts, vals: &[&str]) -> Result<Gauge> {
+    fn build(&self, desc: &Desc, _: &Opts, vals: &[&str]) -> Result<Gauge> {
         Gauge::with_desc(desc.clone(), vals)
     }
 }
