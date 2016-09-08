@@ -41,14 +41,24 @@ fn main() {
     println!("Pushing, please wait 10 seconds ...");
 
     for _ in 0..5 {
-        thread::sleep(time::Duration::from_secs(2));
-        PUSH_COUNTER.inc();
-        let metric_familys = prometheus::gather();
-        let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
-        prometheus::push_from_gather("example_push",
-                                     labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
-                                     "127.0.0.1:9091",
-                                     metric_familys)
-            .unwrap();
+        match () {
+            #[cfg(feature = "push")]
+            () => {
+                thread::sleep(time::Duration::from_secs(2));
+                PUSH_COUNTER.inc();
+                let metric_familys = prometheus::gather();
+                let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
+                prometheus::push_metrics("example_push",
+                                         labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
+                                         "127.0.0.1:9091",
+                                         metric_familys)
+                    .unwrap();
+            }
+            #[cfg(not(feature = "push"))]
+            () => {
+                println!("Please enable feature push");
+                return;
+            }
+        }
     }
 }

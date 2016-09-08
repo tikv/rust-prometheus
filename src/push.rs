@@ -23,25 +23,27 @@ use hyper::status::StatusCode;
 use hyper::header::ContentType;
 
 use proto;
+use registry::Registry;
+use metrics::Collector;
 use errors::{Result, Error};
 use encoder::{Encoder, TextEncoder};
+
+const HYPER_MAX_IDLE: usize = 1;
 
 lazy_static!{
     static ref HTTP_CLIENT: Client = Client::with_pool_config(
             Config{
-                max_idle: 1,
+                max_idle: HYPER_MAX_IDLE,
             }
         );
 }
 
-/// `push_from_gather` triggers a metric collection by the provided Gatherer (which is
-/// usually implemented by a prometheus.Registry) and pushes all gathered metrics
-/// to the Pushgateway specified by url, using the provided job name and the
-/// (optional) further grouping labels (the grouping map may be nil). See the
-/// Pushgateway documentation for detailed implications of the job and other
-/// grouping labels. Neither the job name nor any grouping label value may
-/// contain a "/". The metrics pushed must not contain a job label of their own
-/// nor any of the grouping labels.
+/// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
+/// url, using the provided job name and the (optional) further grouping labels
+/// (the grouping map may be nil). See the Pushgateway documentation for
+/// detailed implications of the job and other grouping labels. Neither the job
+/// name nor any grouping label value may contain a "/". The metrics pushed must
+/// not contain a job label of their own nor any of the grouping labels.
 ///
 /// You can use just host:port or ip:port as url, in which case 'http://' is
 /// added automatically. You can also include the schema in the URL. However, do
@@ -50,12 +52,23 @@ lazy_static!{
 /// Note that all previously pushed metrics with the same job and other grouping
 /// labels will be replaced with the metrics pushed by this call. (It uses HTTP
 /// method 'PUT' to push to the Pushgateway.)
-pub fn push_from_gather(job: &str,
+pub fn push_metrics(job: &str,
+                    grouping: HashMap<String, String>,
+                    url: &str,
+                    mfs: Vec<proto::MetricFamily>)
+                    -> Result<()> {
+    push(job, grouping, url, mfs, "PUT")
+}
+
+/// `push_add_metrics` works like `push_metrics`, but only previously pushed
+/// metrics with the same name (and the same job and other grouping labels) will
+/// be replaced. (It uses HTTP method 'POST' to push to the Pushgateway.)
+pub fn push_add_metrics(job: &str,
                         grouping: HashMap<String, String>,
                         url: &str,
                         mfs: Vec<proto::MetricFamily>)
                         -> Result<()> {
-    push(job, grouping, url, mfs, "PUT")
+    push(job, grouping, url, mfs, "POST")
 }
 
 fn push(job: &str,
@@ -68,7 +81,7 @@ fn push(job: &str,
     let mut push_url = if url.contains("://") {
         url.to_owned()
     } else {
-        "http://".to_owned() + url
+        format!("http://{}", url)
     };
 
     if push_url.ends_with('/') {
@@ -112,6 +125,41 @@ fn push(job: &str,
     }
 }
 
+fn push_from_collector(job: &str,
+                       grouping: HashMap<String, String>,
+                       url: &str,
+                       collectors: Vec<Box<Collector>>,
+                       method: &str)
+                       -> Result<()> {
+    let registry = Registry::new();
+    for bc in collectors.into_iter() {
+        try!(registry.register(bc));
+    }
+
+    let mfs = registry.gather();
+    push(job, grouping, url, mfs, method)
+}
+
+/// `push_collector` push metrics collected from the provided collectors. It is
+/// a convenient way to push only a few metrics.
+pub fn push_collector(job: &str,
+                      grouping: HashMap<String, String>,
+                      url: &str,
+                      collectors: Vec<Box<Collector>>)
+                      -> Result<()> {
+    push_from_collector(job, grouping, url, collectors, "PUT")
+}
+
+/// `push_add_collector` works like `push_add_metrics`, it collects from the
+/// provided collectors. It is a convenient way to push only a few metrics.
+pub fn push_add_collector(job: &str,
+                          grouping: HashMap<String, String>,
+                          url: &str,
+                          collectors: Vec<Box<Collector>>)
+                          -> Result<()> {
+    push_from_collector(job, grouping, url, collectors, "POST")
+}
+
 /// `hostname_grouping_key` returns a label map with the only entry
 /// {instance="<hostname>"}. This can be conveniently used as the grouping
 /// parameter if metrics should be pushed with the hostname as label. The
@@ -129,7 +177,8 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
             labels!{
-                "instance".to_owned() => str::from_utf8(&name[..last_char]).unwrap().to_owned(),
+                "instance".to_owned() => str::from_utf8(&name[..last_char])
+                                            .unwrap_or("unknown").to_owned(),
             }
         }
         _ => labels!{"instance".to_owned() => "unknown".to_owned(),},
