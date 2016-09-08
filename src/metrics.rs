@@ -38,7 +38,7 @@ pub trait Metric: Sync + Send + Clone {
 }
 
 /// `Opts` bundles the options for creating most Metric types.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Opts {
     /// namespace, subsystem, and name are components of the fully-qualified
     /// name of the Metric (created by joining these components with

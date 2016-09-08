@@ -108,8 +108,9 @@ pub struct GaugeVecBuilder {}
 
 impl MetricVecBuilder for GaugeVecBuilder {
     type Output = Gauge;
+    type P = Opts;
 
-    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Gauge> {
+    fn build(&self, desc: &Desc, _: Opts, vals: &[&str]) -> Result<Gauge> {
         Gauge::with_desc(desc.clone(), vals)
     }
 }
@@ -125,9 +126,11 @@ impl GaugeVec {
     /// partitioned by the given label names. At least one label name must be
     /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
+        let opts1 = opts.clone();
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-        let metric_vec = MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {});
+        let metric_vec =
+            MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {}, opts1);
 
         Ok(metric_vec as GaugeVec)
     }

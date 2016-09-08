@@ -71,6 +71,7 @@ pub fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
 /// `HistogramOpts` bundles the options for creating a Histogram metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
+#[derive(Clone)]
 pub struct HistogramOpts {
     pub common_opts: Opts,
 
@@ -262,10 +263,6 @@ impl Histogram {
         Histogram::with_desc_and_buckets(desc, &[], Some(opts.buckets))
     }
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Histogram> {
-        Histogram::with_desc_and_buckets(desc, label_values, None)
-    }
-
     fn with_desc_and_buckets(desc: Desc,
                              label_values: &[&str],
                              buckets: Option<Vec<f64>>)
@@ -336,9 +333,10 @@ pub struct HistogramVecBuilder {}
 
 impl MetricVecBuilder for HistogramVecBuilder {
     type Output = Histogram;
+    type P = HistogramOpts;
 
-    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Histogram> {
-        Histogram::with_desc(desc.clone(), vals)
+    fn build(&self, desc: &Desc, opts: HistogramOpts, vals: &[&str]) -> Result<Histogram> {
+        Histogram::with_desc_and_buckets(desc.clone(), vals, Some(opts.buckets))
     }
 }
 
@@ -354,12 +352,15 @@ impl HistogramVec {
     /// provided.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+        let opts1 = opts.clone();
         let desc = try!(Desc::new(opts.fq_name(),
                                   opts.common_opts.help,
                                   variable_names,
                                   opts.common_opts.const_labels));
-        let metric_vec =
-            MetricVec::create(desc, proto::MetricType::HISTOGRAM, HistogramVecBuilder {});
+        let metric_vec = MetricVec::create(desc,
+                                           proto::MetricType::HISTOGRAM,
+                                           HistogramVecBuilder {},
+                                           opts1);
 
         Ok(metric_vec as HistogramVec)
     }

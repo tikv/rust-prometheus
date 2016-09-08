@@ -27,8 +27,9 @@ use errors::{Result, Error};
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
     type Output: Metric;
+    type P: Sync + Send + Clone;
     /// `build` builds a Metric with description and corresponding label names.
-    fn build(&self, &Desc, &[&str]) -> Result<Self::Output>;
+    fn build(&self, &Desc, Self::P, &[&str]) -> Result<Self::Output>;
 }
 
 struct MetricVecCore<T: MetricVecBuilder> {
@@ -36,6 +37,7 @@ struct MetricVecCore<T: MetricVecBuilder> {
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
+    pub opts: T::P,
 }
 
 impl<T: MetricVecBuilder> MetricVecCore<T> {
@@ -144,7 +146,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let metric = try!(self.new_metric.build(&self.desc, label_values));
+        let metric = try!(self.new_metric.build(&self.desc, self.opts.clone(), label_values));
         children.insert(hash, metric.clone());
         Ok(metric)
     }
@@ -163,12 +165,13 @@ pub struct MetricVec<T: MetricVecBuilder> {
 impl<T: MetricVecBuilder> MetricVec<T> {
     /// `create` creates a MetricVec with description `desc`, a metric type `metric_type` and
     /// a MetricVecBuilder `new_metric`.
-    pub fn create(desc: Desc, metric_type: MetricType, new_metric: T) -> MetricVec<T> {
+    pub fn create(desc: Desc, metric_type: MetricType, new_metric: T, opts: T::P) -> MetricVec<T> {
         let v = MetricVecCore {
             children: RwLock::new(HashMap::new()),
             desc: desc,
             metric_type: metric_type,
             new_metric: new_metric,
+            opts: opts,
         };
 
         MetricVec { v: Arc::new(v) }
