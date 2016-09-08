@@ -14,9 +14,8 @@ include = [
 ]
 
 [features]
-default = ["push"]
-push = ["hyper", "libc"]
-dev = ["clippy", "push"]
+default = []
+dev = ["clippy"]
 
 [[bench]]
 name = "benches"
@@ -27,9 +26,5 @@ quick-error = "0.2"
 clippy = {version = "^0", optional = true}
 fnv = "1.0.3"
 lazy_static = "0.2.1"
-libc = {version = "0.2.15", optional = true}
-hyper = {version = "0.9.9", optional = true}
-
-# For examples_hyper
-[dev-dependencies]
-hyper = "0.9.9"
+libc = "0.2"
+hyper = "0.9"

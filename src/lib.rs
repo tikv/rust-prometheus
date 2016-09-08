@@ -20,9 +20,7 @@ extern crate protobuf;
 extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
-#[cfg(feature = "push")]
 extern crate hyper;
-#[cfg(feature = "push")]
 extern crate libc;
 
 mod errors;
@@ -42,7 +40,6 @@ mod registry;
 #[allow(dead_code)]
 mod vec;
 mod histogram;
-#[cfg(feature = "push")]
 mod push;
 
 // Mods
@@ -68,8 +65,6 @@ pub use self::histogram::{Histogram, HistogramVec, HistogramOpts, HistogramTimer
 // Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
-
-#[cfg(feature = "push")]
 pub use self::push::{push_metrics, push_add_metrics, push_collector, push_add_collector,
                      hostname_grouping_key};
 
