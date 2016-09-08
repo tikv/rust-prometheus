@@ -11,6 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(not(feature="push"), allow(dead_code))]
+#![cfg_attr(not(feature="push"), allow(unused_imports))]
+
 #[macro_use]
 extern crate prometheus;
 #[macro_use]

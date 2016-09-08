@@ -29,3 +29,7 @@ fnv = "1.0.3"
 lazy_static = "0.2.1"
 libc = {version = "0.2.15", optional = true}
 hyper = {version = "0.9.9", optional = true}
+
+# For examples_hyper
+[dev-dependencies]
+hyper = "0.9.9"
