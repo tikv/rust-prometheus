@@ -199,13 +199,13 @@ impl Default for HistogramCore {
 /// observe.
 ///
 /// NOTICE: A timer can be observed only once (automatically or manually).
-pub struct HistogramTimer<'a> {
-    histogram: &'a Histogram,
+pub struct HistogramTimer {
+    histogram: Histogram,
     start: Instant,
 }
 
-impl<'a> HistogramTimer<'a> {
-    fn new(histogram: &'a Histogram) -> HistogramTimer {
+impl HistogramTimer {
+    fn new(histogram: Histogram) -> HistogramTimer {
         HistogramTimer {
             histogram: histogram,
             start: Instant::now(),
@@ -224,7 +224,7 @@ impl<'a> HistogramTimer<'a> {
     }
 }
 
-impl<'a> Drop for HistogramTimer<'a> {
+impl Drop for HistogramTimer {
     fn drop(&mut self) {
         self.observe();
     }
@@ -297,7 +297,7 @@ impl Histogram {
 
     /// `start_timer` returns a `HistogramTimer` to track a duration.
     pub fn start_timer(&self) -> HistogramTimer {
-        HistogramTimer::new(self)
+        HistogramTimer::new(self.clone())
     }
 }
 
@@ -453,10 +453,12 @@ mod tests {
         thread::sleep(Duration::from_millis(100));
         timer.observe_duration();
 
-        {
-            let _timer = histogram.start_timer();
+        let timer = histogram.start_timer();
+        let handler = thread::spawn(move || {
+            let _timer = timer;
             thread::sleep(Duration::from_millis(400));
-        }
+        });
+        assert!(handler.join().is_ok());
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
