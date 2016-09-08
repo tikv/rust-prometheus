@@ -453,10 +453,12 @@ mod tests {
         thread::sleep(Duration::from_millis(100));
         timer.observe_duration();
 
-        {
-            let _timer = histogram.start_timer();
+        let timer = histogram.start_timer();
+        let handler = thread::spawn(move || {
+            let _timer = timer;
             thread::sleep(Duration::from_millis(400));
-        }
+        });
+        handler.join().unwrap();
 
         let mf = histogram.collect();
         let m = mf.get_metric().as_ref().get(0).unwrap();
