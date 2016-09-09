@@ -48,7 +48,7 @@ fn main() {
     let mut opts = Options::new();
     opts.optopt("A",
                 "addr",
-                "set pushgateway address",
+                "prometheus pushgateway address",
                 "default is 127.0.0.1:9091");
     opts.optflag("h", "help", "print this help menu");
 

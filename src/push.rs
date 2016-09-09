@@ -71,6 +71,9 @@ pub fn push_add_metrics(job: &str,
     push(job, grouping, url, mfs, "POST")
 }
 
+// pub for tests
+pub const INVALID_PUSH_LABEL_NAME_JOB: &'static str = "job";
+
 fn push(job: &str,
         grouping: HashMap<String, String>,
         url: &str,
@@ -111,7 +114,7 @@ fn push(job: &str,
     for mf in &mfs {
         for m in mf.get_metric() {
             for lp in m.get_label() {
-                if lp.get_name() == "job" {
+                if lp.get_name() == INVALID_PUSH_LABEL_NAME_JOB {
                     return Err(Error::Msg(format!("pushed metric {} already contains a \
                                                    job label",
                                                   mf.get_name())));
@@ -180,7 +183,8 @@ pub fn push_add_collector(job: &str,
     push_from_collector(job, grouping, url, collectors, "POST")
 }
 
-const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("intance", "unknown");
+// pub for tests
+pub const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("instance", "unknown");
 
 /// `hostname_grouping_key` returns a label map with the only entry
 /// {instance="<hostname>"}. This can be conveniently used as the grouping
@@ -211,11 +215,34 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
+    use protobuf::RepeatedField;
+
+    use proto;
+
     use super::*;
 
     #[test]
     fn test_hostname_grouping_key() {
         let map = hostname_grouping_key();
         assert!(!map.is_empty());
+    }
+
+    #[test]
+    fn test_push_bad_label_name() {
+        let table = vec![// Error message: "pushed metric {} already contains a job label"
+                         (INVALID_PUSH_LABEL_NAME_JOB, "job label"),
+                         // Error message: "pushed metric {} already contains grouping label {}"
+                         (DEFAULT_GROUP_LABEL_PAIR.0, "grouping label")];
+
+        for case in table {
+            let mut l = proto::LabelPair::new();
+            l.set_name(case.0.to_owned());
+            let mut m = proto::Metric::new();
+            m.set_label(RepeatedField::from_vec(vec![l]));
+            let mut mf = proto::MetricFamily::new();
+            mf.set_metric(RepeatedField::from_vec(vec![m]));
+            let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf]);
+            assert!(format!("{}", res.unwrap_err()).contains(case.1));
+        }
     }
 }
