@@ -72,7 +72,7 @@ pub fn push_add_metrics(job: &str,
 }
 
 // pub for tests
-pub const INVALID_PUSH_LABEL_NAME_JOB: &'static str = "job";
+pub const LABEL_NAME_JOB: &'static str = "job";
 
 fn push(job: &str,
         grouping: HashMap<String, String>,
@@ -114,7 +114,7 @@ fn push(job: &str,
     for mf in &mfs {
         for m in mf.get_metric() {
             for lp in m.get_label() {
-                if lp.get_name() == INVALID_PUSH_LABEL_NAME_JOB {
+                if lp.get_name() == LABEL_NAME_JOB {
                     return Err(Error::Msg(format!("pushed metric {} already contains a \
                                                    job label",
                                                   mf.get_name())));
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_push_bad_label_name() {
         let table = vec![// Error message: "pushed metric {} already contains a job label"
-                         (INVALID_PUSH_LABEL_NAME_JOB, "job label"),
+                         (LABEL_NAME_JOB, "job label"),
                          // Error message: "pushed metric {} already contains grouping label {}"
                          (DEFAULT_GROUP_LABEL_PAIR.0, "grouping label")];
 
