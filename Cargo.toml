@@ -28,3 +28,6 @@ fnv = "1.0.3"
 lazy_static = "0.2.1"
 libc = "0.2"
 hyper = "0.9"
+
+[dev-dependencies]
+getopts = "0.2.14"

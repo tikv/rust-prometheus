@@ -96,7 +96,7 @@ fn push(job: &str,
     // TODO: escape job
     url_components.push(job.to_owned());
 
-    for (ln, lv) in grouping {
+    for (ln, lv) in &grouping {
         // TODO: check label name
         if lv.contains('/') {
             return Err(Error::Msg(format!("value of grouping label {} contains '/': {}", ln, lv)));
@@ -107,6 +107,25 @@ fn push(job: &str,
 
     push_url = format!("{}/metrics/job/{}", push_url, url_components.join("/"));
 
+    // Check for pre-existing grouping labels:
+    for mf in &mfs {
+        for m in mf.get_metric() {
+            for lp in m.get_label() {
+                if lp.get_name() == "job" {
+                    return Err(Error::Msg(format!("pushed metric {} already contains a \
+                                                   job label",
+                                                  mf.get_name())));
+                }
+                if grouping.contains_key(lp.get_name()) {
+                    return Err(Error::Msg(format!("pushed metric {} already contains \
+                                                   grouping label {}",
+                                                  mf.get_name(),
+                                                  lp.get_name())));
+                }
+            }
+        }
+    }
+
     let encoder = TextEncoder::new();
     let mut buf = Vec::new();
     try!(encoder.encode(&mfs, &mut buf));
@@ -116,12 +135,13 @@ fn push(job: &str,
         .body(buf.as_slice());
 
     let response = try!(request.send().map_err(|e| Error::Msg(format!("{}", e))));
-    if response.status == StatusCode::Accepted {
-        Ok(())
-    } else {
-        Err(Error::Msg(format!("unexpected status code {} while pushing to {}",
-                               response.status,
-                               push_url)))
+    match response.status {
+        StatusCode::Accepted => Ok(()),
+        _ => {
+            Err(Error::Msg(format!("unexpected status code {} while pushing to {}",
+                                   response.status,
+                                   push_url)))
+        }
     }
 }
 
@@ -160,6 +180,8 @@ pub fn push_add_collector(job: &str,
     push_from_collector(job, grouping, url, collectors, "POST")
 }
 
+const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("intance", "unknown");
+
 /// `hostname_grouping_key` returns a label map with the only entry
 /// {instance="<hostname>"}. This can be conveniently used as the grouping
 /// parameter if metrics should be pushed with the hostname as label. The
@@ -177,11 +199,13 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
             labels!{
-                "instance".to_owned() => str::from_utf8(&name[..last_char])
-                                            .unwrap_or("unknown").to_owned(),
+                DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => str::from_utf8(&name[..last_char])
+                                            .unwrap_or(DEFAULT_GROUP_LABEL_PAIR.1).to_owned(),
             }
         }
-        _ => labels!{"instance".to_owned() => "unknown".to_owned(),},
+        _ => {
+            labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+        }
     }
 }
 

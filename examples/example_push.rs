@@ -15,9 +15,13 @@
 extern crate prometheus;
 #[macro_use]
 extern crate lazy_static;
+extern crate getopts;
 
-use std::thread;
+use std::env;
 use std::time;
+use std::thread;
+
+use getopts::Options;
 
 use prometheus::{Histogram, Counter};
 
@@ -38,8 +42,25 @@ lazy_static! {
 }
 
 fn main() {
-    println!("Pushing, please wait 10 seconds ...");
+    let args: Vec<String> = env::args().collect();
+    let program = args[0].clone();
 
+    let mut opts = Options::new();
+    opts.optopt("A",
+                "addr",
+                "set pushgateway address",
+                "default is 127.0.0.1:9091");
+    opts.optflag("h", "help", "print this help menu");
+
+    let matches = opts.parse(&args).unwrap();
+    if matches.opt_present("h") {
+        let brief = format!("Usage: {} [options]", program);
+        print!("{}", opts.usage(&brief));
+        return;
+    }
+    println!("Pushing, please start pushgateway first and wait 10 seconds ...");
+
+    let address = matches.opt_str("A").unwrap_or("127.0.0.1:9091".to_owned());
     for _ in 0..5 {
         thread::sleep(time::Duration::from_secs(2));
         PUSH_COUNTER.inc();
@@ -47,7 +68,7 @@ fn main() {
         let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
         prometheus::push_metrics("example_push",
                                  labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
-                                 "127.0.0.1:9091",
+                                 &address,
                                  metric_familys)
             .unwrap();
     }
