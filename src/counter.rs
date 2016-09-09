@@ -123,6 +123,8 @@ impl CounterVec {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use metrics::{Opts, Collector};
 
     use super::*;
@@ -140,5 +142,49 @@ mod tests {
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
+    }
+
+    #[test]
+    fn test_counter_vec_with_labels() {
+        let vec = CounterVec::new(Opts::new("test_couter_vec", "test counter vec help"),
+                                  &["l1", "l2"])
+            .unwrap();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", "v1");
+        labels.insert("l2", "v2");
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+
+        let mut labels2 = HashMap::new();
+        labels2.insert("l1", "v2");
+        labels2.insert("l2", "v1");
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels2).is_err());
+
+        vec.with(&labels).inc();
+
+        let mut labels3 = HashMap::new();
+        labels3.insert("l1", "v1");
+        assert!(vec.remove(&labels3).is_err());
+    }
+
+    #[test]
+    fn test_counter_vec_with_label_values() {
+        let vec = CounterVec::new(Opts::new("test_vec", "test counter vec help"),
+                                  &["l1", "l2"])
+            .unwrap();
+
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
     }
 }

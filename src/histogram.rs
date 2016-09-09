@@ -439,6 +439,7 @@ mod tests {
     use std::time::Duration;
 
     use metrics::Collector;
+    use metrics::Metric;
 
     use super::*;
 
@@ -538,5 +539,42 @@ mod tests {
             let v = duration_to_seconds(d);
             assert!((v - seconds).abs() < EPSILON);
         }
+    }
+
+    #[test]
+    fn test_histogram_vec_with_label_values() {
+        let vec = HistogramVec::new(HistogramOpts::new("test_histogram_vec",
+                                                       "test histogram vec help"),
+                                    &["l1", "l2"])
+            .unwrap();
+
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).observe(1.0);
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_histogram_vec_with_opts_buckets() {
+        let labels = ["l1", "l2"];
+        let buckets = vec![1.0, 2.0, 3.0];
+        let vec = HistogramVec::new(HistogramOpts::new("test_histogram_vec",
+                                                       "test histogram vec help")
+                                        .buckets(buckets.clone()),
+                                    &labels)
+            .unwrap();
+
+        let histogram = vec.with_label_values(&["v1", "v2"]);
+        histogram.observe(1.0);
+
+        let m = histogram.metric();
+        assert_eq!(m.get_label().len(), labels.len());
+
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 1);
+        assert!((proto_histogram.get_sample_sum() - 1.0) < EPSILON);
+        assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
     }
 }

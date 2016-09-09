@@ -138,8 +138,11 @@ impl GaugeVec {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+
     use metrics::{Opts, Collector};
+
+    use super::*;
 
     #[test]
     fn test_gauge() {
@@ -161,4 +164,46 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_gauge().get_value() as u64, 42);
     }
+
+    #[test]
+    fn test_gauge_vec_with_labels() {
+        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
+                                &["l1", "l2"])
+            .unwrap();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", "v1");
+        labels.insert("l2", "v2");
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        vec.with(&labels).dec();
+        vec.with(&labels).add(42.0);
+        vec.with(&labels).sub(42.0);
+        vec.with(&labels).set(42.0);
+
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+    }
+
+    #[test]
+    fn test_gauge_vec_with_label_values() {
+        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
+                                &["l1", "l2"])
+            .unwrap();
+
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+
+        vec.with_label_values(&["v1", "v2"]).inc();
+        vec.with_label_values(&["v1", "v2"]).dec();
+        vec.with_label_values(&["v1", "v2"]).add(42.0);
+        vec.with_label_values(&["v1", "v2"]).sub(42.0);
+        vec.with_label_values(&["v1", "v2"]).set(42.0);
+
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
 }
