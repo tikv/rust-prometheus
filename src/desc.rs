@@ -16,6 +16,7 @@ use std::collections::{HashMap, BTreeSet};
 use std::hash::Hasher;
 
 use fnv::FnvHasher;
+use regex::Regex;
 
 use proto::LabelPair;
 use errors::{Result, Error};
@@ -77,7 +78,14 @@ impl Desc {
             return Err(Error::Msg("empty help string".into()));
         }
 
-        // TODO: check valid metric fq_name.
+        lazy_static! {
+            static ref VALID_METRIC_NAME: Regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_:]*$").unwrap();
+            static ref VALID_LABEL_NAME: Regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*$").unwrap();
+        }
+
+        if !VALID_METRIC_NAME.is_match(&desc.fq_name) {
+            return Err(Error::Msg(format!("'{}' is not a valid metric name", desc.fq_name)))
+        }
 
         let mut label_values = Vec::with_capacity(const_labels.len() + 1);
         label_values.push(fq_name);
@@ -85,7 +93,9 @@ impl Desc {
         let mut label_names = BTreeSet::new();
 
         for label_name in const_labels.keys() {
-            // TODO: check invalid label name
+            if !VALID_LABEL_NAME.is_match(&label_name) {
+                return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)))
+            }
             if !label_names.insert(label_name.clone()) {
                 return Err(Error::Msg(format!("duplicate const label name {}", label_name)));
             }
@@ -100,7 +110,9 @@ impl Desc {
         // cannot be in a regular label name. That prevents matching the label
         // dimension with a different mix between preset and variable labels.
         for label_name in &desc.variable_labels {
-            // TODO: check invalid label name
+            if !VALID_LABEL_NAME.is_match(&label_name) {
+                return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)))
+            }
             if !label_names.insert(format!("${}", label_name)) {
                 return Err(Error::Msg(format!("duplicate variable label name {}", label_name)));
             }
@@ -135,5 +147,43 @@ impl Desc {
         desc.const_label_pairs.sort();
 
         Ok(desc)
+    }
+}
+
+#[test]
+fn test_invalid_const_label_name() {
+    for &name in &["-dash", "9gag", ":colon", "colon:", "has space"] {
+        let res = Desc::new("name".into(), "help".into(), vec![name.into()], HashMap::new())
+            .err().expect(format!("expected error for {}", name).as_ref());
+        match res {
+            Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid label name", name)),
+            other => panic!(other),
+        };
+    }
+}
+
+#[test]
+fn test_invalid_variable_label_name() {
+    for &name in &["-dash", "9gag", ":colon", "colon:", "has space"] {
+        let mut labels = HashMap::new();
+        labels.insert(name.into(), "value".to_string());
+        let res = Desc::new("name".into(), "help".into(), vec![], labels)
+            .err().expect(format!("expected error for {}", name).as_ref());
+        match res {
+            Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid label name", name)),
+            other => panic!(other),
+        };
+    }
+}
+
+#[test]
+fn test_invalid_metric_name() {
+    for &name in &["-dash", "9gag", ":colon", "has space"] {
+        let res = Desc::new(name.into(), "help".into(), vec![], HashMap::new())
+            .err().expect(format!("expected error for {}", name).as_ref());
+        match res {
+            Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid metric name", name)),
+            other => panic!(other),
+        };
     }
 }

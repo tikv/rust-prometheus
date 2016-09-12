@@ -22,6 +22,8 @@ extern crate fnv;
 extern crate lazy_static;
 extern crate hyper;
 extern crate libc;
+#[macro_use]
+extern crate regex;
 
 mod errors;
 mod encoder;
