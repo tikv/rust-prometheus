@@ -31,7 +31,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
 
     /// `build` builds a Metric with description, option and corresponding
     /// label names.
-    fn build(&self, &Desc, &Self::P, &[&str]) -> Result<Self::M>;
+    fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
 struct MetricVecCore<T: MetricVecBuilder> {
@@ -103,7 +103,6 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(())
     }
 
-
     /// `reset` deletes all metrics in this vector.
     pub fn reset(&self) {
         self.children.write().unwrap().clear();
@@ -148,7 +147,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let metric = try!(self.new_metric.build(&self.desc, &self.opts, label_values));
+        let metric = try!(self.new_metric.build(&self.opts, label_values));
         children.insert(hash, metric.clone());
         Ok(metric)
     }

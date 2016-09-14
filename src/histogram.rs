@@ -105,8 +105,8 @@ impl HistogramOpts {
     }
 
     /// `const_labels` sets the const labels.
-    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
-        self.common_opts = self.common_opts.const_labels(labels);
+    pub fn const_labels(mut self, const_labels: HashMap<String, String>) -> Self {
+        self.common_opts = self.common_opts.const_labels(const_labels);
         self
     }
 
@@ -116,9 +116,26 @@ impl HistogramOpts {
         self
     }
 
+    /// `variable_labels` sets the variable labels.
+    pub fn variable_labels(mut self, variable_labels: Vec<String>) -> Self {
+        self.common_opts = self.common_opts.variable_labels(variable_labels);
+        self
+    }
+
+    /// `variable_label` adds a variable label.
+    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
+        self.common_opts = self.common_opts.variable_label(name);
+        self
+    }
+
     /// `fq_name` returns the fq_name.
     pub fn fq_name(&self) -> String {
         self.common_opts.fq_name()
+    }
+
+    /// `desc` returns a `Desc`.
+    pub fn desc(&self) -> Result<Desc> {
+        self.common_opts.desc()
     }
 
     /// `buckets` set the buckets.
@@ -255,16 +272,14 @@ pub struct Histogram {
 impl Histogram {
     /// `with_opts` creates a `Histogram` with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        let desc = try!(Desc::new(opts.fq_name(),
-                                  opts.common_opts.help.clone(),
-                                  vec![],
-                                  opts.common_opts.const_labels.clone()));
+        let desc = try!(opts.desc());
 
         Histogram::with_desc_and_buckets(desc, &[], Some(opts.buckets))
     }
 
     fn with_desc_and_buckets(desc: Desc,
                              label_values: &[&str],
+                             // TODO: remove Option
                              buckets: Option<Vec<f64>>)
                              -> Result<Histogram> {
         for name in &desc.variable_labels {
@@ -335,8 +350,9 @@ impl MetricVecBuilder for HistogramVecBuilder {
     type M = Histogram;
     type P = HistogramOpts;
 
-    fn build(&self, desc: &Desc, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
-        Histogram::with_desc_and_buckets(desc.clone(), vals, Some(opts.buckets.clone()))
+    fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
+        let desc = try!(opts.desc());
+        Histogram::with_desc_and_buckets(desc, vals, Some(opts.buckets.clone()))
     }
 }
 
@@ -352,15 +368,12 @@ impl HistogramVec {
     /// provided.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let opts1 = opts.clone();
-        let desc = try!(Desc::new(opts.fq_name(),
-                                  opts.common_opts.help,
-                                  variable_names,
-                                  opts.common_opts.const_labels));
+        let opts = opts.variable_labels(variable_names);
+        let desc = try!(opts.desc());
         let metric_vec = MetricVec::create(desc,
                                            proto::MetricType::HISTOGRAM,
                                            HistogramVecBuilder {},
-                                           opts1);
+                                           opts);
 
         Ok(metric_vec as HistogramVec)
     }

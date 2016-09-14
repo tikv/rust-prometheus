@@ -37,7 +37,7 @@ impl Counter {
 
     /// `with_opts` creates a `Counter` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Counter> {
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
+        let desc = try!(opts.desc());
         Counter::with_desc(desc, &[])
     }
 
@@ -93,7 +93,8 @@ impl MetricVecBuilder for CounterVecBuilder {
     type M = Counter;
     type P = Opts;
 
-    fn build(&self, desc: &Desc, _: &Opts, vals: &[&str]) -> Result<Counter> {
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Counter> {
+        let desc = try!(opts.desc());
         Counter::with_desc(desc.clone(), vals)
     }
 }
@@ -109,13 +110,11 @@ impl CounterVec {
     /// partitioned by the given label names. At least one label name must be
     /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
-        let opts1 = opts.clone();
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-        let metric_vec = MetricVec::create(desc,
-                                           proto::MetricType::COUNTER,
-                                           CounterVecBuilder {},
-                                           opts1);
+        let opts = opts.variable_labels(variable_names);
+        let desc = try!(opts.desc());
+        let metric_vec =
+            MetricVec::create(desc, proto::MetricType::COUNTER, CounterVecBuilder {}, opts);
 
         Ok(metric_vec as CounterVec)
     }

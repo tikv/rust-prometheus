@@ -37,7 +37,7 @@ impl Gauge {
 
     /// `with_opts` create a `Guage` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Gauge> {
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
+        let desc = try!(opts.desc());
         Gauge::with_desc(desc, &[])
     }
 
@@ -110,8 +110,9 @@ impl MetricVecBuilder for GaugeVecBuilder {
     type M = Gauge;
     type P = Opts;
 
-    fn build(&self, desc: &Desc, _: &Opts, vals: &[&str]) -> Result<Gauge> {
-        Gauge::with_desc(desc.clone(), vals)
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Gauge> {
+        let desc = try!(opts.desc());
+        Gauge::with_desc(desc, vals)
     }
 }
 
@@ -126,11 +127,11 @@ impl GaugeVec {
     /// partitioned by the given label names. At least one label name must be
     /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
-        let opts1 = opts.clone();
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
+        let opts = opts.variable_labels(variable_names);
+        let desc = try!(opts.desc());
         let metric_vec =
-            MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {}, opts1);
+            MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {}, opts);
 
         Ok(metric_vec as GaugeVec)
     }
