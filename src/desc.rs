@@ -137,3 +137,9 @@ impl Desc {
         Ok(desc)
     }
 }
+
+/// `Describer` describes the immutable meta-data of a Metric.
+pub trait Describer {
+    /// `desc` returns a `Desc`.
+    fn describe(&self) -> Result<Desc>;
+}

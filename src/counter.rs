@@ -17,7 +17,7 @@ use std::sync::Arc;
 use proto;
 use metrics::{Opts, Collector, Metric};
 use value::{Value, ValueType};
-use desc::Desc;
+use desc::{Describer, Desc};
 use errors::{Result, Error};
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -37,11 +37,11 @@ impl Counter {
 
     /// `with_opts` creates a `Counter` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Counter> {
-        let desc = try!(opts.desc());
-        Counter::with_desc(desc, &[])
+        Counter::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Counter> {
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Counter> {
+        let desc = try!(opts.describe());
         let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
         Ok(Counter { v: Arc::new(v) })
     }
@@ -94,8 +94,7 @@ impl MetricVecBuilder for CounterVecBuilder {
     type P = Opts;
 
     fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Counter> {
-        let desc = try!(opts.desc());
-        Counter::with_desc(desc.clone(), vals)
+        Counter::with_opts_and_label_values(opts, vals)
     }
 }
 
@@ -112,9 +111,8 @@ impl CounterVec {
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let desc = try!(opts.desc());
         let metric_vec =
-            MetricVec::create(desc, proto::MetricType::COUNTER, CounterVecBuilder {}, opts);
+            try!(MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder {}, opts));
 
         Ok(metric_vec as CounterVec)
     }

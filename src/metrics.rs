@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 use std::cmp::{Ord, Ordering, Eq, PartialOrd};
 
-use desc::Desc;
+use desc::{Desc, Describer};
 use errors::Result;
 use proto::{self, LabelPair};
 
@@ -138,9 +138,10 @@ impl Opts {
     pub fn fq_name(&self) -> String {
         build_fq_name(&self.namespace, &self.subsystem, &self.name)
     }
+}
 
-    /// `desc` returns a `Desc`.
-    pub fn desc(&self) -> Result<Desc> {
+impl Describer for Opts {
+    fn describe(&self) -> Result<Desc> {
         Desc::new(self.fq_name(),
                   self.help.clone(),
                   self.variable_labels.clone(),

@@ -19,7 +19,7 @@ use std::hash::Hasher;
 use fnv::FnvHasher;
 use protobuf::RepeatedField;
 
-use desc::Desc;
+use desc::{Describer, Desc};
 use metrics::{Collector, Metric};
 use proto::{MetricFamily, MetricType};
 use errors::{Result, Error};
@@ -27,10 +27,9 @@ use errors::{Result, Error};
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
     type M: Metric;
-    type P: Sync + Send + Clone;
+    type P: Describer + Sync + Send + Clone;
 
-    /// `build` builds a Metric with description, option and corresponding
-    /// label names.
+    /// `build` builds a Metric with option and corresponding label names.
     fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
@@ -166,7 +165,8 @@ pub struct MetricVec<T: MetricVecBuilder> {
 impl<T: MetricVecBuilder> MetricVec<T> {
     /// `create` creates a MetricVec with description `desc`, a metric type `metric_type` and
     /// a MetricVecBuilder `new_metric`.
-    pub fn create(desc: Desc, metric_type: MetricType, new_metric: T, opts: T::P) -> MetricVec<T> {
+    pub fn create(metric_type: MetricType, new_metric: T, opts: T::P) -> Result<MetricVec<T>> {
+        let desc = try!(opts.describe());
         let v = MetricVecCore {
             children: RwLock::new(HashMap::new()),
             desc: desc,
@@ -175,7 +175,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
             opts: opts,
         };
 
-        MetricVec { v: Arc::new(v) }
+        Ok(MetricVec { v: Arc::new(v) })
     }
 
     /// `get_metric_with_label_values` returns the Metric for the given slice of label

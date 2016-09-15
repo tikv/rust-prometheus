@@ -17,9 +17,9 @@ use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 
-use protobuf::RepeatedField;
 use proto;
-use desc::Desc;
+use protobuf::RepeatedField;
+use desc::{Desc, Describer};
 use errors::{Result, Error};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
@@ -133,15 +133,16 @@ impl HistogramOpts {
         self.common_opts.fq_name()
     }
 
-    /// `desc` returns a `Desc`.
-    pub fn desc(&self) -> Result<Desc> {
-        self.common_opts.desc()
-    }
-
     /// `buckets` set the buckets.
     pub fn buckets(mut self, buckets: Vec<f64>) -> Self {
         self.buckets = buckets;
         self
+    }
+}
+
+impl Describer for HistogramOpts {
+    fn describe(&self) -> Result<Desc> {
+        self.common_opts.describe()
     }
 }
 
@@ -272,25 +273,28 @@ pub struct Histogram {
 impl Histogram {
     /// `with_opts` creates a `Histogram` with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        let desc = try!(opts.desc());
-
-        Histogram::with_desc_and_buckets(desc, &[], Some(opts.buckets))
+        Histogram::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_desc_and_buckets(desc: Desc,
-                             label_values: &[&str],
-                             // TODO: remove Option
-                             buckets: Option<Vec<f64>>)
-                             -> Result<Histogram> {
+    fn with_opts_and_label_values(opts: &HistogramOpts,
+                                  label_values: &[&str])
+                                  -> Result<Histogram> {
+        let desc = try!(opts.describe());
+
         for name in &desc.variable_labels {
             try!(check_bucket_lable(&name));
         }
         for pair in &desc.const_label_pairs {
             try!(check_bucket_lable(pair.get_name()));
         }
-
         let pairs = make_label_pairs(&desc, label_values);
-        let core = try!(buckets.map_or(Ok(HistogramCore::default()), HistogramCore::with_buckets));
+
+        let buckets = opts.buckets.clone();
+        let core = if buckets.is_empty() {
+            HistogramCore::default()
+        } else {
+            try!(HistogramCore::with_buckets(buckets))
+        };
 
         Ok(Histogram {
             desc: desc,
@@ -351,8 +355,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
     type P = HistogramOpts;
 
     fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
-        let desc = try!(opts.desc());
-        Histogram::with_desc_and_buckets(desc, vals, Some(opts.buckets.clone()))
+        Histogram::with_opts_and_label_values(opts, vals)
     }
 }
 
@@ -369,11 +372,8 @@ impl HistogramVec {
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let desc = try!(opts.desc());
-        let metric_vec = MetricVec::create(desc,
-                                           proto::MetricType::HISTOGRAM,
-                                           HistogramVecBuilder {},
-                                           opts);
+        let metric_vec =
+            try!(MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts));
 
         Ok(metric_vec as HistogramVec)
     }

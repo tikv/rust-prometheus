@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 use proto;
-use desc::Desc;
+use desc::{Describer, Desc};
 use errors::Result;
 use value::{Value, ValueType};
 use metrics::{Opts, Collector, Metric};
@@ -37,11 +37,11 @@ impl Gauge {
 
     /// `with_opts` create a `Guage` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Gauge> {
-        let desc = try!(opts.desc());
-        Gauge::with_desc(desc, &[])
+        Gauge::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Gauge> {
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Gauge> {
+        let desc = try!(opts.describe());
         let v = try!(Value::new(desc, ValueType::Gauge, 0.0, label_values));
         Ok(Gauge { v: Arc::new(v) })
     }
@@ -111,8 +111,7 @@ impl MetricVecBuilder for GaugeVecBuilder {
     type P = Opts;
 
     fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Gauge> {
-        let desc = try!(opts.desc());
-        Gauge::with_desc(desc, vals)
+        Gauge::with_opts_and_label_values(opts, vals)
     }
 }
 
@@ -129,9 +128,8 @@ impl GaugeVec {
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let desc = try!(opts.desc());
         let metric_vec =
-            MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {}, opts);
+            try!(MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder {}, opts));
 
         Ok(metric_vec as GaugeVec)
     }
