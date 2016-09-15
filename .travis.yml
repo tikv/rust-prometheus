@@ -3,7 +3,11 @@ language: rust
 rust:
   - stable
   - beta
-  - nightly
+
+matrix:
+  include:
+  - rust: nightly
+    env: FEATURE="--features dev"
 
 script:
-  - cargo test
+  - cargo test $FEATURE
