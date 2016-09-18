@@ -31,6 +31,8 @@ regex = "0.1"
 
 [dependencies.hyper]
 version = "0.9"
+# disable hyper ssl
+#  refer to https://github.com/hyperium/hyper/issues/903#issuecomment-242798266
 default-features = false
 
 [dev-dependencies]
