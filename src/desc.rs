@@ -93,7 +93,7 @@ impl Desc {
         let mut label_names = BTreeSet::new();
 
         for label_name in const_labels.keys() {
-            if !VALID_LABEL_NAME.is_match(&label_name) {
+            if !VALID_LABEL_NAME.is_match(label_name) {
                 return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)));
             }
 
