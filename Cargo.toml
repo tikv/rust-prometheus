@@ -27,8 +27,13 @@ clippy = {version = "^0", optional = true}
 fnv = "1.0.3"
 lazy_static = "0.2.1"
 libc = "0.2"
-hyper = "0.9"
 regex = "0.1"
+
+[dependencies.hyper]
+version = "0.9"
+# disable hyper ssl
+#  refer to https://github.com/hyperium/hyper/issues/903#issuecomment-242798266
+default-features = false
 
 [dev-dependencies]
 getopts = "0.2.14"
