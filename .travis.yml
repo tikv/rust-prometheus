@@ -10,4 +10,4 @@ matrix:
     env: FEATURE="--features dev"
 
 script:
-  - cargo test $FEATURE
+  - cargo test $FEATURE | grep warning | awk '{print} END{if(NR>0) {exit 1}}'
