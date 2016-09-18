@@ -93,7 +93,7 @@ impl Desc {
         let mut label_names = BTreeSet::new();
 
         for label_name in const_labels.keys() {
-            if !VALID_LABEL_NAME.is_match(&label_name) {
+            if !VALID_LABEL_NAME.is_match(label_name) {
                 return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)));
             }
 
@@ -111,7 +111,7 @@ impl Desc {
         // cannot be in a regular label name. That prevents matching the label
         // dimension with a different mix between preset and variable labels.
         for label_name in &desc.variable_labels {
-            if !VALID_LABEL_NAME.is_match(&label_name) {
+            if !VALID_LABEL_NAME.is_match(label_name) {
                 return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)));
             }
 
