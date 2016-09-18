@@ -81,7 +81,7 @@ pub struct Opts {
     /// the same label names in their variable_labels.
     ///
     /// Note that variable_labels is used in `MetricVec`. To create a single
-    /// metric must leaves it empty.
+    /// metric must leave it empty.
     pub variable_labels: Vec<String>,
 }
 
