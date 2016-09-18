@@ -17,7 +17,7 @@ use std::sync::RwLock;
 use protobuf::RepeatedField;
 
 use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType};
-use desc::Desc;
+use desc::{Describer, Desc};
 use errors::{Result, Error};
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
@@ -52,11 +52,12 @@ pub struct Value {
 }
 
 impl Value {
-    pub fn new(desc: Desc,
-               value_type: ValueType,
-               val: f64,
-               label_values: &[&str])
-               -> Result<Value> {
+    pub fn new<D: Describer>(describer: &D,
+                             value_type: ValueType,
+                             val: f64,
+                             label_values: &[&str])
+                             -> Result<Value> {
+        let desc = try!(describer.describe());
         if desc.variable_labels.len() != label_values.len() {
             return Err(Error::InconsistentCardinality(desc.variable_labels.len(),
                                                       label_values.len()));

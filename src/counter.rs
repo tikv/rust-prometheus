@@ -17,7 +17,7 @@ use std::sync::Arc;
 use proto;
 use metrics::{Opts, Collector, Metric};
 use value::{Value, ValueType};
-use desc::{Describer, Desc};
+use desc::Desc;
 use errors::{Result, Error};
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -41,8 +41,7 @@ impl Counter {
     }
 
     fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Counter> {
-        let desc = try!(opts.describe());
-        let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
+        let v = try!(Value::new(opts, ValueType::Counter, 0.0, label_values));
         Ok(Counter { v: Arc::new(v) })
     }
 

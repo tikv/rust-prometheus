@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 use proto;
-use desc::{Describer, Desc};
+use desc::Desc;
 use errors::Result;
 use value::{Value, ValueType};
 use metrics::{Opts, Collector, Metric};
@@ -41,8 +41,7 @@ impl Gauge {
     }
 
     fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Gauge> {
-        let desc = try!(opts.describe());
-        let v = try!(Value::new(desc, ValueType::Gauge, 0.0, label_values));
+        let v = try!(Value::new(opts, ValueType::Gauge, 0.0, label_values));
         Ok(Gauge { v: Arc::new(v) })
     }
 }
