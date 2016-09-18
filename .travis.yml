@@ -10,7 +10,9 @@ env:
 matrix:
   include:
   - rust: nightly
-    env: FEATURE="--features dev"
+    env:
+      - FEATURE="--features dev"
+      - RUSTFLAGS=-Dwarnings
 
 script:
   - cargo test $FEATURE
