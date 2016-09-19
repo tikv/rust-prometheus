@@ -42,7 +42,6 @@ mod registry;
 mod vec;
 mod histogram;
 mod push;
-#[cfg(feature="nightly")]
 mod atomicf64;
 
 // Mods

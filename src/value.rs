@@ -12,19 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(not(feature = "nightly"))]
-use std::sync::RwLock;
-#[cfg(feature = "nightly")]
-use std::sync::atomic::Ordering;
-#[cfg(feature = "nightly")]
-use std::f64::EPSILON;
-
 use protobuf::RepeatedField;
 
 use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType};
 use desc::Desc;
 use errors::{Result, Error};
-#[cfg(feature = "nightly")]
 use atomicf64::AtomicF64;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
@@ -52,57 +44,9 @@ impl ValueType {
 /// `Counter`, `Gauge`, and `Untyped`.
 pub struct Value {
     pub desc: Desc,
+    pub val: AtomicF64,
     pub val_type: ValueType,
     pub label_pairs: Vec<LabelPair>,
-
-    #[cfg(not(feature = "nightly"))]
-    pub val: RwLock<f64>,
-
-    #[cfg(feature = "nightly")]
-    pub val: AtomicF64,
-}
-
-#[cfg(not(feature = "nightly"))]
-impl Value {
-    #[inline]
-    pub fn set(&self, val: f64) {
-        *self.val.write().unwrap() = val;
-    }
-
-    #[inline]
-    pub fn get(&self) -> f64 {
-        *self.val.read().unwrap()
-    }
-
-    #[inline]
-    pub fn inc_by(&self, delta: f64) {
-        *self.val.write().unwrap() += delta;
-    }
-}
-
-#[cfg(feature = "nightly")]
-impl Value {
-    #[inline]
-    pub fn set(&self, val: f64) {
-        self.val.store(val, Ordering::Release);
-    }
-
-    #[inline]
-    pub fn get(&self) -> f64 {
-        self.val.load(Ordering::Acquire)
-    }
-
-    #[inline]
-    pub fn inc_by(&self, delta: f64) {
-        loop {
-            let current = self.val.load(Ordering::Acquire);
-            let new = current + delta;
-            let swapped = self.val.compare_and_swap(current, new, Ordering::Release);
-            if (swapped - current).abs() < EPSILON {
-                return;
-            }
-        }
-    }
 }
 
 impl Value {
@@ -118,20 +62,27 @@ impl Value {
 
         let label_pairs = make_label_pairs(&desc, label_values);
 
-        let val = match () {
-            #[cfg(not(feature = "nightly"))]
-            _ => RwLock::new(val),
-
-            #[cfg(feature = "nightly")]
-            _ => AtomicF64::new(val),
-        };
-
         Ok(Value {
             desc: desc,
-            val: val,
+            val: AtomicF64::new(val),
             val_type: value_type,
             label_pairs: label_pairs,
         })
+    }
+
+    #[inline]
+    pub fn get(&self) -> f64 {
+        self.val.get()
+    }
+
+    #[inline]
+    pub fn set(&self, val: f64) {
+        self.val.set(val);
+    }
+
+    #[inline]
+    pub fn inc_by(&self, val: f64) {
+        self.val.inc_by(val);
     }
 
     #[inline]
