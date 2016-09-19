@@ -63,7 +63,7 @@ mod atomic {
 
         #[inline]
         pub fn get(&self) -> f64 {
-            self.inner.load(Ordering::Acquire).as_f64()
+            self.inner.load(Ordering::Relex).as_f64()
         }
 
         #[inline]
