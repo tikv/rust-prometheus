@@ -37,12 +37,12 @@ mod rwlock {
 
         #[inline]
         pub fn get(&self) -> f64 {
-            *(self.inner).read().unwrap()
+            *self.inner.read().unwrap()
         }
 
         #[inline]
         pub fn inc_by(&self, delta: f64) {
-            *(self.inner).write().unwrap() += delta;
+            *self.inner.write().unwrap() += delta;
         }
     }
 }
@@ -58,26 +58,26 @@ mod atomic {
 
     impl AtomicF64 {
         pub fn new(val: f64) -> AtomicF64 {
-            AtomicF64 { inner: AtomicU64::new(val.as_u64()) }
+            AtomicF64 { inner: AtomicU64::new(f64_to_u64(val)) }
         }
 
         #[inline]
         pub fn get(&self) -> f64 {
-            self.inner.load(Ordering::Relaxed).as_f64()
+            u64_to_f64(self.inner.load(Ordering::Relaxed))
         }
 
         #[inline]
         pub fn set(&self, val: f64) {
-            self.inner.store(val.as_u64(), Ordering::Release)
+            self.inner.store(f64_to_u64(val), Ordering::Release)
         }
 
         #[inline]
         pub fn inc_by(&self, delta: f64) {
             loop {
                 let current = self.inner.load(Ordering::Acquire);
-                let new = current.as_f64() + delta;
+                let new = u64_to_f64(current) + delta;
                 let swapped = self.inner
-                    .compare_and_swap(current.as_u64(), new.as_u64(), Ordering::Release);
+                    .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
                 if swapped == current {
                     return;
                 }
@@ -85,31 +85,14 @@ mod atomic {
         }
     }
 
-    trait Transform64bits: Copy {
-        fn as_u64(&self) -> u64;
-
-        fn as_f64(&self) -> f64;
+    fn u64_to_f64(val: u64) -> f64 {
+        unsafe { transmute(val) }
     }
 
-    impl Transform64bits for u64 {
-        fn as_u64(&self) -> u64 {
-            *self
-        }
-
-        fn as_f64(&self) -> f64 {
-            unsafe { transmute(*self) }
-        }
+    fn f64_to_u64(val: f64) -> u64 {
+        unsafe { transmute(val) }
     }
 
-    impl Transform64bits for f64 {
-        fn as_u64(&self) -> u64 {
-            unsafe { transmute(*self) }
-        }
-
-        fn as_f64(&self) -> f64 {
-            *self
-        }
-    }
 }
 
 #[cfg(test)]
