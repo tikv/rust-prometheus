@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::convert::From;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 
@@ -136,63 +136,153 @@ impl From<Opts> for HistogramOpts {
     }
 }
 
-#[derive(Debug)]
-struct HistogramCore {
-    sum: f64,
-    count: u64,
+#[cfg(feature = "nightly")]
+use self::atomic::AtomicHistogramCore as HistogramCore;
 
-    upper_bounds: Vec<f64>,
-    counts: Vec<u64>,
-}
+#[cfg(feature = "nightly")]
+mod atomic {
+    use std::sync::atomic::{AtomicU64, Ordering};
 
-impl HistogramCore {
-    fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
-        let buckets = try!(check_and_adjust_buckets(buckets));
+    use protobuf::RepeatedField;
 
-        Ok(HistogramCore {
-            sum: 0.0,
-            count: 0,
-            counts: vec![0; buckets.len()],
-            upper_bounds: buckets,
-        })
+    use proto;
+    use errors::Result;
+    use atomicf64::AtomicF64;
+    use super::check_and_adjust_buckets;
+
+    pub struct AtomicHistogramCore {
+        sum: AtomicF64,
+        count: AtomicU64,
+
+        upper_bounds: Vec<f64>,
+        counts: Vec<AtomicU64>,
     }
 
-    fn observe(&mut self, v: f64) {
-        // Try find the bucket.
-        let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
-        if let Some((i, _)) = iter.next() {
-            self.counts[i] += 1;
+    impl AtomicHistogramCore {
+        pub fn with_buckets(buckets: Vec<f64>) -> Result<AtomicHistogramCore> {
+            let buckets = try!(check_and_adjust_buckets(buckets));
+
+            let mut counts = Vec::new();
+            for _ in 0..buckets.len() {
+                counts.push(AtomicU64::new(0));
+            }
+
+            Ok(AtomicHistogramCore {
+                sum: AtomicF64::new(0.0),
+                count: AtomicU64::new(0),
+                upper_bounds: buckets,
+                counts: counts,
+            })
         }
 
-        self.count += 1;
-        self.sum += v;
-    }
+        pub fn observe(&self, v: f64) {
+            // Try find the bucket.
+            let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
+            if let Some((i, _)) = iter.next() {
+                self.counts[i].fetch_add(1, Ordering::Release);
+            }
 
-    fn proto(&self) -> proto::Histogram {
-        let mut h = proto::Histogram::new();
-        h.set_sample_sum(self.sum);
-        h.set_sample_count(self.count);
-
-        let mut count = 0;
-        let mut buckets = Vec::with_capacity(self.upper_bounds.len());
-        for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
-            count += self.counts[i];
-            let mut b = proto::Bucket::new();
-            b.set_cumulative_count(count);
-            b.set_upper_bound(*upper_bound);
-            buckets.push(b);
+            self.count.fetch_add(1, Ordering::Release);
+            self.sum.inc_by(v);
         }
-        h.set_bucket(RepeatedField::from_vec(buckets));
 
-        h
+        pub fn proto(&self) -> proto::Histogram {
+            let mut h = proto::Histogram::new();
+            h.set_sample_sum(self.sum.get());
+            h.set_sample_count(self.count.load(Ordering::Acquire));
+
+            let mut count = 0;
+            let mut buckets = Vec::with_capacity(self.upper_bounds.len());
+            for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
+                count += self.counts[i].load(Ordering::Acquire);
+                let mut b = proto::Bucket::new();
+                b.set_cumulative_count(count);
+                b.set_upper_bound(*upper_bound);
+                buckets.push(b);
+            }
+            h.set_bucket(RepeatedField::from_vec(buckets));
+
+            h
+        }
     }
 }
 
-impl Default for HistogramCore {
-    fn default() -> HistogramCore {
-        HistogramCore::with_buckets(vec![]).unwrap()
+#[cfg(not(feature = "nightly"))]
+use self::rwlock::RwLockHistogramCore as HistogramCore;
+
+#[cfg(not(feature = "nightly"))]
+mod rwlock {
+    use std::sync::RwLock;
+
+    use protobuf::RepeatedField;
+
+    use proto;
+    use errors::Result;
+    use super::check_and_adjust_buckets;
+
+    struct SimpleCore {
+        sum: f64,
+        count: u64,
+
+        upper_bounds: Vec<f64>,
+        counts: Vec<u64>,
+    }
+
+    pub struct RwLockHistogramCore {
+        core: RwLock<SimpleCore>,
+    }
+
+    impl RwLockHistogramCore {
+        pub fn with_buckets(buckets: Vec<f64>) -> Result<RwLockHistogramCore> {
+            let buckets = try!(check_and_adjust_buckets(buckets));
+
+            let core = SimpleCore {
+                sum: 0.0,
+                count: 0,
+                counts: vec![0; buckets.len()],
+                upper_bounds: buckets,
+            };
+
+            Ok(RwLockHistogramCore { core: RwLock::new(core) })
+        }
+
+        pub fn observe(&self, v: f64) {
+            let mut core = self.core.write().unwrap();
+
+            // Try find the bucket.
+            let upper_bounds =  core.upper_bounds.clone();  
+            let mut iter = upper_bounds.into_iter().enumerate().filter(|&(_, f)| v <= f);
+            if let Some((i, _)) = iter.next() {
+                core.counts[i] += 1;
+            }
+
+            core.count += 1;
+            core.sum += v;
+        }
+
+        pub fn proto(&self) -> proto::Histogram {
+            let core = self.core.read().unwrap();
+
+            let mut h = proto::Histogram::new();
+            h.set_sample_sum(core.sum);
+            h.set_sample_count(core.count);
+
+            let mut count = 0;
+            let mut buckets = Vec::with_capacity(core.upper_bounds.len());
+            for (i, upper_bound) in core.upper_bounds.iter().enumerate() {
+                count += core.counts[i];
+                let mut b = proto::Bucket::new();
+                b.set_cumulative_count(count);
+                b.set_upper_bound(*upper_bound);
+                buckets.push(b);
+            }
+            h.set_bucket(RepeatedField::from_vec(buckets));
+
+            h
+        }
     }
 }
+
 
 /// `HistogramTimer` represents an event being timed. When the timer goes out of
 /// scope, the duration will be observed, or call `observe_duration` to manually
@@ -247,8 +337,7 @@ impl Drop for HistogramTimer {
 pub struct Histogram {
     desc: Desc,
     label_pairs: Vec<proto::LabelPair>,
-
-    core: Arc<RwLock<HistogramCore>>,
+    core: Arc<HistogramCore>,
 }
 
 impl Histogram {
@@ -278,13 +367,14 @@ impl Histogram {
         }
 
         let pairs = make_label_pairs(&desc, label_values);
-        let core = try!(buckets.map_or(Ok(HistogramCore::default()), HistogramCore::with_buckets));
+        let core = try!(buckets.map_or(Ok(HistogramCore::with_buckets(vec![]).unwrap()),
+                                       HistogramCore::with_buckets));
 
         Ok(Histogram {
             desc: desc,
             label_pairs: pairs,
 
-            core: Arc::new(RwLock::new(core)),
+            core: Arc::new(core),
         })
     }
 }
@@ -292,7 +382,7 @@ impl Histogram {
 impl Histogram {
     /// `observe` adds a single observation to the `Histogram`.
     pub fn observe(&self, v: f64) {
-        self.core.write().unwrap().observe(v)
+        self.core.observe(v)
     }
 
     /// `start_timer` returns a `HistogramTimer` to track a duration.
@@ -307,8 +397,7 @@ impl Metric for Histogram {
         let mut m = proto::Metric::new();
         m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
 
-        let core = self.core.read().unwrap();
-        let h = core.proto();
+        let h = self.core.proto();
         m.set_histogram(h);
 
         m
