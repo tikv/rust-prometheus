@@ -7,12 +7,12 @@ rust:
 env:
   - RUSTFLAGS=-Dwarnings
 
+script:
+  - cargo test
+
 matrix:
   include:
   - rust: nightly
-    env:
-      - FEATURE="--features dev"
-      - RUSTFLAGS=-Dwarnings
-
-script:
-  - cargo test $FEATURE
+    script:
+      - cargo test --features dev
+      - cargo test --features="dev nightly"

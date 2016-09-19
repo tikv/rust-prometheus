@@ -42,8 +42,8 @@ mod registry;
 mod vec;
 mod histogram;
 mod push;
-#[cfg_attr(not(feature="nightly"), allow(dead_code))]
-mod util;
+#[cfg(feature="nightly")]
+mod atomicf64;
 
 // Mods
 

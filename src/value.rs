@@ -15,7 +15,9 @@
 #[cfg(not(feature = "nightly"))]
 use std::sync::RwLock;
 #[cfg(feature = "nightly")]
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::Ordering;
+#[cfg(feature = "nightly")]
+use std::f64::EPSILON;
 
 use protobuf::RepeatedField;
 
@@ -23,7 +25,7 @@ use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType
 use desc::Desc;
 use errors::{Result, Error};
 #[cfg(feature = "nightly")]
-use util::{f64u64, u64f64};
+use atomicf64::AtomicF64;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for `Counter`, `Gauge`, and `Untyped`.
@@ -57,7 +59,7 @@ pub struct Value {
     pub val: RwLock<f64>,
 
     #[cfg(feature = "nightly")]
-    pub val: AtomicU64,
+    pub val: AtomicF64,
 }
 
 #[cfg(not(feature = "nightly"))]
@@ -82,21 +84,21 @@ impl Value {
 impl Value {
     #[inline]
     pub fn set(&self, val: f64) {
-        self.val.store(f64u64(val), Ordering::Release);
+        self.val.store(val, Ordering::Release);
     }
 
     #[inline]
     pub fn get(&self) -> f64 {
-        u64f64(self.val.load(Ordering::Acquire))
+        self.val.load(Ordering::Acquire)
     }
 
     #[inline]
     pub fn inc_by(&self, delta: f64) {
         loop {
-            let old = self.val.load(Ordering::Acquire);
-            let new = f64u64(u64f64(old) + delta);
-            let swapped = self.val.compare_and_swap(old, new, Ordering::Release);
-            if swapped == old {
+            let current = self.val.load(Ordering::Acquire);
+            let new = current + delta;
+            let swapped = self.val.compare_and_swap(current, new, Ordering::Release);
+            if (swapped - current).abs() < EPSILON {
                 return;
             }
         }
@@ -121,7 +123,7 @@ impl Value {
             _ => RwLock::new(val),
 
             #[cfg(feature = "nightly")]
-            _ => AtomicU64::new(f64u64(val)),
+            _ => AtomicF64::new(val),
         };
 
         Ok(Value {
