@@ -17,3 +17,5 @@ extern crate test;
 extern crate prometheus;
 
 mod counter;
+mod gauge;
+mod histogram;
