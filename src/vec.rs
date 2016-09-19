@@ -61,13 +61,16 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::Output> {
         let h = try!(self.hash_label_values(&vals));
 
+        if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
+            return Ok(metric);
+        }
+
         self.get_or_create_metric(h, vals)
     }
 
     pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::Output> {
         let h = try!(self.hash_labels(labels));
 
-        // Avoid to create vector values, check hash first.
         if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
             return Ok(metric);
         }
@@ -140,6 +143,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
     fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::Output> {
         let mut children = self.children.write().unwrap();
+        // Check exist first.
         if let Some(metric) = children.get(&hash).cloned() {
             return Ok(metric);
         }
