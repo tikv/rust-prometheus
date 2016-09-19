@@ -13,6 +13,7 @@
 
 #![cfg_attr(feature="dev", feature(plugin))]
 #![cfg_attr(feature="dev", plugin(clippy))]
+#![cfg_attr(feature="nightly", feature(integer_atomics))]
 
 #[macro_use]
 extern crate quick_error;
@@ -41,6 +42,7 @@ mod registry;
 mod vec;
 mod histogram;
 mod push;
+mod atomicf64;
 
 // Mods
 

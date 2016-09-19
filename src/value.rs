@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::RwLock;
-
 use protobuf::RepeatedField;
 
 use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType};
 use desc::Desc;
 use errors::{Result, Error};
+use atomicf64::AtomicF64;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for `Counter`, `Gauge`, and `Untyped`.
@@ -45,8 +44,7 @@ impl ValueType {
 /// `Counter`, `Gauge`, and `Untyped`.
 pub struct Value {
     pub desc: Desc,
-    // TODO: like prometheus client go, use atomic u64.
-    pub val: RwLock<f64>,
+    pub val: AtomicF64,
     pub val_type: ValueType,
     pub label_pairs: Vec<LabelPair>,
 }
@@ -66,20 +64,25 @@ impl Value {
 
         Ok(Value {
             desc: desc,
-            val: RwLock::new(val),
+            val: AtomicF64::new(val),
             val_type: value_type,
             label_pairs: label_pairs,
         })
     }
 
     #[inline]
-    pub fn set(&self, val: f64) {
-        *self.val.write().unwrap() = val;
+    pub fn get(&self) -> f64 {
+        self.val.get()
     }
 
     #[inline]
-    pub fn get(&self) -> f64 {
-        *self.val.read().unwrap()
+    pub fn set(&self, val: f64) {
+        self.val.set(val);
+    }
+
+    #[inline]
+    pub fn inc_by(&self, val: f64) {
+        self.val.inc_by(val);
     }
 
     #[inline]
@@ -90,11 +93,6 @@ impl Value {
     #[inline]
     pub fn dec(&self) {
         self.inc_by(-1.0);
-    }
-
-    #[inline]
-    pub fn inc_by(&self, val: f64) {
-        *self.val.write().unwrap() += val;
     }
 
     #[inline]

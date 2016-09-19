@@ -16,6 +16,7 @@ include = [
 [features]
 default = []
 dev = ["clippy"]
+nightly = []
 
 [[bench]]
 name = "benches"

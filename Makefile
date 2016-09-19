@@ -8,7 +8,7 @@ test:
 
 dev: format
 	cargo build --features dev
-	cargo test --features dev -- --nocapture 
+	cargo test --features="nightly dev" -- --nocapture
 
 bench: format
 	cargo bench --features dev -- --nocapture
