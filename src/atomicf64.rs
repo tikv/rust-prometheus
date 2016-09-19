@@ -32,7 +32,7 @@ mod rwlock {
 
         #[inline]
         pub fn set(&self, val: f64) {
-            *(self.inner).write().unwrap() = val;
+            *self.inner.write().unwrap() = val;
         }
 
         #[inline]
