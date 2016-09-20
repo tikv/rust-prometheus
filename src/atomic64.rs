@@ -13,16 +13,10 @@
 // limitations under the License.
 
 #[cfg(not(feature = "nightly"))]
-pub use self::rwlock::RwlockF64 as AtomicF64;
-
-#[cfg(not(feature = "nightly"))]
-pub use self::rwlock::RwlockU64 as AtomicU64;
+pub use self::rwlock::{RwlockF64 as AtomicF64, RwlockU64 as AtomicU64};
 
 #[cfg(feature = "nightly")]
-pub use self::atomic::AtomicF64;
-
-#[cfg(feature = "nightly")]
-pub use self::atomic::AtomicU64;
+pub use self::atomic::{AtomicF64, AtomicU64};
 
 #[cfg(not(feature = "nightly"))]
 mod rwlock {
