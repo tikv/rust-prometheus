@@ -42,7 +42,7 @@ mod registry;
 mod vec;
 mod histogram;
 mod push;
-mod atomicf64;
+mod atomic64;
 
 // Mods
 

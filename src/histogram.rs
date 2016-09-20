@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::convert::From;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 
@@ -24,6 +24,7 @@ use errors::{Result, Error};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 use metrics::{Collector, Metric, Opts};
+use atomic64::{AtomicU64, AtomicF64};
 
 /// `DEFAULT_BUCKETS` are the default Histogram buckets. The default buckets are
 /// tailored to broadly measure the response time (in seconds) of a
@@ -136,47 +137,51 @@ impl From<Opts> for HistogramOpts {
     }
 }
 
-#[derive(Debug)]
-struct HistogramCore {
-    sum: f64,
-    count: u64,
+pub struct HistogramCore {
+    sum: AtomicF64,
+    count: AtomicU64,
 
     upper_bounds: Vec<f64>,
-    counts: Vec<u64>,
+    counts: Vec<AtomicU64>,
 }
 
 impl HistogramCore {
-    fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
+    pub fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
         let buckets = try!(check_and_adjust_buckets(buckets));
 
+        let mut counts = Vec::new();
+        for _ in 0..buckets.len() {
+            counts.push(AtomicU64::new(0));
+        }
+
         Ok(HistogramCore {
-            sum: 0.0,
-            count: 0,
-            counts: vec![0; buckets.len()],
+            sum: AtomicF64::new(0.0),
+            count: AtomicU64::new(0),
             upper_bounds: buckets,
+            counts: counts,
         })
     }
 
-    fn observe(&mut self, v: f64) {
+    pub fn observe(&self, v: f64) {
         // Try find the bucket.
         let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
-            self.counts[i] += 1;
+            self.counts[i].inc_by(1);
         }
 
-        self.count += 1;
-        self.sum += v;
+        self.count.inc_by(1);
+        self.sum.inc_by(v);
     }
 
-    fn proto(&self) -> proto::Histogram {
+    pub fn proto(&self) -> proto::Histogram {
         let mut h = proto::Histogram::new();
-        h.set_sample_sum(self.sum);
-        h.set_sample_count(self.count);
+        h.set_sample_sum(self.sum.get());
+        h.set_sample_count(self.count.get());
 
         let mut count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
-            count += self.counts[i];
+            count += self.counts[i].get();
             let mut b = proto::Bucket::new();
             b.set_cumulative_count(count);
             b.set_upper_bound(*upper_bound);
@@ -247,8 +252,7 @@ impl Drop for HistogramTimer {
 pub struct Histogram {
     desc: Desc,
     label_pairs: Vec<proto::LabelPair>,
-
-    core: Arc<RwLock<HistogramCore>>,
+    core: Arc<HistogramCore>,
 }
 
 impl Histogram {
@@ -284,7 +288,7 @@ impl Histogram {
             desc: desc,
             label_pairs: pairs,
 
-            core: Arc::new(RwLock::new(core)),
+            core: Arc::new(core),
         })
     }
 }
@@ -292,7 +296,7 @@ impl Histogram {
 impl Histogram {
     /// `observe` adds a single observation to the `Histogram`.
     pub fn observe(&self, v: f64) {
-        self.core.write().unwrap().observe(v)
+        self.core.observe(v)
     }
 
     /// `start_timer` returns a `HistogramTimer` to track a duration.
@@ -307,8 +311,7 @@ impl Metric for Histogram {
         let mut m = proto::Metric::new();
         m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
 
-        let core = self.core.read().unwrap();
-        let h = core.proto();
+        let h = self.core.proto();
         m.set_histogram(h);
 
         m

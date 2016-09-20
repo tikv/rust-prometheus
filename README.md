@@ -22,6 +22,15 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
     extern crate prometheus
     ```
 
++ Or enable nightly feature for better performance. 
+
+    ```toml
+    [dependencies.prometheus]
+    git = "https://github.com/pingcap/rust-prometheus.git"
+    default-features = false
+    features = ["nightly"]
+    ```
+
 ## Example
 
 ```rust
