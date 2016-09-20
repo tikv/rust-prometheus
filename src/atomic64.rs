@@ -30,7 +30,7 @@ impl AtomicF64 {
 
     #[inline]
     pub fn set(&self, val: f64) {
-        self.inner.store(val, Ordering::Relaxed)
+        self.inner.store(val, Ordering::Release)
     }
 
     #[inline]
@@ -57,12 +57,12 @@ impl AtomicU64 {
 
     #[inline]
     pub fn get(&self) -> u64 {
-        self.inner.load(Ordering::Relaxed)
+        self.inner.load(Ordering::Acquire)
     }
 
     #[inline]
     pub fn inc_by(&self, delta: u64) {
-        self.inner.fetch_add(delta, Ordering::Relaxed);
+        self.inner.fetch_add(delta, Ordering::Release);
     }
 }
 
