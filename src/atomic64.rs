@@ -156,4 +156,13 @@ mod test {
             assert!((f - AtomicF64::new(f).get()).abs() < EPSILON);
         }
     }
+
+    #[test]
+    fn test_atomicu64() {
+        let au64 = AtomicU64::new(0);
+        assert_eq!(au64.get(), 0);
+
+        au64.inc_by(1);
+        assert_eq!(au64.get(), 1);
+    }
 }
