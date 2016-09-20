@@ -89,7 +89,7 @@ mod atomic {
 
         #[inline]
         pub fn set(&self, val: f64) {
-            self.inner.store(f64_to_u64(val), Ordering::Release)
+            self.inner.store(f64_to_u64(val), Ordering::Relaxed)
         }
 
         #[inline]
