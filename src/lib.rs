@@ -13,6 +13,7 @@
 
 #![cfg_attr(feature="dev", feature(plugin))]
 #![cfg_attr(feature="dev", plugin(clippy))]
+#![cfg_attr(feature="nightly", feature(integer_atomics))]
 
 #[macro_use]
 extern crate quick_error;
@@ -23,7 +24,6 @@ extern crate lazy_static;
 extern crate hyper;
 extern crate libc;
 extern crate regex;
-extern crate atomic;
 
 mod errors;
 mod encoder;

@@ -137,7 +137,7 @@ impl From<Opts> for HistogramOpts {
     }
 }
 
-pub struct HistogramCore {
+pub struct AtomicHistogramCore {
     sum: AtomicF64,
     count: AtomicU64,
 
@@ -145,8 +145,8 @@ pub struct HistogramCore {
     counts: Vec<AtomicU64>,
 }
 
-impl HistogramCore {
-    pub fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
+impl AtomicHistogramCore {
+    pub fn with_buckets(buckets: Vec<f64>) -> Result<AtomicHistogramCore> {
         let buckets = try!(check_and_adjust_buckets(buckets));
 
         let mut counts = Vec::new();
@@ -154,7 +154,7 @@ impl HistogramCore {
             counts.push(AtomicU64::new(0));
         }
 
-        Ok(HistogramCore {
+        Ok(AtomicHistogramCore {
             sum: AtomicF64::new(0.0),
             count: AtomicU64::new(0),
             upper_bounds: buckets,
@@ -246,7 +246,7 @@ impl Drop for HistogramTimer {
 pub struct Histogram {
     desc: Desc,
     label_pairs: Vec<proto::LabelPair>,
-    core: Arc<HistogramCore>,
+    core: Arc<AtomicHistogramCore>,
 }
 
 impl Histogram {
@@ -276,8 +276,8 @@ impl Histogram {
         }
 
         let pairs = make_label_pairs(&desc, label_values);
-        let core = try!(buckets.map_or(Ok(HistogramCore::with_buckets(vec![]).unwrap()),
-                                       HistogramCore::with_buckets));
+        let core = try!(buckets.map_or(Ok(AtomicHistogramCore::with_buckets(vec![]).unwrap()),
+                                       AtomicHistogramCore::with_buckets));
 
         Ok(Histogram {
             desc: desc,
