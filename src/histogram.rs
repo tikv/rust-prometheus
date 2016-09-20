@@ -137,7 +137,7 @@ impl From<Opts> for HistogramOpts {
     }
 }
 
-struct HistogramCore {
+pub struct HistogramCore {
     sum: AtomicF64,
     count: AtomicU64,
 
@@ -146,7 +146,7 @@ struct HistogramCore {
 }
 
 impl HistogramCore {
-    fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
+    pub fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
         let buckets = try!(check_and_adjust_buckets(buckets));
 
         let mut counts = Vec::new();
@@ -162,7 +162,7 @@ impl HistogramCore {
         })
     }
 
-    fn observe(&self, v: f64) {
+    pub fn observe(&self, v: f64) {
         // Try find the bucket.
         let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
@@ -173,7 +173,7 @@ impl HistogramCore {
         self.sum.inc_by(v);
     }
 
-    fn proto(&self) -> proto::Histogram {
+    pub fn proto(&self) -> proto::Histogram {
         let mut h = proto::Histogram::new();
         h.set_sample_sum(self.sum.get());
         h.set_sample_count(self.count.get());
@@ -190,12 +190,6 @@ impl HistogramCore {
         h.set_bucket(RepeatedField::from_vec(buckets));
 
         h
-    }
-}
-
-impl Default for HistogramCore {
-    fn default() -> HistogramCore {
-        HistogramCore::with_buckets(vec![]).unwrap()
     }
 }
 
@@ -282,7 +276,8 @@ impl Histogram {
         }
 
         let pairs = make_label_pairs(&desc, label_values);
-        let core = try!(buckets.map_or(Ok(HistogramCore::default()), HistogramCore::with_buckets));
+        let core = try!(buckets.map_or(Ok(HistogramCore::with_buckets(vec![]).unwrap()),
+                                       HistogramCore::with_buckets));
 
         Ok(Histogram {
             desc: desc,
