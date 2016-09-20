@@ -63,11 +63,6 @@ mod rwlock {
         }
 
         #[inline]
-        pub fn set(&self, val: u64) {
-            *self.inner.write().unwrap() = val;
-        }
-
-        #[inline]
         pub fn get(&self) -> u64 {
             *self.inner.read().unwrap()
         }
