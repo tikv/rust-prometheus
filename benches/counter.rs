@@ -56,7 +56,7 @@ fn bench_counter_with_prepared_mapped_labels(b: &mut Bencher) {
     })
 }
 
-#[bench]
+// #[bench]
 fn bench_counter_no_labels(b: &mut Bencher) {
     let counter = Counter::new("benchmark_counter", "A counter to benchmark it.").unwrap();
     b.iter(|| counter.inc())

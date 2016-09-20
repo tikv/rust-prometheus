@@ -14,7 +14,7 @@
 
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
-use std::hash::Hasher;
+use std::hash::{Hasher, BuildHasherDefault};
 
 use fnv::FnvHasher;
 use protobuf::RepeatedField;
@@ -33,15 +33,15 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
-struct MetricVecCore<T: MetricVecBuilder> {
-    pub children: RwLock<HashMap<u64, T::M>>,
+struct MetricVecCore<T: MetricVecBuilder, H: Default + Hasher> {
+    pub children: RwLock<HashMap<u64, T::M, BuildHasherDefault<H>>>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
     pub opts: T::P,
 }
 
-impl<T: MetricVecBuilder> MetricVecCore<T> {
+impl<T: MetricVecBuilder, H: Default + Hasher> MetricVecCore<T, H> {
     pub fn desc(&self) -> &Desc {
         &self.desc
     }
@@ -64,8 +64,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
         let h = try!(self.hash_label_values(&vals));
 
-        if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
-            return Ok(metric);
+        if let Some(metric) = self.children.read().unwrap().get(&h) {
+            return Ok(metric.clone());
         }
 
         self.get_or_create_metric(h, vals)
@@ -146,8 +146,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
         let mut children = self.children.write().unwrap();
         // Check exist first.
-        if let Some(metric) = children.get(&hash).cloned() {
-            return Ok(metric);
+        if let Some(metric) = children.get(&hash) {
+            return Ok(metric.clone());
         }
 
         let metric = try!(self.new_metric.build(&self.opts, label_values));
@@ -163,7 +163,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 /// provided in this package.
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
-    v: Arc<MetricVecCore<T>>,
+    v: Arc<MetricVecCore<T, FnvHasher>>,
 }
 
 impl<T: MetricVecBuilder> MetricVec<T> {
@@ -171,8 +171,11 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// a MetricVecBuilder `new_metric`.
     pub fn create(metric_type: MetricType, new_metric: T, opts: T::P) -> Result<MetricVec<T>> {
         let desc = try!(opts.describe());
+        let fnv = BuildHasherDefault::<FnvHasher>::default();
+        let map = HashMap::with_hasher(fnv);
+
         let v = MetricVecCore {
-            children: RwLock::new(HashMap::new()),
+            children: RwLock::new(map),
             desc: desc,
             metric_type: metric_type,
             new_metric: new_metric,

@@ -38,3 +38,7 @@ default-features = false
 
 [dev-dependencies]
 getopts = "0.2.14"
+
+[profile.release]
+opt-level = 3
+debug = true
