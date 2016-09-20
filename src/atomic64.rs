@@ -14,8 +14,15 @@
 
 #[cfg(not(feature = "nightly"))]
 pub use self::rwlock::RwlockF64 as AtomicF64;
+
+#[cfg(not(feature = "nightly"))]
+pub use self::rwlock::RwlockU64 as AtomicU64;
+
 #[cfg(feature = "nightly")]
 pub use self::atomic::AtomicF64;
+
+#[cfg(feature = "nightly")]
+pub use self::atomic::AtomicU64;
 
 #[cfg(not(feature = "nightly"))]
 mod rwlock {
@@ -45,20 +52,45 @@ mod rwlock {
             *self.inner.write().unwrap() += delta;
         }
     }
+
+    pub struct RwlockU64 {
+        inner: RwLock<u64>,
+    }
+
+    impl RwlockU64 {
+        pub fn new(val: u64) -> RwlockU64 {
+            RwlockU64 { inner: RwLock::new(val) }
+        }
+
+        #[inline]
+        pub fn set(&self, val: u64) {
+            *self.inner.write().unwrap() = val;
+        }
+
+        #[inline]
+        pub fn get(&self) -> u64 {
+            *self.inner.read().unwrap()
+        }
+
+        #[inline]
+        pub fn inc_by(&self, delta: u64) {
+            *self.inner.write().unwrap() += delta;
+        }
+    }
 }
 
 #[cfg(feature = "nightly")]
 mod atomic {
-    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
     use std::mem::transmute;
 
     pub struct AtomicF64 {
-        inner: AtomicU64,
+        inner: StdAtomicU64,
     }
 
     impl AtomicF64 {
         pub fn new(val: f64) -> AtomicF64 {
-            AtomicF64 { inner: AtomicU64::new(f64_to_u64(val)) }
+            AtomicF64 { inner: StdAtomicU64::new(f64_to_u64(val)) }
         }
 
         #[inline]
@@ -93,6 +125,25 @@ mod atomic {
         unsafe { transmute(val) }
     }
 
+    pub struct AtomicU64 {
+        inner: StdAtomicU64,
+    }
+
+    impl AtomicU64 {
+        pub fn new(val: u64) -> AtomicU64 {
+            AtomicU64 { inner: StdAtomicU64::new(val) }
+        }
+
+        #[inline]
+        pub fn get(&self) -> u64 {
+            self.inner.load(Ordering::Acquire)
+        }
+
+        #[inline]
+        pub fn inc_by(&self, delta: u64) {
+            self.inner.fetch_add(delta, Ordering::Release);
+        }
+    }
 }
 
 #[cfg(test)]

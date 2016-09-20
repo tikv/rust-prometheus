@@ -17,7 +17,7 @@ use protobuf::RepeatedField;
 use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType};
 use desc::Desc;
 use errors::{Result, Error};
-use atomicf64::AtomicF64;
+use atomic64::AtomicF64;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for `Counter`, `Gauge`, and `Untyped`.
