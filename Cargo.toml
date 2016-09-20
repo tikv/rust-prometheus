@@ -16,7 +16,6 @@ include = [
 [features]
 default = []
 dev = ["clippy"]
-nightly = []
 
 [[bench]]
 name = "benches"
@@ -29,6 +28,7 @@ fnv = "1.0.3"
 lazy_static = "0.2.1"
 libc = "0.2"
 regex = "0.1"
+atomic = "0.3"
 
 [dependencies.hyper]
 version = "0.9"

@@ -14,4 +14,4 @@ matrix:
   include:
   - rust: nightly
     script:
-      - cargo test --features="dev nightly"
+      - cargo test --features dev

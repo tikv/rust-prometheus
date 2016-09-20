@@ -12,137 +12,57 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(not(feature = "nightly"))]
-pub use self::rwlock::RwlockF64 as AtomicF64;
+use atomic::{Atomic, Ordering};
 
-#[cfg(not(feature = "nightly"))]
-pub use self::rwlock::RwlockU64 as AtomicU64;
+pub struct AtomicF64 {
+    inner: Atomic<f64>,
+}
 
-#[cfg(feature = "nightly")]
-pub use self::atomic::AtomicF64;
-
-#[cfg(feature = "nightly")]
-pub use self::atomic::AtomicU64;
-
-#[cfg(not(feature = "nightly"))]
-mod rwlock {
-    use std::sync::RwLock;
-
-    pub struct RwlockF64 {
-        inner: RwLock<f64>,
+impl AtomicF64 {
+    pub fn new(val: f64) -> AtomicF64 {
+        AtomicF64 { inner: Atomic::new(val) }
     }
 
-    impl RwlockF64 {
-        pub fn new(val: f64) -> RwlockF64 {
-            RwlockF64 { inner: RwLock::new(val) }
-        }
-
-        #[inline]
-        pub fn set(&self, val: f64) {
-            *self.inner.write().unwrap() = val;
-        }
-
-        #[inline]
-        pub fn get(&self) -> f64 {
-            *self.inner.read().unwrap()
-        }
-
-        #[inline]
-        pub fn inc_by(&self, delta: f64) {
-            *self.inner.write().unwrap() += delta;
-        }
+    #[inline]
+    pub fn get(&self) -> f64 {
+        self.inner.load(Ordering::Relaxed)
     }
 
-    pub struct RwlockU64 {
-        inner: RwLock<u64>,
+    #[inline]
+    pub fn set(&self, val: f64) {
+        self.inner.store(val, Ordering::Release)
     }
 
-    impl RwlockU64 {
-        pub fn new(val: u64) -> RwlockU64 {
-            RwlockU64 { inner: RwLock::new(val) }
-        }
-
-        #[inline]
-        pub fn set(&self, val: u64) {
-            *self.inner.write().unwrap() = val;
-        }
-
-        #[inline]
-        pub fn get(&self) -> u64 {
-            *self.inner.read().unwrap()
-        }
-
-        #[inline]
-        pub fn inc_by(&self, delta: u64) {
-            *self.inner.write().unwrap() += delta;
+    #[inline]
+    pub fn inc_by(&self, delta: f64) {
+        loop {
+            let current = self.inner.load(Ordering::Acquire);
+            let new = current + delta;
+            if let Ok(_) = self.inner
+                .compare_exchange(current, new, Ordering::Release, Ordering::Release) {
+                return;
+            }
         }
     }
 }
 
-#[cfg(feature = "nightly")]
-mod atomic {
-    use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
-    use std::mem::transmute;
+pub struct AtomicU64 {
+    inner: Atomic<u64>,
+}
 
-    pub struct AtomicF64 {
-        inner: StdAtomicU64,
+impl AtomicU64 {
+    pub fn new(val: u64) -> AtomicU64 {
+        AtomicU64 { inner: Atomic::new(val) }
     }
 
-    impl AtomicF64 {
-        pub fn new(val: f64) -> AtomicF64 {
-            AtomicF64 { inner: StdAtomicU64::new(f64_to_u64(val)) }
-        }
-
-        #[inline]
-        pub fn get(&self) -> f64 {
-            u64_to_f64(self.inner.load(Ordering::Relaxed))
-        }
-
-        #[inline]
-        pub fn set(&self, val: f64) {
-            self.inner.store(f64_to_u64(val), Ordering::Release)
-        }
-
-        #[inline]
-        pub fn inc_by(&self, delta: f64) {
-            loop {
-                let current = self.inner.load(Ordering::Acquire);
-                let new = u64_to_f64(current) + delta;
-                let swapped = self.inner
-                    .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
-                if swapped == current {
-                    return;
-                }
-            }
-        }
+    #[inline]
+    pub fn get(&self) -> u64 {
+        self.inner.load(Ordering::Acquire)
     }
 
-    fn u64_to_f64(val: u64) -> f64 {
-        unsafe { transmute(val) }
-    }
-
-    fn f64_to_u64(val: f64) -> u64 {
-        unsafe { transmute(val) }
-    }
-
-    pub struct AtomicU64 {
-        inner: StdAtomicU64,
-    }
-
-    impl AtomicU64 {
-        pub fn new(val: u64) -> AtomicU64 {
-            AtomicU64 { inner: StdAtomicU64::new(val) }
-        }
-
-        #[inline]
-        pub fn get(&self) -> u64 {
-            self.inner.load(Ordering::Acquire)
-        }
-
-        #[inline]
-        pub fn inc_by(&self, delta: u64) {
-            self.inner.fetch_add(delta, Ordering::Release);
-        }
+    #[inline]
+    pub fn inc_by(&self, delta: u64) {
+        self.inner.fetch_add(delta, Ordering::Release);
     }
 }
 
@@ -160,5 +80,14 @@ mod test {
         for f in table {
             assert!((f - AtomicF64::new(f).get()).abs() < EPSILON);
         }
+    }
+
+    #[test]
+    fn test_atomicu64() {
+        let au64 = AtomicU64::new(0);
+        assert_eq!(au64.get(), 0);
+
+        au64.inc_by(1);
+        assert_eq!(au64.get(), 1);
     }
 }
