@@ -157,6 +157,9 @@ impl From<Opts> for HistogramOpts {
 }
 
 pub struct HistogramCore {
+    desc: Desc,
+    label_pairs: Vec<proto::LabelPair>,
+
     sum: AtomicF64,
     count: AtomicU64,
 
@@ -165,8 +168,18 @@ pub struct HistogramCore {
 }
 
 impl HistogramCore {
-    pub fn with_buckets(buckets: Vec<f64>) -> Result<HistogramCore> {
-        let buckets = try!(check_and_adjust_buckets(buckets));
+    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore> {
+        let desc = try!(opts.describe());
+
+        for name in &desc.variable_labels {
+            try!(check_bucket_lable(&name));
+        }
+        for pair in &desc.const_label_pairs {
+            try!(check_bucket_lable(pair.get_name()));
+        }
+        let pairs = make_label_pairs(&desc, label_values);
+
+        let buckets = try!(check_and_adjust_buckets(opts.buckets.clone()));
 
         let mut counts = Vec::new();
         for _ in 0..buckets.len() {
@@ -174,6 +187,8 @@ impl HistogramCore {
         }
 
         Ok(HistogramCore {
+            desc: desc,
+            label_pairs: pairs,
             sum: AtomicF64::new(0.0),
             count: AtomicU64::new(0),
             upper_bounds: buckets,
@@ -209,12 +224,6 @@ impl HistogramCore {
         h.set_bucket(RepeatedField::from_vec(buckets));
 
         h
-    }
-}
-
-impl Default for HistogramCore {
-    fn default() -> HistogramCore {
-        HistogramCore::with_buckets(vec![]).unwrap()
     }
 }
 
@@ -269,8 +278,6 @@ impl Drop for HistogramTimer {
 /// method of a Summary.
 #[derive(Clone)]
 pub struct Histogram {
-    desc: Desc,
-    label_pairs: Vec<proto::LabelPair>,
     core: Arc<HistogramCore>,
 }
 
@@ -283,29 +290,9 @@ impl Histogram {
     fn with_opts_and_label_values(opts: &HistogramOpts,
                                   label_values: &[&str])
                                   -> Result<Histogram> {
-        let desc = try!(opts.describe());
+        let core = try!(HistogramCore::new(opts, label_values));
 
-        for name in &desc.variable_labels {
-            try!(check_bucket_lable(&name));
-        }
-        for pair in &desc.const_label_pairs {
-            try!(check_bucket_lable(pair.get_name()));
-        }
-        let pairs = make_label_pairs(&desc, label_values);
-
-        let buckets = opts.buckets.clone();
-        let core = if buckets.is_empty() {
-            HistogramCore::default()
-        } else {
-            try!(HistogramCore::with_buckets(buckets))
-        };
-
-        Ok(Histogram {
-            desc: desc,
-            label_pairs: pairs,
-
-            core: Arc::new(core),
-        })
+        Ok(Histogram { core: Arc::new(core) })
     }
 }
 
@@ -325,7 +312,7 @@ impl Histogram {
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
         let mut m = proto::Metric::new();
-        m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
+        m.set_label(RepeatedField::from_vec(self.core.label_pairs.clone()));
 
         let h = self.core.proto();
         m.set_histogram(h);
@@ -336,13 +323,13 @@ impl Metric for Histogram {
 
 impl Collector for Histogram {
     fn desc(&self) -> &Desc {
-        &self.desc
+        &self.core.desc
     }
 
     fn collect(&self) -> proto::MetricFamily {
         let mut m = proto::MetricFamily::new();
-        m.set_name(self.desc.fq_name.clone());
-        m.set_help(self.desc.help.clone());
+        m.set_name(self.core.desc.fq_name.clone());
+        m.set_help(self.core.desc.help.clone());
         m.set_field_type(proto::MetricType::HISTOGRAM);
         m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
 
@@ -443,6 +430,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 }
 
 /// `duration_to_seconds` converts Duration to seconds.
+#[inline]
 pub fn duration_to_seconds(d: Duration) -> f64 {
     let nanos = d.subsec_nanos() as f64 / 1e9;
     d.as_secs() as f64 + nanos
