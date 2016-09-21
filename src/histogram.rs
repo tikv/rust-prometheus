@@ -179,7 +179,6 @@ impl HistogramCore {
         }
         let pairs = make_label_pairs(&desc, label_values);
 
-
         let buckets = try!(check_and_adjust_buckets(opts.buckets.clone()));
 
         let mut counts = Vec::new();
