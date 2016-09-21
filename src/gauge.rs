@@ -37,12 +37,11 @@ impl Gauge {
 
     /// `with_opts` create a `Guage` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Gauge> {
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        Gauge::with_desc(desc, &[])
+        Gauge::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Gauge> {
-        let v = try!(Value::new(desc, ValueType::Gauge, 0.0, label_values));
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Gauge> {
+        let v = try!(Value::new(opts, ValueType::Gauge, 0.0, label_values));
         Ok(Gauge { v: Arc::new(v) })
     }
 }
@@ -107,10 +106,11 @@ impl Metric for Gauge {
 pub struct GaugeVecBuilder {}
 
 impl MetricVecBuilder for GaugeVecBuilder {
-    type Output = Gauge;
+    type M = Gauge;
+    type P = Opts;
 
-    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Gauge> {
-        Gauge::with_desc(desc.clone(), vals)
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Gauge> {
+        Gauge::with_opts_and_label_values(opts, vals)
     }
 }
 
@@ -126,8 +126,9 @@ impl GaugeVec {
     /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-        let metric_vec = MetricVec::create(desc, proto::MetricType::GAUGE, GaugeVecBuilder {});
+        let opts = opts.variable_labels(variable_names);
+        let metric_vec =
+            try!(MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder {}, opts));
 
         Ok(metric_vec as GaugeVec)
     }
@@ -135,8 +136,11 @@ impl GaugeVec {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+
     use metrics::{Opts, Collector};
+
+    use super::*;
 
     #[test]
     fn test_gauge() {
@@ -158,4 +162,46 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_gauge().get_value() as u64, 42);
     }
+
+    #[test]
+    fn test_gauge_vec_with_labels() {
+        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
+                                &["l1", "l2"])
+            .unwrap();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", "v1");
+        labels.insert("l2", "v2");
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        vec.with(&labels).dec();
+        vec.with(&labels).add(42.0);
+        vec.with(&labels).sub(42.0);
+        vec.with(&labels).set(42.0);
+
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+    }
+
+    #[test]
+    fn test_gauge_vec_with_label_values() {
+        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
+                                &["l1", "l2"])
+            .unwrap();
+
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+
+        vec.with_label_values(&["v1", "v2"]).inc();
+        vec.with_label_values(&["v1", "v2"]).dec();
+        vec.with_label_values(&["v1", "v2"]).add(42.0);
+        vec.with_label_values(&["v1", "v2"]).sub(42.0);
+        vec.with_label_values(&["v1", "v2"]).set(42.0);
+
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
 }

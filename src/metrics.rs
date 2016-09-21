@@ -13,10 +13,11 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-
-use desc::Desc;
-use proto::{self, LabelPair};
 use std::cmp::{Ord, Ordering, Eq, PartialOrd};
+
+use desc::{Desc, Describer};
+use errors::Result;
+use proto::{self, LabelPair};
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -38,7 +39,7 @@ pub trait Metric: Sync + Send + Clone {
 }
 
 /// `Opts` bundles the options for creating most Metric types.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Opts {
     /// namespace, subsystem, and name are components of the fully-qualified
     /// name of the Metric (created by joining these components with
@@ -74,6 +75,14 @@ pub struct Opts {
     /// that label most likely should not be a label at all (but part of the
     /// metric name).
     pub const_labels: HashMap<String, String>,
+
+    /// variable_labels contains names of labels for which the metric maintains
+    /// variable values. Metrics with the same fully-qualified name must have
+    /// the same label names in their variable_labels.
+    ///
+    /// Note that variable_labels is used in `MetricVec`. To create a single
+    /// metric must leave it empty.
+    pub variable_labels: Vec<String>,
 }
 
 impl Opts {
@@ -85,6 +94,7 @@ impl Opts {
             name: name.into(),
             help: help.into(),
             const_labels: HashMap::new(),
+            variable_labels: Vec::new(),
         }
     }
 
@@ -101,8 +111,8 @@ impl Opts {
     }
 
     /// `const_labels` sets the const labels.
-    pub fn const_labels(mut self, labels: HashMap<String, String>) -> Self {
-        self.const_labels = labels;
+    pub fn const_labels(mut self, const_labels: HashMap<String, String>) -> Self {
+        self.const_labels = const_labels;
         self
     }
 
@@ -112,9 +122,30 @@ impl Opts {
         self
     }
 
+    /// `variable_labels` sets the variable labels.
+    pub fn variable_labels(mut self, variable_labels: Vec<String>) -> Self {
+        self.variable_labels = variable_labels;
+        self
+    }
+
+    /// `variable_label` adds a variable label.
+    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
+        self.variable_labels.push(name.into());
+        self
+    }
+
     /// `fq_name` returns the fq_name.
     pub fn fq_name(&self) -> String {
         build_fq_name(&self.namespace, &self.subsystem, &self.name)
+    }
+}
+
+impl Describer for Opts {
+    fn describe(&self) -> Result<Desc> {
+        Desc::new(self.fq_name(),
+                  self.help.clone(),
+                  self.variable_labels.clone(),
+                  self.const_labels.clone())
     }
 }
 

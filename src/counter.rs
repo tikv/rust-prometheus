@@ -37,12 +37,11 @@ impl Counter {
 
     /// `with_opts` creates a `Counter` with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Counter> {
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, vec![], opts.const_labels));
-        Counter::with_desc(desc, &[])
+        Counter::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_desc(desc: Desc, label_values: &[&str]) -> Result<Counter> {
-        let v = try!(Value::new(desc, ValueType::Counter, 0.0, label_values));
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Counter> {
+        let v = try!(Value::new(opts, ValueType::Counter, 0.0, label_values));
         Ok(Counter { v: Arc::new(v) })
     }
 
@@ -90,10 +89,11 @@ impl Metric for Counter {
 pub struct CounterVecBuilder {}
 
 impl MetricVecBuilder for CounterVecBuilder {
-    type Output = Counter;
+    type M = Counter;
+    type P = Opts;
 
-    fn build(&self, desc: &Desc, vals: &[&str]) -> Result<Counter> {
-        Counter::with_desc(desc.clone(), vals)
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Counter> {
+        Counter::with_opts_and_label_values(opts, vals)
     }
 }
 
@@ -109,8 +109,9 @@ impl CounterVec {
     /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let desc = try!(Desc::new(opts.fq_name(), opts.help, variable_names, opts.const_labels));
-        let metric_vec = MetricVec::create(desc, proto::MetricType::COUNTER, CounterVecBuilder {});
+        let opts = opts.variable_labels(variable_names);
+        let metric_vec =
+            try!(MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder {}, opts));
 
         Ok(metric_vec as CounterVec)
     }
@@ -118,6 +119,8 @@ impl CounterVec {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use metrics::{Opts, Collector};
 
     use super::*;
@@ -135,5 +138,49 @@ mod tests {
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
+    }
+
+    #[test]
+    fn test_counter_vec_with_labels() {
+        let vec = CounterVec::new(Opts::new("test_couter_vec", "test counter vec help"),
+                                  &["l1", "l2"])
+            .unwrap();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", "v1");
+        labels.insert("l2", "v2");
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+
+        let mut labels2 = HashMap::new();
+        labels2.insert("l1", "v2");
+        labels2.insert("l2", "v1");
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels2).is_err());
+
+        vec.with(&labels).inc();
+
+        let mut labels3 = HashMap::new();
+        labels3.insert("l1", "v1");
+        assert!(vec.remove(&labels3).is_err());
+    }
+
+    #[test]
+    fn test_counter_vec_with_label_values() {
+        let vec = CounterVec::new(Opts::new("test_vec", "test counter vec help"),
+                                  &["l1", "l2"])
+            .unwrap();
+
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+
+        vec.with_label_values(&["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(&["v1"]).is_err());
+        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
     }
 }

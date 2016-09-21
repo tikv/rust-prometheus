@@ -152,6 +152,12 @@ impl Desc {
     }
 }
 
+/// `Describer` describes the immutable meta-data of a Metric.
+pub trait Describer {
+    /// `describe` returns a `Desc`.
+    fn describe(&self) -> Result<Desc>;
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
