@@ -14,7 +14,7 @@
 
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
-use std::hash::{Hasher, BuildHasherDefault};
+use std::hash::Hasher;
 
 use fnv::FnvHasher;
 use protobuf::RepeatedField;
@@ -33,15 +33,96 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
-struct MetricVecCore<T: MetricVecBuilder, H: Default + Hasher> {
-    pub children: RwLock<HashMap<u64, T::M, BuildHasherDefault<H>>>,
+pub struct Entry<K, V> {
+    key: K,
+    value: V,
+}
+
+impl<K, V> Entry<K, V> {
+    #[inline]
+    pub fn new(key: K, value: V) -> Entry<K, V> {
+        Entry {
+            key: key,
+            value: value,
+        }
+    }
+
+    #[inline]
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    #[inline]
+    pub fn value(&self) -> &V {
+        &self.value
+    }
+
+    #[inline]
+    pub fn value_mut(&mut self) -> &mut V {
+        &mut self.value
+    }
+
+    #[inline]
+    pub fn take_value(self) -> V {
+        self.value
+    }
+}
+
+pub struct MapVec<K: Eq, V> {
+    entries: Vec<Entry<K, V>>,
+}
+
+impl<K: Eq, V> MapVec<K, V> {
+    pub fn new() -> MapVec<K, V> {
+        MapVec { entries: Vec::new() }
+    }
+
+    pub fn get(&self, k: &K) -> Option<&V> {
+        self.entries
+            .iter()
+            .find(|&v| k == v.key())
+            .map(|entry| entry.value())
+    }
+
+    pub fn insert(&mut self, k: K, v: V) -> Option<V> {
+        let idx = self.entries
+            .iter()
+            .position(|v| &k == v.key());
+
+        let entry = Entry::new(k, v);
+        self.entries.push(entry);
+        idx.map(|idx| self.entries.swap_remove(idx).take_value())
+    }
+
+    pub fn remove(&mut self, k: &K) -> Option<V> {
+        self.entries
+            .iter()
+            .position(|v| k == v.key())
+            .map(|idx| self.entries.remove(idx).take_value())
+    }
+
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
+
+    pub fn get_vec(&self) -> &Vec<Entry<K, V>> {
+        &self.entries
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+struct MetricVecCore<T: MetricVecBuilder> {
+    pub children: RwLock<MapVec<u64, T::M>>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
     pub opts: T::P,
 }
 
-impl<T: MetricVecBuilder, H: Default + Hasher> MetricVecCore<T, H> {
+impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn desc(&self) -> &Desc {
         &self.desc
     }
@@ -54,8 +135,8 @@ impl<T: MetricVecBuilder, H: Default + Hasher> MetricVecCore<T, H> {
 
         let children = self.children.read().unwrap();
         let mut metrics = Vec::with_capacity(children.len());
-        for child in children.values() {
-            metrics.push(child.metric());
+        for child in children.get_vec() {
+            metrics.push(child.value().metric());
         }
         m.set_metric(RepeatedField::from_vec(metrics));
         m
@@ -74,8 +155,8 @@ impl<T: MetricVecBuilder, H: Default + Hasher> MetricVecCore<T, H> {
     pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
         let h = try!(self.hash_labels(labels));
 
-        if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
-            return Ok(metric);
+        if let Some(metric) = self.children.read().unwrap().get(&h) {
+            return Ok(metric.clone());
         }
 
         let mut vals: Vec<&str> = labels.values().map(|v| v.as_ref()).collect();
@@ -163,7 +244,7 @@ impl<T: MetricVecBuilder, H: Default + Hasher> MetricVecCore<T, H> {
 /// provided in this package.
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
-    v: Arc<MetricVecCore<T, FnvHasher>>,
+    v: Arc<MetricVecCore<T>>,
 }
 
 impl<T: MetricVecBuilder> MetricVec<T> {
@@ -171,11 +252,8 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// a MetricVecBuilder `new_metric`.
     pub fn create(metric_type: MetricType, new_metric: T, opts: T::P) -> Result<MetricVec<T>> {
         let desc = try!(opts.describe());
-        let fnv = BuildHasherDefault::<FnvHasher>::default();
-        let map = HashMap::with_hasher(fnv);
-
         let v = MetricVecCore {
-            children: RwLock::new(map),
+            children: RwLock::new(MapVec::new()),
             desc: desc,
             metric_type: metric_type,
             new_metric: new_metric,
@@ -290,94 +368,41 @@ impl<T: MetricVecBuilder> Collector for MetricVec<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use counter::CounterVec;
-    use gauge::GaugeVec;
-    use metrics::Opts;
+    use super::*;
 
     #[test]
-    fn test_counter_vec_with_labels() {
-        let vec = CounterVec::new(Opts::new("test_couter_vec", "test counter vec help"),
-                                  &["l1", "l2"])
-            .unwrap();
+    fn test_mapvec() {
+        let mut mv = MapVec::new();
 
-        let mut labels = HashMap::new();
-        labels.insert("l1", "v1");
-        labels.insert("l2", "v2");
-        assert!(vec.remove(&labels).is_err());
+        assert!(mv.get(&0xdeadbeef_u64).is_none());
 
-        vec.with(&labels).inc();
-        assert!(vec.remove(&labels).is_ok());
-        assert!(vec.remove(&labels).is_err());
+        mv.insert(0xdeadbeef_u64, "0xdeadbeef_u64".to_owned());
+        assert!(mv.get(&0xdeadbeef_u64).is_some());
+        assert_eq!(mv.get(&0xdeadbeef_u64).unwrap(),
+                   &"0xdeadbeef_u64".to_owned());
 
-        let mut labels2 = HashMap::new();
-        labels2.insert("l1", "v2");
-        labels2.insert("l2", "v1");
+        mv.insert(0xdeadbeef_u64, "0xbeefdead".to_owned());
+        assert!(mv.get(&0xdeadbeef_u64).is_some());
+        assert_eq!(mv.get(&0xdeadbeef_u64).unwrap(), &"0xbeefdead".to_owned());
+        assert_eq!(mv.get_vec().len(), 1);
 
-        vec.with(&labels).inc();
-        assert!(vec.remove(&labels2).is_err());
+        mv.insert(0xfabaceae_u64, "0xfabaceae_u64".to_owned());
+        assert!(mv.get(&0xfabaceae_u64).is_some());
+        assert_eq!(mv.get(&0xfabaceae_u64).unwrap(),
+                   &"0xfabaceae_u64".to_owned());
 
-        vec.with(&labels).inc();
+        assert!(mv.get(&0xdeadbeef_u64).is_some());
+        assert_eq!(mv.get(&0xdeadbeef_u64).unwrap(), &"0xbeefdead".to_owned());
+        assert_eq!(mv.get_vec().len(), 2);
 
-        let mut labels3 = HashMap::new();
-        labels3.insert("l1", "v1");
-        assert!(vec.remove(&labels3).is_err());
-    }
+        let deadbeef = mv.remove(&0xdeadbeef_u64);
+        assert!(deadbeef.is_some());
+        assert_eq!(deadbeef.unwrap(), "0xbeefdead".to_owned());
+        assert_eq!(mv.get_vec().len(), 1);
 
-    #[test]
-    fn test_counter_vec_with_label_values() {
-        let vec = CounterVec::new(Opts::new("test_vec", "test counter vec help"),
-                                  &["l1", "l2"])
-            .unwrap();
-
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
-        vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
-
-        vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.remove_label_values(&["v1"]).is_err());
-        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
-    }
-
-    #[test]
-    fn test_gauge_vec_with_labels() {
-        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
-                                &["l1", "l2"])
-            .unwrap();
-
-        let mut labels = HashMap::new();
-        labels.insert("l1", "v1");
-        labels.insert("l2", "v2");
-        assert!(vec.remove(&labels).is_err());
-
-        vec.with(&labels).inc();
-        vec.with(&labels).dec();
-        vec.with(&labels).add(42.0);
-        vec.with(&labels).sub(42.0);
-        vec.with(&labels).set(42.0);
-
-        assert!(vec.remove(&labels).is_ok());
-        assert!(vec.remove(&labels).is_err());
-    }
-
-    #[test]
-    fn test_gauge_vec_with_label_values() {
-        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
-                                &["l1", "l2"])
-            .unwrap();
-
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
-        vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
-
-        vec.with_label_values(&["v1", "v2"]).inc();
-        vec.with_label_values(&["v1", "v2"]).dec();
-        vec.with_label_values(&["v1", "v2"]).add(42.0);
-        vec.with_label_values(&["v1", "v2"]).sub(42.0);
-        vec.with_label_values(&["v1", "v2"]).set(42.0);
-
-        assert!(vec.remove_label_values(&["v1"]).is_err());
-        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+        mv.clear();
+        assert!(mv.remove(&0xdeadbeef_u64).is_none());
+        assert!(mv.remove(&0xfabaceae_u64).is_none());
+        assert_eq!(mv.get_vec().len(), 0);
     }
 }

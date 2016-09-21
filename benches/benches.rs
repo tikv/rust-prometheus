@@ -15,8 +15,7 @@
 
 extern crate test;
 extern crate prometheus;
-extern crate fnv;
 
-// mod counter;
-// mod gauge;
+mod counter;
+mod gauge;
 mod histogram;
