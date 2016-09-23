@@ -15,7 +15,6 @@
 use std::str::{self, FromStr};
 use std::collections::HashMap;
 
-use libc::{self, gethostname};
 use hyper::client::Client;
 use hyper::client::pool::Config;
 use hyper::method::Method;
@@ -191,14 +190,19 @@ pub const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("instance", 
 /// parameter if metrics should be pushed with the hostname as label. The
 /// returned map is created upon each call so that the caller is free to add more
 /// labels to the map.
+///
+/// Note: This function returns `instance = "unknown"` in Windows.
+#[cfg(not(target_os = "windows"))]
 pub fn hostname_grouping_key() -> HashMap<String, String> {
+    use libc;
+
     // Host names are limited to 255 bytes.
     //   ref: http://pubs.opengroup.org/onlinepubs/7908799/xns/gethostname.html
     let max_len = 256;
     let mut name = vec![0u8; max_len];
     match unsafe {
-        gethostname(name.as_mut_ptr() as *mut libc::c_char,
-                    max_len as libc::size_t)
+        libc::gethostname(name.as_mut_ptr() as *mut libc::c_char,
+                          max_len as libc::size_t)
     } {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
@@ -211,6 +215,11 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
             labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+pub fn hostname_grouping_key() -> HashMap<String, String> {
+    labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
 }
 
 #[cfg(test)]
