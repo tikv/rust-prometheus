@@ -15,6 +15,7 @@
 
 extern crate test;
 extern crate prometheus;
+extern crate rand;
 
 mod counter;
 mod gauge;

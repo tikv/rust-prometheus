@@ -14,8 +14,47 @@
 use std::collections::HashMap;
 
 use test::Bencher;
+use rand::{self, Rng};
 
 use prometheus::{Opts, Counter, CounterVec};
+
+fn rand_string() -> String {
+    rand::thread_rng().gen_ascii_chars().take(8).collect()
+}
+
+macro_rules! counter_with_label_values {
+    ($name:ident, $len: expr) => {
+        #[bench]
+        fn $name(b: &mut Bencher) {
+            let counter = CounterVec::new(Opts::new("benchmark_counter",
+                                                    "A counter to benchmark it."),
+                                        &["one"])
+                .unwrap();
+
+            let mut values_vec = Vec::new();
+            for _ in 0..$len {
+                values_vec.push(rand_string());
+            }
+
+            for v in &values_vec {
+                counter.with_label_values(&[v]);
+            }
+
+            let ref target = values_vec[values_vec.len() / 2];
+
+            b.iter(|| {
+                counter.with_label_values(&[&target]);
+            })
+        }
+    }
+}
+
+counter_with_label_values!{bench_counter_with_label_values_2, 2}
+counter_with_label_values!{bench_counter_with_label_values_4, 4}
+counter_with_label_values!{bench_counter_with_label_values_8, 8}
+counter_with_label_values!{bench_counter_with_label_values_16, 16}
+counter_with_label_values!{bench_counter_with_label_values_32, 32}
+counter_with_label_values!{bench_counter_with_label_values_64, 64}
 
 #[bench]
 fn bench_counter_with_label_values(b: &mut Bencher) {
