@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::collections::HashMap;
 use std::hash::Hasher;
 
@@ -23,6 +23,7 @@ use desc::{Describer, Desc};
 use metrics::{Collector, Metric};
 use proto::{MetricFamily, MetricType};
 use errors::{Result, Error};
+use mapvec::MapVec;
 
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -33,89 +34,12 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
-pub struct Entry<K, V> {
-    key: K,
-    value: V,
-}
-
-impl<K, V> Entry<K, V> {
-    #[inline]
-    pub fn new(key: K, value: V) -> Entry<K, V> {
-        Entry {
-            key: key,
-            value: value,
-        }
-    }
-
-    #[inline]
-    pub fn key(&self) -> &K {
-        &self.key
-    }
-
-    #[inline]
-    pub fn value(&self) -> &V {
-        &self.value
-    }
-
-    #[inline]
-    pub fn value_mut(&mut self) -> &mut V {
-        &mut self.value
-    }
-
-    #[inline]
-    pub fn take_value(self) -> V {
-        self.value
-    }
-}
-
-pub struct MapVec<K: Eq, V> {
-    entries: Vec<Entry<K, V>>,
-}
-
-impl<K: Eq, V> MapVec<K, V> {
-    pub fn new() -> MapVec<K, V> {
-        MapVec { entries: Vec::new() }
-    }
-
-    pub fn get(&self, k: &K) -> Option<&V> {
-        self.entries
-            .iter()
-            .find(|&v| k == v.key())
-            .map(|entry| entry.value())
-    }
-
-    pub fn insert(&mut self, k: K, v: V) -> Option<V> {
-        let idx = self.entries
-            .iter()
-            .position(|v| &k == v.key());
-
-        let entry = Entry::new(k, v);
-        self.entries.push(entry);
-        idx.map(|idx| self.entries.swap_remove(idx).take_value())
-    }
-
-    pub fn remove(&mut self, k: &K) -> Option<V> {
-        self.entries
-            .iter()
-            .position(|v| k == v.key())
-            .map(|idx| self.entries.remove(idx).take_value())
-    }
-
-    pub fn clear(&mut self) {
-        self.entries.clear();
-    }
-
-    pub fn get_vec(&self) -> &Vec<Entry<K, V>> {
-        &self.entries
-    }
-
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-}
-
 struct MetricVecCore<T: MetricVecBuilder> {
-    pub children: RwLock<MapVec<u64, T::M>>,
+    #[cfg(feature = "nightly")]
+    pub children: MapVec<T::M>,
+
+    #[cfg(not(feature = "nightly"))]
+    pub children: MapVec<u64, T::M>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
@@ -133,9 +57,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.metric_type);
 
-        let children = self.children.read().unwrap();
-        let mut metrics = Vec::with_capacity(children.len());
-        for child in children.get_vec() {
+        let mut metrics = Vec::with_capacity(self.children.len());
+        for child in self.children.get_vec().iter() {
             metrics.push(child.value().metric());
         }
         m.set_metric(RepeatedField::from_vec(metrics));
@@ -145,8 +68,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
         let h = try!(self.hash_label_values(&vals));
 
-        if let Some(metric) = self.children.read().unwrap().get(&h) {
-            return Ok(metric.clone());
+        if let Some(metric) = self.children.get(&h) {
+            return Ok(metric);
         }
 
         self.get_or_create_metric(h, vals)
@@ -155,8 +78,8 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
         let h = try!(self.hash_labels(labels));
 
-        if let Some(metric) = self.children.read().unwrap().get(&h) {
-            return Ok(metric.clone());
+        if let Some(metric) = self.children.get(&h) {
+            return Ok(metric);
         }
 
         let mut vals: Vec<&str> = labels.values().map(|v| v.as_ref()).collect();
@@ -167,8 +90,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
         let h = try!(self.hash_label_values(&vals));
 
-        let mut children = self.children.write().unwrap();
-        if children.remove(&h).is_none() {
+        if self.children.remove(&h).is_none() {
             return Err(Error::Msg(format!("missing label values {:?}", vals)));
         }
 
@@ -178,8 +100,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn delete(&self, labels: &HashMap<&str, &str>) -> Result<()> {
         let h = try!(self.hash_labels(labels));
 
-        let mut children = self.children.write().unwrap();
-        if children.remove(&h).is_none() {
+        if self.children.remove(&h).is_none() {
             return Err(Error::Msg(format!("missing labels {:?}", labels)));
         }
 
@@ -188,7 +109,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
     /// `reset` deletes all metrics in this vector.
     pub fn reset(&self) {
-        self.children.write().unwrap().clear();
+        self.children.clear();
     }
 
     fn hash_label_values(&self, vals: &[&str]) -> Result<u64> {
@@ -225,15 +146,14 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 
     fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
-        let mut children = self.children.write().unwrap();
         // Check exist first.
-        if let Some(metric) = children.get(&hash) {
-            return Ok(metric.clone());
+        if let Some(metric) = self.children.get(&hash) {
+            return Ok(metric);
         }
 
         let metric = try!(self.new_metric.build(&self.opts, label_values));
-        children.insert(hash, metric.clone());
-        Ok(metric)
+        let metric = self.children.get_or_insert(hash, metric);
+        metric.ok_or_else(|| Error::Msg("get empty metric, should not never happen".to_owned()))
     }
 }
 
@@ -253,7 +173,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     pub fn create(metric_type: MetricType, new_metric: T, opts: T::P) -> Result<MetricVec<T>> {
         let desc = try!(opts.describe());
         let v = MetricVecCore {
-            children: RwLock::new(MapVec::new()),
+            children: MapVec::new(),
             desc: desc,
             metric_type: metric_type,
             new_metric: new_metric,
@@ -363,46 +283,5 @@ impl<T: MetricVecBuilder> Collector for MetricVec<T> {
 
     fn collect(&self) -> MetricFamily {
         self.v.collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mapvec() {
-        let mut mv = MapVec::new();
-
-        assert!(mv.get(&0xdeadbeef_u64).is_none());
-
-        mv.insert(0xdeadbeef_u64, "0xdeadbeef_u64".to_owned());
-        assert!(mv.get(&0xdeadbeef_u64).is_some());
-        assert_eq!(mv.get(&0xdeadbeef_u64).unwrap(),
-                   &"0xdeadbeef_u64".to_owned());
-
-        mv.insert(0xdeadbeef_u64, "0xbeefdead".to_owned());
-        assert!(mv.get(&0xdeadbeef_u64).is_some());
-        assert_eq!(mv.get(&0xdeadbeef_u64).unwrap(), &"0xbeefdead".to_owned());
-        assert_eq!(mv.get_vec().len(), 1);
-
-        mv.insert(0xfabaceae_u64, "0xfabaceae_u64".to_owned());
-        assert!(mv.get(&0xfabaceae_u64).is_some());
-        assert_eq!(mv.get(&0xfabaceae_u64).unwrap(),
-                   &"0xfabaceae_u64".to_owned());
-
-        assert!(mv.get(&0xdeadbeef_u64).is_some());
-        assert_eq!(mv.get(&0xdeadbeef_u64).unwrap(), &"0xbeefdead".to_owned());
-        assert_eq!(mv.get_vec().len(), 2);
-
-        let deadbeef = mv.remove(&0xdeadbeef_u64);
-        assert!(deadbeef.is_some());
-        assert_eq!(deadbeef.unwrap(), "0xbeefdead".to_owned());
-        assert_eq!(mv.get_vec().len(), 1);
-
-        mv.clear();
-        assert!(mv.remove(&0xdeadbeef_u64).is_none());
-        assert!(mv.remove(&0xfabaceae_u64).is_none());
-        assert_eq!(mv.get_vec().len(), 0);
     }
 }

@@ -52,8 +52,11 @@ macro_rules! counter_with_label_values {
 counter_with_label_values!{bench_counter_with_label_values_2, 2}
 counter_with_label_values!{bench_counter_with_label_values_4, 4}
 counter_with_label_values!{bench_counter_with_label_values_8, 8}
+#[cfg(not(feature = "nightly"))]
 counter_with_label_values!{bench_counter_with_label_values_16, 16}
+#[cfg(not(feature = "nightly"))]
 counter_with_label_values!{bench_counter_with_label_values_32, 32}
+#[cfg(not(feature = "nightly"))]
 counter_with_label_values!{bench_counter_with_label_values_64, 64}
 
 #[bench]

@@ -43,6 +43,7 @@ mod vec;
 mod histogram;
 mod push;
 mod atomic64;
+mod mapvec;
 
 // Mods
 
