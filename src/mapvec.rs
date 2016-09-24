@@ -36,6 +36,7 @@ impl<K, V> Entry<K, V> {
         &self.value
     }
 
+    #[cfg(not(feature = "nightly"))]
     #[inline]
     pub fn take_value(self) -> V {
         self.value
@@ -112,19 +113,28 @@ pub use self::atomic::MapVec;
 
 #[cfg(feature = "nightly")]
 mod atomic {
-    use std::sync::RwLock;
+    use std::usize::MAX;
     use std::sync::atomic::{Ordering, AtomicPtr, AtomicU64};
 
     use super::Entry;
 
+    const LOCKED: usize = MAX;
+    const EMPTY_VALUE: usize = 0;
+    const EMPTY_KEY: u64 = 0;
+
+    /// Requirements:
+    ///   - V has to be wrapped by `Arc`, or internally be wrapped by `Arc`.
+    ///   - key can not be 0 or `0xFFFFFFFFFFFFFFFF`.`
     pub struct MapVec<V: Clone> {
+        // Guarantee: `AtomicPtr`s always point to a valid address,
+        //            if it is not `0` or `MAX`.
         entries: [Entry<AtomicU64, AtomicPtr<V>>; 8],
-        heap: RwLock<[Option<V>; 8]>,
     }
 
     impl<V: Clone> MapVec<V> {
         pub fn new() -> MapVec<V> {
             MapVec {
+                // TODO: new array macro
                 entries: [Entry::<AtomicU64, AtomicPtr<V>>::default(),
                           Entry::default(),
                           Entry::default(),
@@ -133,7 +143,6 @@ mod atomic {
                           Entry::default(),
                           Entry::default(),
                           Entry::default()],
-                heap: RwLock::new([None, None, None, None, None, None, None, None]),
             }
         }
 
@@ -142,99 +151,212 @@ mod atomic {
                 .iter()
                 .find(|&v| *k == v.key().load(Ordering::Relaxed))
                 .and_then(|entry| {
-                    let ptr = entry.value().load(Ordering::Relaxed);
-                    if 0 != ptr as usize {
-                        unsafe {
-                            return Some((*ptr).clone());
+                    // TODO: what if this entry has been removed?
+                    loop {
+                        let current = entry.value().load(Ordering::Relaxed);
+                        if 0 == current as usize {
+                            // fail fast.
+                            return None;
                         }
-                    } else {
-                        return None;
+
+                        // wait lock
+                        if LOCKED == current as usize {
+                            // TODO: thread yield?
+                            continue;
+                        }
+                        // current is a pointer that points to a valid address.
+
+                        // try lock.
+                        let swapped = entry.value()
+                            .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                        if swapped != current {
+                            continue;
+                        }
+                        // we got lock!
+
+                        // swapped is guaranteed to be valid.
+                        let v = unsafe { (*swapped).clone() };
+
+                        // try restore the pervious value, while releasing the
+                        // lock, the guarantee of value is still hold.
+                        let lock = entry.value()
+                            .compare_and_swap(LOCKED as *mut V, swapped, Ordering::Relaxed);
+                        debug_assert_eq!(lock as usize, LOCKED);
+
+                        return Some(v);
                     }
                 })
         }
 
         pub fn get_or_insert(&self, k: u64, v: V) -> Option<V> {
             self.get(&k).or_else(|| {
-                // insert.
-                self.entries
-                    .iter()
-                    .enumerate()
-                    .find(|&(idx, entry)| {
-                        // try find an empty slot.
-                        let found = 0 == entry.key().compare_and_swap(0, k, Ordering::Relaxed);
-                        if found {
-                            // key has been updated, updating value and heap.
-                            let mut heap = self.heap.write().unwrap();
-                            heap[idx] = Some(v.clone());
-                            let ptr = heap[idx].as_mut().unwrap() as *mut V;
-                            entry.value().store(ptr, Ordering::Relaxed);
+                // put it to heap first.
+                let mut ptr = Some(Box::into_raw(Box::new(v.clone())));
+
+                // try find an empty slot.
+                for entry in self.entries.iter() {
+                    let key = entry.key().compare_and_swap(0, k, Ordering::Relaxed);
+                    if key != 0 {
+                        continue;
+                    }
+                    // the key has been updated, the value will be updated.
+
+                    loop {
+                        // wait lock.
+                        let current = entry.value().load(Ordering::Relaxed);
+                        if LOCKED == current as usize {
+                            // TODO: thread yield?
+                            continue;
                         }
-                        found
-                    })
-                    .map(|(_, entry)| {
-                        let ptr = entry.value().load(Ordering::Relaxed);
-                        unsafe { (*ptr).clone() }
-                    })
+                        // current is EMPTY_VALUE or a pointer that points to
+                        // a valid address.
+
+                        // try lock.
+                        let swapped = entry.value()
+                            .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                        if current != swapped {
+                            continue;
+                        }
+                        // we got lock!
+
+                        // do not forget to drop the pervious value!
+                        if EMPTY_VALUE != swapped as usize {
+                            unsafe {
+                                drop(Box::from_raw(swapped));
+                            }
+                        }
+
+                        // prepare return value.
+                        debug_assert!(ptr.is_some());
+                        let new_ptr = ptr.take().unwrap();
+                        let ret = unsafe { (*new_ptr).clone() };
+
+                        // try update the value, while releasing the lock, the
+                        // guarantee of value is still hold.
+                        let lock = entry.value()
+                            .compare_and_swap(LOCKED as *mut V, new_ptr, Ordering::Relaxed);
+                        debug_assert_eq!(lock as usize, LOCKED);
+
+                        return Some(ret);
+                    }
+                }
+
+                // out of space!
+                debug_assert!(ptr.is_some());
+                ptr.and_then(|ptr| {
+                    unsafe {
+                        drop(Box::from_raw(ptr));
+                    }
+                    None
+                })
             })
         }
 
         pub fn remove(&self, k: &u64) -> Option<V> {
             self.entries
                 .iter()
-                .position(|entry| *k == entry.key().load(Ordering::Relaxed))
+                .position(|entry| {
+                    *k == entry.key().compare_and_swap(*k, EMPTY_KEY, Ordering::Relaxed)
+                })
                 .and_then(|idx| {
-                    let key = self.entries[idx].key().swap(0, Ordering::Relaxed);
-                    if key == 0 {
-                        return None;
-                    } else {
-                        let ptr = self.entries[idx]
-                            .value()
-                            .swap((0 as *mut V),
-                                  Ordering::Relaxed) as usize;
-                        if ptr == 0 {
-                            return None;
+                    // try lock
+                    loop {
+                        let ref entry = self.entries[idx];
+
+                        // wait lock.
+                        let current = entry.value().load(Ordering::Relaxed);
+                        if LOCKED == current as usize {
+                            // TODO: thread yield?
+                            continue;
                         }
-                        // update value and heap.
-                        self.entries[idx].value().store((0 as *mut V), Ordering::Relaxed);
-                        let mut heap = self.heap.write().unwrap();
-                        return heap[idx].take();
+                        // current is EMPTY_VALUE or a pointer that points to
+                        // a valid address.
+
+                        // try lock.
+                        let swapped = entry.value()
+                            .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                        if current != swapped {
+                            continue;
+                        }
+                        // we got lock!
+
+                        let ret = if EMPTY_VALUE != swapped as usize {
+                            // clone first, then drop the value.
+                            let ret = unsafe {
+                                let ret = (*swapped).clone();
+                                drop(Box::from_raw(swapped));
+                                ret
+                            };
+
+                            Some(ret)
+                        } else {
+                            // TODO: bug?
+                            None
+                        };
+
+                        // release lock, and replace LOCKED with EMPTY_VALUE.
+                        let lock = entry.value()
+                            .compare_and_swap(LOCKED as *mut V,
+                                              EMPTY_VALUE as *mut V,
+                                              Ordering::Relaxed);
+                        debug_assert_eq!(lock as usize, LOCKED);
+
+                        return ret;
                     }
                 })
         }
 
         pub fn clear(&self) {
-            let mut heap = self.heap.write().unwrap();
-            for _ in self.entries
-                .iter()
-                .enumerate()
-                .inspect(|&(idx, entry)| {
-                    entry.key().store(0, Ordering::Relaxed);
-                    let ptr = entry.value().swap((0 as *mut V), Ordering::Relaxed) as usize;
-                    if ptr != 0 {
-                        heap[idx].take();
-                    }
-                }) {}
+            for entry in self.entries.iter() {
+                entry.key().store(EMPTY_KEY, Ordering::Relaxed);
+                // it is ok to just remove keys, the underlying data will be
+                // dropped during the updating of this entry.
+            }
         }
 
         pub fn get_vec(&self) -> Vec<Entry<u64, V>> {
-            self.entries
-                .iter()
-                .fold(Vec::new(), |mut vec, ref entry| {
-                    let key = entry.key().load(Ordering::Relaxed);
-                    let ptr = entry.value().load(Ordering::Relaxed);
-                    if 0 != ptr as usize {
-                        let v = unsafe { (*ptr).clone() };
+            let mut vec = Vec::new();
+
+            for entry in self.entries.iter() {
+                let key = entry.key().load(Ordering::Relaxed);
+                if EMPTY_KEY != key {
+                    // wait lock.
+                    let current = entry.value().load(Ordering::Relaxed);
+                    if LOCKED == current as usize {
+                        // TODO: thread yield?
+                        continue;
+                    }
+                    // current is EMPTY_VALUE or a pointer that points to
+                    // a valid address.
+
+                    // try lock.
+                    let swapped = entry.value()
+                        .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                    if current != swapped {
+                        continue;
+                    }
+                    // we got lock!
+
+                    if EMPTY_VALUE != swapped as usize {
+                        let v = unsafe { (*swapped).clone() };
                         vec.push(Entry::new(key, v));
                     }
-                    vec
-                })
+
+                    // release lock, and replace it with the pervious value.
+                    let lock = entry.value()
+                        .compare_and_swap(LOCKED as *mut V, swapped, Ordering::Relaxed);
+                    debug_assert_eq!(lock as usize, LOCKED);
+                }
+            }
+
+            vec
         }
 
         pub fn len(&self) -> usize {
             self.entries
                 .iter()
                 .fold(0, |acc, ref v| {
-                    if 0 != v.value().load(Ordering::Relaxed) as usize {
+                    if 0 != v.key().load(Ordering::Relaxed) as usize {
                         return acc + 1;
                     }
                     acc
