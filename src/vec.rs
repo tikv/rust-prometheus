@@ -143,7 +143,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         let mut values = Vec::new();
         for name in &self.desc.variable_labels {
             match labels.get(&name.as_ref()) {
-                Some(val) => values.push(val.clone()),
+                Some(val) => values.push(*val),
                 None => return Err(Error::Msg(format!("label name {} missing in label map", name))),
             }
         }
