@@ -78,8 +78,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let mut vals: Vec<&str> = labels.values().map(|v| v.as_ref()).collect();
-        vals.sort_by(|v1, v2| v1.cmp(v2));
+        let vals = try!(self.sort_value(labels));
         self.get_or_create_metric(h, &vals)
     }
 
@@ -130,17 +129,25 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         }
 
         let mut h = FnvHasher::default();
-        for label in &self.desc.variable_labels {
-            match labels.get(&label.as_ref()) {
+        for name in &self.desc.variable_labels {
+            match labels.get(&name.as_ref()) {
                 Some(val) => h.write(val.as_bytes()),
-                None => {
-                    return Err(Error::Msg(format!("label name {} missing in label map", label)))
-                }
+                None => return Err(Error::Msg(format!("label name {} missing in label map", name))),
             }
-
         }
 
         Ok(h.finish())
+    }
+
+    fn sort_value<'a>(&self, labels: &'a HashMap<&str, &str>) -> Result<Vec<&'a str>> {
+        let mut values = Vec::new();
+        for name in &self.desc.variable_labels {
+            match labels.get(&name.as_ref()) {
+                Some(val) => values.push(val.clone()),
+                None => return Err(Error::Msg(format!("label name {} missing in label map", name))),
+            }
+        }
+        Ok(values)
     }
 
     fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
