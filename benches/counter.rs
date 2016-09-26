@@ -40,7 +40,7 @@ macro_rules! counter_with_label_values {
                 counter.with_label_values(&[v]);
             }
 
-            let ref target = values_vec[values_vec.len() / 2];
+            let target = &values_vec[values_vec.len() / 2];
 
             b.iter(|| {
                 counter.with_label_values(&[&target]);

@@ -11,6 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(not(feature = "nightly"))]
+pub use self::rwlock::MapVec;
+
+#[cfg(feature = "nightly")]
+pub use self::atomic::{MapVec, set_capacity};
+
 #[derive(Default)]
 pub struct Entry<K, V> {
     key: K,
@@ -44,26 +50,23 @@ impl<K, V> Entry<K, V> {
 }
 
 #[cfg(not(feature = "nightly"))]
-pub use self::rwlock::MapVec;
-
-#[cfg(not(feature = "nightly"))]
 mod rwlock {
     use std::sync::{RwLock, RwLockReadGuard};
 
     use super::Entry;
 
-    pub struct MapVec<K: Eq, V: Clone> {
-        entries: RwLock<Vec<Entry<K, V>>>,
+    pub struct MapVec<V: Clone> {
+        entries: RwLock<Vec<Entry<u64, V>>>,
     }
 
-    impl<K: Eq, V: Clone> MapVec<K, V> {
+    impl<V: Clone> MapVec<V> {
         /// Creates an empty `MapVec`.
-        pub fn new() -> MapVec<K, V> {
+        pub fn new() -> MapVec<V> {
             MapVec { entries: RwLock::new(Vec::new()) }
         }
 
         /// Returns a cloned value corresponding to the key.
-        pub fn get(&self, k: &K) -> Option<V> {
+        pub fn get(&self, k: &u64) -> Option<V> {
             self.entries
                 .read()
                 .unwrap()
@@ -76,7 +79,7 @@ mod rwlock {
         /// Inserts a key-value pair into the map, if the map did not have this
         /// key present.
         /// If the map did have this key present, the value will not be updated.
-        pub fn get_or_insert(&self, k: K, v: V) -> Option<V> {
+        pub fn get_or_insert(&self, k: u64, v: V) -> Option<V> {
             let mut entries = self.entries.write().unwrap();
             entries.iter()
                 .position(|v| &k == v.key())
@@ -89,7 +92,7 @@ mod rwlock {
 
         /// Removes a key from the map, returning the value at the key if the
         /// key was previously in the map.
-        pub fn remove(&self, k: &K) -> Option<V> {
+        pub fn remove(&self, k: &u64) -> Option<V> {
             let mut entries = self.entries.write().unwrap();
             entries.iter()
                 .position(|v| k == v.key())
@@ -106,7 +109,7 @@ mod rwlock {
         }
 
         /// Returns the internal `Vec`.
-        pub fn get_vec(&self) -> RwLockReadGuard<Vec<Entry<K, V>>> {
+        pub fn get_vec(&self) -> RwLockReadGuard<Vec<Entry<u64, V>>> {
             self.entries.read().unwrap()
         }
 
@@ -121,12 +124,9 @@ mod rwlock {
 }
 
 #[cfg(feature = "nightly")]
-pub use self::atomic::MapVec;
-
-#[cfg(feature = "nightly")]
 mod atomic {
     use std::usize::MAX;
-    use std::sync::atomic::{Ordering, AtomicPtr, AtomicU64};
+    use std::sync::atomic::{Ordering, AtomicPtr, AtomicU64, AtomicUsize, ATOMIC_USIZE_INIT};
 
     use super::Entry;
 
@@ -134,7 +134,15 @@ mod atomic {
     const EMPTY_VALUE: usize = 0;
     const EMPTY_KEY: u64 = 0;
 
-    /// An atomic MapVec with a limited capacity. It does not provide strong
+    pub const DEFAULT_CAP: usize = 16;
+    static CAP: AtomicUsize = ATOMIC_USIZE_INIT;
+
+    /// Set the global capacity of all `MepVec`.
+    pub fn set_capacity(cap: usize) {
+        CAP.store(cap, Ordering::Relaxed);
+    }
+
+    /// An atomic map with a limited capacity. It does not provide strong
     /// consistency.
     ///
     /// Requirements:
@@ -143,23 +151,23 @@ mod atomic {
     pub struct MapVec<V: Clone> {
         // Guarantee: `AtomicPtr`s always point to a valid address,
         //            if it is not `0` or `MAX`.
-        entries: [Entry<AtomicU64, AtomicPtr<V>>; 8],
+        entries: Vec<Entry<AtomicU64, AtomicPtr<V>>>,
     }
 
     impl<V: Clone> MapVec<V> {
         /// Creates an empty `MapVec`.
         pub fn new() -> MapVec<V> {
-            MapVec {
-                // TODO: new array macro
-                entries: [Entry::<AtomicU64, AtomicPtr<V>>::default(),
-                          Entry::default(),
-                          Entry::default(),
-                          Entry::default(),
-                          Entry::default(),
-                          Entry::default(),
-                          Entry::default(),
-                          Entry::default()],
+            let mut cap = CAP.load(Ordering::Relaxed);
+            if cap == 0 {
+                cap = DEFAULT_CAP;
             }
+
+            let mut vec = Vec::with_capacity(cap);
+            for _ in 0..cap {
+                vec.push(Entry::default());
+            }
+
+            MapVec { entries: vec }
         }
 
         /// Returns a cloned value corresponding to the key.
@@ -214,7 +222,7 @@ mod atomic {
                 let mut ptr = Some(Box::into_raw(Box::new(v.clone())));
 
                 // try to find an empty slot.
-                for entry in self.entries.iter() {
+                for entry in &self.entries {
                     let key = entry.key().compare_and_swap(EMPTY_KEY, k, Ordering::Relaxed);
                     if key != EMPTY_KEY {
                         continue;
@@ -283,7 +291,7 @@ mod atomic {
                 .and_then(|idx| {
                     // try lock
                     loop {
-                        let ref entry = self.entries[idx];
+                        let entry = &self.entries[idx];
 
                         // wait lock.
                         let current = entry.value().load(Ordering::Relaxed);
@@ -331,7 +339,7 @@ mod atomic {
         /// Clears the map, removing all key-value pairs. Keeps the allocated
         /// memory for reuse.
         pub fn clear(&self) {
-            for entry in self.entries.iter() {
+            for entry in &self.entries {
                 entry.key().store(EMPTY_KEY, Ordering::Relaxed);
                 // it is ok to just remove keys, the underlying data will be
                 // dropped during the updating of this entry.
@@ -342,7 +350,7 @@ mod atomic {
         pub fn get_vec(&self) -> Vec<Entry<u64, V>> {
             let mut vec = Vec::new();
 
-            for entry in self.entries.iter() {
+            for entry in &self.entries {
                 let key = entry.key().load(Ordering::Relaxed);
                 if EMPTY_KEY != key {
                     // wait lock.
@@ -381,18 +389,52 @@ mod atomic {
         pub fn len(&self) -> usize {
             self.entries
                 .iter()
-                .fold(0, |acc, ref v| {
-                    if EMPTY_KEY != v.key().load(Ordering::Relaxed) as usize {
+                .fold(0, |acc, v| {
+                    if EMPTY_KEY != v.key().load(Ordering::Relaxed) {
                         return acc + 1;
                     }
                     acc
                 })
         }
     }
+
+    #[cfg(test)]
+    mod tests {
+        use std::sync::Arc;
+
+        use super::*;
+
+        #[test]
+        fn test_capacity() {
+            let m = MapVec::new();
+            let mut key = 1;
+            loop {
+                if let None = m.get_or_insert(key, Arc::new(key)) {
+                    break;
+                }
+                key += 1;
+            }
+            assert_eq!(m.len(), DEFAULT_CAP);
+
+            set_capacity(DEFAULT_CAP * 2);
+            let m1 = MapVec::new();
+            loop {
+                if let None = m1.get_or_insert(key, Arc::new(key)) {
+                    break;
+                }
+                key += 1;
+            }
+            assert_eq!(m1.len(), DEFAULT_CAP * 2);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+    use std::sync::Arc;
+    use std::sync::atomic::{Ordering, AtomicUsize};
+
     use super::*;
 
     #[test]
@@ -431,5 +473,59 @@ mod tests {
         assert!(mv.remove(&0xdeadbeef_u64).is_none());
         assert!(mv.remove(&0xfabaceae_u64).is_none());
         assert_eq!(mv.get_vec().len(), 0);
+    }
+
+    #[test]
+    fn test_mapvec_concurrent() {
+        lazy_static! {
+            static ref MV: Arc<MapVec<Arc<AtomicUsize>>> = Arc::new(MapVec::new());
+        }
+        let counter = Arc::new(AtomicUsize::new(1));
+        let loops = 1024 * 1024;
+
+        let c1 = counter.clone();
+        let m1 = MV.as_ref();
+        let t1 = thread::spawn(move || {
+            for i in 0..loops {
+                m1.get_or_insert(1, c1.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
+                m1.get(&1).map(|c| c.fetch_add(1, Ordering::Relaxed));
+                m1.remove(&1).map(|c| c.fetch_add(1, Ordering::Relaxed));
+                if 0 == i % 100 {
+                    thread::yield_now();
+                }
+            }
+        });
+
+        let c2 = counter.clone();
+        let m2 = MV.as_ref();
+        let t2 = thread::spawn(move || {
+            for i in 0..loops {
+                m2.get_or_insert(2, c2.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
+                m2.get(&2).map(|c| c.fetch_add(1, Ordering::Relaxed));
+                m2.remove(&2).map(|c| c.fetch_add(1, Ordering::Relaxed));
+                if 0 == i % 100 {
+                    thread::yield_now();
+                }
+            }
+        });
+
+        let c3 = counter.clone();
+        let m3 = MV.as_ref();
+        let t3 = thread::spawn(move || {
+            for i in 0..loops {
+                m3.get_or_insert(3, c3.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
+                m3.get(&3).map(|c| c.fetch_add(1, Ordering::Relaxed));
+                m3.remove(&3).map(|c| c.fetch_add(1, Ordering::Relaxed));
+                if 0 == i % 100 {
+                    thread::yield_now();
+                }
+            }
+        });
+
+        t1.join().unwrap();
+        t2.join().unwrap();
+        t3.join().unwrap();
+
+        assert_eq!(MV.len(), 0);
     }
 }

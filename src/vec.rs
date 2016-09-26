@@ -35,11 +35,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
 }
 
 struct MetricVecCore<T: MetricVecBuilder> {
-    #[cfg(feature = "nightly")]
     pub children: MapVec<T::M>,
-
-    #[cfg(not(feature = "nightly"))]
-    pub children: MapVec<u64, T::M>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
@@ -51,6 +47,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         &self.desc
     }
 
+    #[allow(explicit_iter_loop)]
     pub fn collect(&self) -> MetricFamily {
         let mut m = MetricFamily::new();
         m.set_name(self.desc.fq_name.clone());

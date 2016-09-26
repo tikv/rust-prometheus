@@ -69,6 +69,8 @@ pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
 pub use self::push::{push_metrics, push_add_metrics, push_collector, push_add_collector,
                      hostname_grouping_key};
+#[cfg(feature = "nightly")]
+pub use self::mapvec::set_capacity as set_metric_vec_capacity;
 
 // Constants
 pub use self::encoder::TEXT_FORMAT;
