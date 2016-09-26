@@ -78,7 +78,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let vals = try!(self.sort_value(labels));
+        let vals = try!(self.sort_values_by_variable_labels(labels));
         self.get_or_create_metric(h, &vals)
     }
 
@@ -139,7 +139,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn sort_value<'a>(&self, labels: &'a HashMap<&str, &str>) -> Result<Vec<&'a str>> {
+    fn sort_values_by_variable_labels<'a>(&self, labels: &'a HashMap<&str, &str>) -> Result<Vec<&'a str>> {
         let mut values = Vec::new();
         for name in &self.desc.variable_labels {
             match labels.get(&name.as_ref()) {
