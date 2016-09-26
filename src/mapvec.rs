@@ -57,10 +57,12 @@ mod rwlock {
     }
 
     impl<K: Eq, V: Clone> MapVec<K, V> {
+        /// Creates an empty `MapVec`.
         pub fn new() -> MapVec<K, V> {
             MapVec { entries: RwLock::new(Vec::new()) }
         }
 
+        /// Returns a cloned value corresponding to the key.
         pub fn get(&self, k: &K) -> Option<V> {
             self.entries
                 .read()
@@ -70,6 +72,10 @@ mod rwlock {
                 .map(|entry| entry.value().clone())
         }
 
+        /// Returns a cloned value corresponding to the key.
+        /// Inserts a key-value pair into the map, if the map did not have this
+        /// key present.
+        /// If the map did have this key present, the value will not be updated.
         pub fn get_or_insert(&self, k: K, v: V) -> Option<V> {
             let mut entries = self.entries.write().unwrap();
             entries.iter()
@@ -81,6 +87,8 @@ mod rwlock {
                 })
         }
 
+        /// Removes a key from the map, returning the value at the key if the
+        /// key was previously in the map.
         pub fn remove(&self, k: &K) -> Option<V> {
             let mut entries = self.entries.write().unwrap();
             entries.iter()
@@ -88,6 +96,8 @@ mod rwlock {
                 .map(|idx| entries.remove(idx).take_value())
         }
 
+        /// Clears the map, removing all key-value pairs. Keeps the allocated
+        /// memory for reuse.
         pub fn clear(&self) {
             self.entries
                 .write()
@@ -95,10 +105,12 @@ mod rwlock {
                 .clear();
         }
 
+        /// Returns the internal `Vec`.
         pub fn get_vec(&self) -> RwLockReadGuard<Vec<Entry<K, V>>> {
             self.entries.read().unwrap()
         }
 
+        /// Returns the number of elements in the map.
         pub fn len(&self) -> usize {
             self.entries
                 .read()
@@ -122,6 +134,9 @@ mod atomic {
     const EMPTY_VALUE: usize = 0;
     const EMPTY_KEY: u64 = 0;
 
+    /// An atomic MapVec with a limited capacity. It does not provide strong
+    /// consistency.
+    ///
     /// Requirements:
     ///   - V has to be wrapped by `Arc`, or internally be wrapped by `Arc`.
     ///   - key can not be 0 or `0xFFFFFFFFFFFFFFFF`.`
@@ -132,6 +147,7 @@ mod atomic {
     }
 
     impl<V: Clone> MapVec<V> {
+        /// Creates an empty `MapVec`.
         pub fn new() -> MapVec<V> {
             MapVec {
                 // TODO: new array macro
@@ -146,15 +162,15 @@ mod atomic {
             }
         }
 
+        /// Returns a cloned value corresponding to the key.
         pub fn get(&self, k: &u64) -> Option<V> {
             self.entries
                 .iter()
                 .find(|&v| *k == v.key().load(Ordering::Relaxed))
                 .and_then(|entry| {
-                    // TODO: what if this entry has been removed?
                     loop {
                         let current = entry.value().load(Ordering::Relaxed);
-                        if 0 == current as usize {
+                        if EMPTY_VALUE == current as usize {
                             // fail fast.
                             return None;
                         }
@@ -178,7 +194,7 @@ mod atomic {
                         let v = unsafe { (*swapped).clone() };
 
                         // try restore the pervious value, while releasing the
-                        // lock, the guarantee of value is still hold.
+                        // lock, the guarantee is still hold.
                         let lock = entry.value()
                             .compare_and_swap(LOCKED as *mut V, swapped, Ordering::Relaxed);
                         debug_assert_eq!(lock as usize, LOCKED);
@@ -188,15 +204,19 @@ mod atomic {
                 })
         }
 
+        /// Returns a cloned value corresponding to the key.
+        /// Inserts a key-value pair into the map, if the map did not have this
+        /// key present.
+        /// If the map did have this key present, the value will not be updated.
         pub fn get_or_insert(&self, k: u64, v: V) -> Option<V> {
             self.get(&k).or_else(|| {
                 // put it to heap first.
                 let mut ptr = Some(Box::into_raw(Box::new(v.clone())));
 
-                // try find an empty slot.
+                // try to find an empty slot.
                 for entry in self.entries.iter() {
-                    let key = entry.key().compare_and_swap(0, k, Ordering::Relaxed);
-                    if key != 0 {
+                    let key = entry.key().compare_and_swap(EMPTY_KEY, k, Ordering::Relaxed);
+                    if key != EMPTY_KEY {
                         continue;
                     }
                     // the key has been updated, the value will be updated.
@@ -252,6 +272,8 @@ mod atomic {
             })
         }
 
+        /// Removes a key from the map, returning the value at the key if the
+        /// key was previously in the map.
         pub fn remove(&self, k: &u64) -> Option<V> {
             self.entries
                 .iter()
@@ -306,6 +328,8 @@ mod atomic {
                 })
         }
 
+        /// Clears the map, removing all key-value pairs. Keeps the allocated
+        /// memory for reuse.
         pub fn clear(&self) {
             for entry in self.entries.iter() {
                 entry.key().store(EMPTY_KEY, Ordering::Relaxed);
@@ -314,6 +338,7 @@ mod atomic {
             }
         }
 
+        /// Returns a cloned internal `Vec`.
         pub fn get_vec(&self) -> Vec<Entry<u64, V>> {
             let mut vec = Vec::new();
 
@@ -352,11 +377,12 @@ mod atomic {
             vec
         }
 
+        /// Returns the number of elements in the map.
         pub fn len(&self) -> usize {
             self.entries
                 .iter()
                 .fold(0, |acc, ref v| {
-                    if 0 != v.key().load(Ordering::Relaxed) as usize {
+                    if EMPTY_KEY != v.key().load(Ordering::Relaxed) as usize {
                         return acc + 1;
                     }
                     acc
