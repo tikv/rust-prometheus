@@ -130,9 +130,10 @@ mod atomic {
 
     use super::Entry;
 
-    const LOCKED: usize = MAX;
-    const EMPTY_VALUE: usize = 0;
-    const EMPTY_KEY: u64 = 0;
+    const KEY_EMPTY: u64 = 0;
+    const KEY_TOMBSTONE: u64 = 0;
+    const VALUE_EMPTY: usize = 0;
+    const VALUE_LOCKED: usize = MAX;
 
     pub const DEFAULT_CAP: usize = 16;
     static CAP: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -147,7 +148,8 @@ mod atomic {
     ///
     /// Requirements:
     ///   - V has to be wrapped by `Arc`, or internally be wrapped by `Arc`.
-    ///   - key can not be 0 or `0xFFFFFFFFFFFFFFFF`.`
+    ///   - key can not be `0` or `0xFFFFFFFFFFFFFFFF`.
+    ///   - value can not be `0` or `0xFFFFFFFFFFFFFFFF`.
     pub struct MapVec<V: Clone> {
         // Guarantee: `AtomicPtr`s always point to a valid address,
         //            if it is not `0` or `MAX`.
@@ -162,6 +164,10 @@ mod atomic {
                 cap = DEFAULT_CAP;
             }
 
+            MapVec::with_capacity(cap)
+        }
+
+        pub fn with_capacity(cap: usize) -> MapVec<V> {
             let mut vec = Vec::with_capacity(cap);
             for _ in 0..cap {
                 vec.push(Entry::default());
@@ -178,13 +184,13 @@ mod atomic {
                 .and_then(|entry| {
                     loop {
                         let current = entry.value().load(Ordering::Relaxed);
-                        if EMPTY_VALUE == current as usize {
+                        if VALUE_EMPTY == current as usize {
                             // fail fast.
                             return None;
                         }
 
                         // wait lock
-                        if LOCKED == current as usize {
+                        if VALUE_LOCKED == current as usize {
                             // TODO: thread yield?
                             continue;
                         }
@@ -192,20 +198,20 @@ mod atomic {
 
                         // try lock.
                         let swapped = entry.value()
-                            .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                            .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
                         if swapped != current {
                             continue;
                         }
                         // we got lock!
 
-                        // swapped is guaranteed to be valid.
+                        // swapped is guaranteed to be a valid address.
                         let v = unsafe { (*swapped).clone() };
 
                         // try restore the pervious value, while releasing the
                         // lock, the guarantee is still hold.
                         let lock = entry.value()
-                            .compare_and_swap(LOCKED as *mut V, swapped, Ordering::Relaxed);
-                        debug_assert_eq!(lock as usize, LOCKED);
+                            .compare_and_swap(VALUE_LOCKED as *mut V, swapped, Ordering::Relaxed);
+                        debug_assert_eq!(lock as usize, VALUE_LOCKED);
 
                         return Some(v);
                     }
@@ -223,8 +229,8 @@ mod atomic {
 
                 // try to find an empty slot.
                 for entry in &self.entries {
-                    let key = entry.key().compare_and_swap(EMPTY_KEY, k, Ordering::Relaxed);
-                    if key != EMPTY_KEY {
+                    let key = entry.key().compare_and_swap(KEY_EMPTY, k, Ordering::Relaxed);
+                    if key != KEY_EMPTY {
                         continue;
                     }
                     // the key has been updated, the value will be updated.
@@ -232,23 +238,38 @@ mod atomic {
                     loop {
                         // wait lock.
                         let current = entry.value().load(Ordering::Relaxed);
-                        if LOCKED == current as usize {
+                        if VALUE_LOCKED == current as usize {
                             // TODO: thread yield?
                             continue;
                         }
-                        // current is EMPTY_VALUE or a pointer that points to
+                        // current is VALUE_EMPTY or a pointer that points to
                         // a valid address.
 
                         // try lock.
                         let swapped = entry.value()
-                            .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                            .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
                         if current != swapped {
                             continue;
                         }
                         // we got lock!
 
+                        // before change the value, we have to check if this had
+                        // been tombstoned.
+                        if KEY_TOMBSTONE == entry.key().load(Ordering::Relaxed) {
+                            // can not update tombstoned entry, break to next one.
+                            // here we do not need to take care about the pervious
+                            // value, it will be dropped at `remove` if there is
+                            // any.
+                            let lock = entry.value()
+                                .compare_and_swap(VALUE_LOCKED as *mut V,
+                                                  swapped,
+                                                  Ordering::Relaxed);
+                            debug_assert_eq!(lock as usize, VALUE_LOCKED);
+                            break;
+                        }
+
                         // do not forget to drop the pervious value!
-                        if EMPTY_VALUE != swapped as usize {
+                        if VALUE_EMPTY != swapped as usize {
                             unsafe {
                                 drop(Box::from_raw(swapped));
                             }
@@ -262,8 +283,8 @@ mod atomic {
                         // try update the value, while releasing the lock, the
                         // guarantee of value is still hold.
                         let lock = entry.value()
-                            .compare_and_swap(LOCKED as *mut V, new_ptr, Ordering::Relaxed);
-                        debug_assert_eq!(lock as usize, LOCKED);
+                            .compare_and_swap(VALUE_LOCKED as *mut V, new_ptr, Ordering::Relaxed);
+                        debug_assert_eq!(lock as usize, VALUE_LOCKED);
 
                         return Some(ret);
                     }
@@ -286,7 +307,8 @@ mod atomic {
             self.entries
                 .iter()
                 .position(|entry| {
-                    *k == entry.key().compare_and_swap(*k, EMPTY_KEY, Ordering::Relaxed)
+                    // find and tombstone it.
+                    *k == entry.key().compare_and_swap(*k, KEY_TOMBSTONE, Ordering::Relaxed)
                 })
                 .and_then(|idx| {
                     // try lock
@@ -295,22 +317,22 @@ mod atomic {
 
                         // wait lock.
                         let current = entry.value().load(Ordering::Relaxed);
-                        if LOCKED == current as usize {
+                        if VALUE_LOCKED == current as usize {
                             // TODO: thread yield?
                             continue;
                         }
-                        // current is EMPTY_VALUE or a pointer that points to
+                        // current is VALUE_EMPTY or a pointer that points to
                         // a valid address.
 
                         // try lock.
                         let swapped = entry.value()
-                            .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                            .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
                         if current != swapped {
                             continue;
                         }
                         // we got lock!
 
-                        let ret = if EMPTY_VALUE != swapped as usize {
+                        let ret = if VALUE_EMPTY != swapped as usize {
                             // clone first, then drop the value.
                             let ret = unsafe {
                                 let ret = (*swapped).clone();
@@ -324,12 +346,12 @@ mod atomic {
                             None
                         };
 
-                        // release lock, and replace LOCKED with EMPTY_VALUE.
+                        // release lock, and replace VALUE_LOCKED with VALUE_EMPTY.
                         let lock = entry.value()
-                            .compare_and_swap(LOCKED as *mut V,
-                                              EMPTY_VALUE as *mut V,
+                            .compare_and_swap(VALUE_LOCKED as *mut V,
+                                              VALUE_EMPTY as *mut V,
                                               Ordering::Relaxed);
-                        debug_assert_eq!(lock as usize, LOCKED);
+                        debug_assert_eq!(lock as usize, VALUE_LOCKED);
 
                         return ret;
                     }
@@ -340,7 +362,7 @@ mod atomic {
         /// memory for reuse.
         pub fn clear(&self) {
             for entry in &self.entries {
-                entry.key().store(EMPTY_KEY, Ordering::Relaxed);
+                entry.key().store(KEY_EMPTY, Ordering::Relaxed);
                 // it is ok to just remove keys, the underlying data will be
                 // dropped during the updating of this entry.
             }
@@ -352,33 +374,33 @@ mod atomic {
 
             for entry in &self.entries {
                 let key = entry.key().load(Ordering::Relaxed);
-                if EMPTY_KEY != key {
+                if KEY_EMPTY != key {
                     // wait lock.
                     let current = entry.value().load(Ordering::Relaxed);
-                    if LOCKED == current as usize {
+                    if VALUE_LOCKED == current as usize {
                         // TODO: thread yield?
                         continue;
                     }
-                    // current is EMPTY_VALUE or a pointer that points to
+                    // current is VALUE_EMPTY or a pointer that points to
                     // a valid address.
 
                     // try lock.
                     let swapped = entry.value()
-                        .compare_and_swap(current, LOCKED as *mut V, Ordering::Relaxed);
+                        .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
                     if current != swapped {
                         continue;
                     }
                     // we got lock!
 
-                    if EMPTY_VALUE != swapped as usize {
+                    if VALUE_EMPTY != swapped as usize {
                         let v = unsafe { (*swapped).clone() };
                         vec.push(Entry::new(key, v));
                     }
 
                     // release lock, and replace it with the pervious value.
                     let lock = entry.value()
-                        .compare_and_swap(LOCKED as *mut V, swapped, Ordering::Relaxed);
-                    debug_assert_eq!(lock as usize, LOCKED);
+                        .compare_and_swap(VALUE_LOCKED as *mut V, swapped, Ordering::Relaxed);
+                    debug_assert_eq!(lock as usize, VALUE_LOCKED);
                 }
             }
 
@@ -390,7 +412,7 @@ mod atomic {
             self.entries
                 .iter()
                 .fold(0, |acc, v| {
-                    if EMPTY_KEY != v.key().load(Ordering::Relaxed) {
+                    if KEY_EMPTY != v.key().load(Ordering::Relaxed) {
                         return acc + 1;
                     }
                     acc
@@ -478,54 +500,42 @@ mod tests {
     #[test]
     fn test_mapvec_concurrent() {
         lazy_static! {
-            static ref MV: Arc<MapVec<Arc<AtomicUsize>>> = Arc::new(MapVec::new());
+            static ref MV: Arc<MapVec<Arc<AtomicUsize>>> = Arc::new(MapVec::with_capacity(1024));
         }
-        let counter = Arc::new(AtomicUsize::new(1));
-        let loops = 1024 * 1024;
+        let counter = Arc::new(AtomicUsize::new(0));
 
         let c1 = counter.clone();
         let m1 = MV.as_ref();
-        let t1 = thread::spawn(move || {
-            for i in 0..loops {
+        let t1 = thread::Builder::new().name("t1".to_owned()).spawn(move || {
+            for i in 0..512 {
                 m1.get_or_insert(1, c1.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
-                m1.get(&1).map(|c| c.fetch_add(1, Ordering::Relaxed));
-                m1.remove(&1).map(|c| c.fetch_add(1, Ordering::Relaxed));
-                if 0 == i % 100 {
+                m1.get(&1).or_else(|| {println!("{:?}", i); None}).unwrap().fetch_add(1, Ordering::Relaxed);
+                m1.remove(&1).unwrap().fetch_add(1, Ordering::Relaxed);
+
+                if 0 == i % 32 {
                     thread::yield_now();
                 }
             }
-        });
+        }).unwrap();
 
         let c2 = counter.clone();
         let m2 = MV.as_ref();
-        let t2 = thread::spawn(move || {
-            for i in 0..loops {
+        let t2 = thread::Builder::new().name("t2".to_owned()).spawn(move || {
+            for i in 0..512 {
                 m2.get_or_insert(2, c2.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
-                m2.get(&2).map(|c| c.fetch_add(1, Ordering::Relaxed));
-                m2.remove(&2).map(|c| c.fetch_add(1, Ordering::Relaxed));
-                if 0 == i % 100 {
-                    thread::yield_now();
-                }
-            }
-        });
+                m2.get(&2).or_else(|| {println!("{:?}", i); None}).unwrap().fetch_add(1, Ordering::Relaxed);
+                m2.remove(&2).unwrap().fetch_add(1, Ordering::Relaxed);
 
-        let c3 = counter.clone();
-        let m3 = MV.as_ref();
-        let t3 = thread::spawn(move || {
-            for i in 0..loops {
-                m3.get_or_insert(3, c3.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
-                m3.get(&3).map(|c| c.fetch_add(1, Ordering::Relaxed));
-                m3.remove(&3).map(|c| c.fetch_add(1, Ordering::Relaxed));
-                if 0 == i % 100 {
+                if 0 == i % 20 {
                     thread::yield_now();
                 }
             }
-        });
+        }).unwrap();
 
         t1.join().unwrap();
         t2.join().unwrap();
-        t3.join().unwrap();
 
         assert_eq!(MV.len(), 0);
+        assert_eq!(counter.load(Ordering::Relaxed), 1024 * 3);
     }
 }
