@@ -78,8 +78,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             return Ok(metric);
         }
 
-        let mut vals: Vec<&str> = labels.values().map(|v| v.as_ref()).collect();
-        vals.sort_by(|v1, v2| v1.cmp(v2));
+        let vals = try!(self.get_label_values(labels));
         self.get_or_create_metric(h, &vals)
     }
 
@@ -130,17 +129,25 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         }
 
         let mut h = FnvHasher::default();
-        for label in &self.desc.variable_labels {
-            match labels.get(&label.as_ref()) {
+        for name in &self.desc.variable_labels {
+            match labels.get(&name.as_ref()) {
                 Some(val) => h.write(val.as_bytes()),
-                None => {
-                    return Err(Error::Msg(format!("label name {} missing in label map", label)))
-                }
+                None => return Err(Error::Msg(format!("label name {} missing in label map", name))),
             }
-
         }
 
         Ok(h.finish())
+    }
+
+    fn get_label_values<'a>(&self, labels: &'a HashMap<&str, &str>) -> Result<Vec<&'a str>> {
+        let mut values = Vec::new();
+        for name in &self.desc.variable_labels {
+            match labels.get(&name.as_ref()) {
+                Some(val) => values.push(*val),
+                None => return Err(Error::Msg(format!("label name {} missing in label map", name))),
+            }
+        }
+        Ok(values)
     }
 
     fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
@@ -291,7 +298,7 @@ mod tests {
 
     use counter::CounterVec;
     use gauge::GaugeVec;
-    use metrics::Opts;
+    use metrics::{Opts, Metric};
 
     #[test]
     fn test_counter_vec_with_labels() {
@@ -376,5 +383,25 @@ mod tests {
 
         assert!(vec.remove_label_values(&["v1"]).is_err());
         assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_vec_get_metric_with() {
+        let vec = CounterVec::new(Opts::new("test_vec", "test counter vec help"),
+                                  &["b", "c", "a"])
+            .unwrap();
+
+        // create a new metric that labels are {b" => "c", "c" => "a" "a" => "b"}.
+        let mut labels = HashMap::new();
+        labels.insert("a", "b");
+        labels.insert("b", "c");
+        labels.insert("c", "a");
+        let c = vec.get_metric_with(&labels).unwrap();
+        let m = c.metric();
+        let label_pairs = m.get_label();
+        assert_eq!(label_pairs.len(), labels.len());
+        for lp in label_pairs.iter() {
+            assert_eq!(lp.get_value(), *labels.get(&lp.get_name()).unwrap());
+        }
     }
 }
