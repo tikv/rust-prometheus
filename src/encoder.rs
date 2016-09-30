@@ -51,10 +51,6 @@ impl TextEncoder {
 impl Encoder for TextEncoder {
     fn encode(&self, metric_familys: &[MetricFamily], writer: &mut Write) -> Result<()> {
         for mf in metric_familys {
-            if mf.get_metric().is_empty() {
-                return Err(Error::Msg("MetricFamily has no metrics".to_owned()));
-            }
-
             let name = mf.get_name();
             if name.is_empty() {
                 return Err(Error::Msg("MetricFamily has no name".to_owned()));
