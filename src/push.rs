@@ -154,7 +154,7 @@ fn push_from_collector(job: &str,
                        method: &str)
                        -> Result<()> {
     let registry = Registry::new();
-    for bc in collectors.into_iter() {
+    for bc in collectors {
         try!(registry.register(bc));
     }
 
