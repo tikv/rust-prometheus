@@ -47,7 +47,6 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         &self.desc
     }
 
-    #[allow(explicit_iter_loop)]
     pub fn collect(&self) -> MetricFamily {
         let mut m = MetricFamily::new();
         m.set_name(self.desc.fq_name.clone());

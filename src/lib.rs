@@ -24,6 +24,8 @@ extern crate lazy_static;
 extern crate hyper;
 extern crate libc;
 extern crate regex;
+#[cfg(feature = "nightly")]
+extern crate crossbeam;
 
 mod errors;
 mod encoder;
@@ -43,6 +45,7 @@ mod vec;
 mod histogram;
 mod push;
 mod atomic64;
+#[warn(dead_code)]
 mod mapvec;
 
 // Mods

@@ -10,7 +10,6 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #[cfg(not(feature = "nightly"))]
 pub use self::rwlock::MapVec;
 
@@ -63,6 +62,11 @@ mod rwlock {
         /// Creates an empty `MapVec`.
         pub fn new() -> MapVec<V> {
             MapVec { entries: RwLock::new(Vec::new()) }
+        }
+
+        pub fn with_capacity(cap: usize) -> MapVec<V> {
+            let vec = Vec::with_capacity(cap);
+            MapVec { entries: RwLock::new(vec) }
         }
 
         /// Returns a cloned value corresponding to the key.
@@ -125,15 +129,18 @@ mod rwlock {
 
 #[cfg(feature = "nightly")]
 mod atomic {
-    use std::usize::MAX;
-    use std::sync::atomic::{Ordering, AtomicPtr, AtomicU64, AtomicUsize, ATOMIC_USIZE_INIT};
+    use std::sync::atomic::{Ordering, AtomicU64, AtomicUsize, ATOMIC_USIZE_INIT};
+
+    use crossbeam::mem::epoch::{self, Atomic, Owned, Guard};
 
     use super::Entry;
 
-    const KEY_EMPTY: u64 = 0;
-    const KEY_TOMBSTONE: u64 = 0;
-    const VALUE_EMPTY: usize = 0;
-    const VALUE_LOCKED: usize = MAX;
+    pub const KEY_EMPTY: u64 = ::std::u64::MIN;
+    pub const KEY_TOMBSTONE: u64 = ::std::u64::MAX;
+
+    pub fn validate_key(k: u64) -> bool {
+        k != KEY_EMPTY && k != KEY_TOMBSTONE
+    }
 
     pub const DEFAULT_CAP: usize = 16;
     static CAP: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -153,7 +160,7 @@ mod atomic {
     pub struct MapVec<V: Clone> {
         // Guarantee: `AtomicPtr`s always point to a valid address,
         //            if it is not `0` or `MAX`.
-        entries: Vec<Entry<AtomicU64, AtomicPtr<V>>>,
+        entries: Vec<Entry<AtomicU64, Atomic<V>>>,
     }
 
     impl<V: Clone> MapVec<V> {
@@ -170,7 +177,8 @@ mod atomic {
         pub fn with_capacity(cap: usize) -> MapVec<V> {
             let mut vec = Vec::with_capacity(cap);
             for _ in 0..cap {
-                vec.push(Entry::default());
+                let e = Entry::new(AtomicU64::new(KEY_EMPTY), Atomic::null());
+                vec.push(e);
             }
 
             MapVec { entries: vec }
@@ -178,193 +186,161 @@ mod atomic {
 
         /// Returns a cloned value corresponding to the key.
         pub fn get(&self, k: &u64) -> Option<V> {
-            self.entries
-                .iter()
-                .find(|&v| *k == v.key().load(Ordering::Relaxed))
-                .and_then(|entry| {
-                    loop {
-                        let current = entry.value().load(Ordering::Relaxed);
-                        if VALUE_EMPTY == current as usize {
-                            // fail fast.
-                            return None;
-                        }
+            if !validate_key(*k) {
+                return None;
+            }
 
-                        // wait lock
-                        if VALUE_LOCKED == current as usize {
-                            // TODO: thread yield?
+            for e in &self.entries {
+                loop {
+                    let key = e.key().load(Ordering::Relaxed);
+                    if key == *k {
+                        let guard = epoch::pin();
+                        if let Some(v) = e.value().load(Ordering::Relaxed, &guard) {
+                            return Some((*v).clone());
+                        } else {
+                            // we are in the middle of `get_or_insert`, wait for it.
                             continue;
                         }
-                        // current is a pointer that points to a valid address.
-
-                        // try lock.
-                        let swapped = entry.value()
-                            .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
-                        if swapped != current {
-                            continue;
-                        }
-                        // we got lock!
-
-                        // swapped is guaranteed to be a valid address.
-                        let v = unsafe { (*swapped).clone() };
-
-                        // try restore the pervious value, while releasing the
-                        // lock, the guarantee is still hold.
-                        let lock = entry.value()
-                            .compare_and_swap(VALUE_LOCKED as *mut V, swapped, Ordering::Relaxed);
-                        debug_assert_eq!(lock as usize, VALUE_LOCKED);
-
-                        return Some(v);
                     }
-                })
+
+                    // not found.
+                    if key == KEY_EMPTY {
+                        return None;
+                    }
+
+                    // it is not the key we want and it is not an empty key,
+                    // then it must be something else.
+                    break;
+                }
+            }
+
+            None
         }
 
         /// Returns a cloned value corresponding to the key.
         /// Inserts a key-value pair into the map, if the map did not have this
         /// key present.
         /// If the map did have this key present, the value will not be updated.
+        ///
+        /// It always return a Some(V) unless, there is no space to inert.
         pub fn get_or_insert(&self, k: u64, v: V) -> Option<V> {
-            self.get(&k).or_else(|| {
-                // put it to heap first.
-                let mut ptr = Some(Box::into_raw(Box::new(v.clone())));
+            if !validate_key(k) {
+                return None;
+            }
 
-                // try to find an empty slot.
-                for entry in &self.entries {
-                    let key = entry.key().compare_and_swap(KEY_EMPTY, k, Ordering::Relaxed);
-                    if key != KEY_EMPTY {
-                        continue;
+            let mut owned = Owned::new(v);
+            for e in &self.entries {
+                loop {
+                    let key = e.key().load(Ordering::Relaxed);
+
+                    if key == k {
+                        // get,
+                        // found the target entry.
+
+                        let guard = epoch::pin();
+                        match e.value().load(Ordering::Relaxed, &guard) {
+                            Some(v) => return Some((*v).clone()),
+                            None => continue,
+                        }
                     }
-                    // the key has been updated, the value will be updated.
 
-                    loop {
-                        // wait lock.
-                        let current = entry.value().load(Ordering::Relaxed);
-                        if VALUE_LOCKED == current as usize {
-                            // TODO: thread yield?
-                            continue;
-                        }
-                        // current is VALUE_EMPTY or a pointer that points to
-                        // a valid address.
+                    if key != KEY_EMPTY {
+                        // it is not the key we want and it is not an empty key,
+                        // then it must be something else.
+                        break;
+                    }
 
-                        // try lock.
-                        let swapped = entry.value()
-                            .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
-                        if current != swapped {
-                            continue;
-                        }
-                        // we got lock!
+                    // insert,
+                    // empty entry, try cas the key then the value.
 
-                        // before change the value, we have to check if this had
-                        // been tombstoned.
-                        if KEY_TOMBSTONE == entry.key().load(Ordering::Relaxed) {
-                            // can not update tombstoned entry, break to next one.
-                            // here we do not need to take care about the pervious
-                            // value, it will be dropped at `remove` if there is
-                            // any.
-                            let lock = entry.value()
-                                .compare_and_swap(VALUE_LOCKED as *mut V,
-                                                  swapped,
-                                                  Ordering::Relaxed);
-                            debug_assert_eq!(lock as usize, VALUE_LOCKED);
+                    // compare_exchange the key.
+                    // here comes three possable situation.
+                    //   succeed: prev == KEY_EMPTY
+                    //   failed:
+                    //     1. prev != k
+                    //     2. prev == k
+                    match e.key()
+                        .compare_exchange(KEY_EMPTY, k, Ordering::Relaxed, Ordering::Relaxed) {
+                        Err(prev) => {
+                            // prev == k but compare_exchange failed.
+                            //
+                            // other thread win the race, continue to get.
+                            if prev == k {
+                                continue;
+                            }
+                            // prev != k
+                            //
+                            // other thread insert a new value, break to next entry.
                             break;
                         }
 
-                        // do not forget to drop the pervious value!
-                        if VALUE_EMPTY != swapped as usize {
-                            unsafe {
-                                drop(Box::from_raw(swapped));
+                        Ok(_) => {
+                            // update the key successfully. now update the value.
+                            let guard = epoch::pin();
+                            match e.value().cas_and_ref(None, owned, Ordering::Relaxed, &guard) {
+                                // cas succeed.
+                                Ok(s) => return Some((*s).clone()),
+
+                                // TODO: when will it happen?
+                                Err(o) => owned = o,
                             }
                         }
-
-                        // prepare return value.
-                        debug_assert!(ptr.is_some());
-                        let new_ptr = ptr.take().unwrap();
-                        let ret = unsafe { (*new_ptr).clone() };
-
-                        // try update the value, while releasing the lock, the
-                        // guarantee of value is still hold.
-                        let lock = entry.value()
-                            .compare_and_swap(VALUE_LOCKED as *mut V, new_ptr, Ordering::Relaxed);
-                        debug_assert_eq!(lock as usize, VALUE_LOCKED);
-
-                        return Some(ret);
                     }
                 }
+            }
 
-                // out of space!
-                debug_assert!(ptr.is_some());
-                ptr.and_then(|ptr| {
-                    unsafe {
-                        drop(Box::from_raw(ptr));
-                    }
-                    None
-                })
-            })
+            // TODO: running out space?
+            None
+        }
+
+        #[inline]
+        fn reclaim_value(v: &Atomic<V>, guard: Guard) -> Option<V> {
+            let swapped = v.swap(None, Ordering::Relaxed, &guard).map(|shared| {
+                unsafe {
+                    guard.unlinked(shared);
+                }
+                (*shared).clone()
+            });
+
+            swapped
         }
 
         /// Removes a key from the map, returning the value at the key if the
         /// key was previously in the map.
         pub fn remove(&self, k: &u64) -> Option<V> {
-            self.entries
-                .iter()
-                .position(|entry| {
-                    // find and tombstone it.
-                    *k == entry.key().compare_and_swap(*k, KEY_TOMBSTONE, Ordering::Relaxed)
-                })
-                .and_then(|idx| {
-                    // try lock
-                    loop {
-                        let entry = &self.entries[idx];
+            if !validate_key(*k) {
+                return None;
+            }
 
-                        // wait lock.
-                        let current = entry.value().load(Ordering::Relaxed);
-                        if VALUE_LOCKED == current as usize {
-                            // TODO: thread yield?
-                            continue;
-                        }
-                        // current is VALUE_EMPTY or a pointer that points to
-                        // a valid address.
+            for e in &self.entries {
+                if let Ok(_) = e.key()
+                    .compare_exchange(*k, KEY_TOMBSTONE, Ordering::Relaxed, Ordering::Relaxed) {
 
-                        // try lock.
-                        let swapped = entry.value()
-                            .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
-                        if current != swapped {
-                            continue;
-                        }
-                        // we got lock!
+                    let guard = epoch::pin();
+                    return Self::reclaim_value(e.value(), guard);
+                }
+            }
 
-                        let ret = if VALUE_EMPTY != swapped as usize {
-                            // clone first, then drop the value.
-                            let ret = unsafe {
-                                let ret = (*swapped).clone();
-                                drop(Box::from_raw(swapped));
-                                ret
-                            };
-
-                            Some(ret)
-                        } else {
-                            // TODO: bug?
-                            None
-                        };
-
-                        // release lock, and replace VALUE_LOCKED with VALUE_EMPTY.
-                        let lock = entry.value()
-                            .compare_and_swap(VALUE_LOCKED as *mut V,
-                                              VALUE_EMPTY as *mut V,
-                                              Ordering::Relaxed);
-                        debug_assert_eq!(lock as usize, VALUE_LOCKED);
-
-                        return ret;
-                    }
-                })
+            None
         }
 
-        /// Clears the map, removing all key-value pairs. Keeps the allocated
-        /// memory for reuse.
+        /// Clears the map, removing all key-value pairs.
         pub fn clear(&self) {
-            for entry in &self.entries {
-                entry.key().store(KEY_EMPTY, Ordering::Relaxed);
-                // it is ok to just remove keys, the underlying data will be
-                // dropped during the updating of this entry.
+            for e in &self.entries {
+                let k = e.key().load(Ordering::Relaxed);
+                if k == KEY_EMPTY {
+                    return;
+                }
+                if k == KEY_TOMBSTONE {
+                    continue;
+                }
+
+                if let Ok(_) = e.key()
+                    .compare_exchange(k, KEY_TOMBSTONE, Ordering::Relaxed, Ordering::Relaxed) {
+
+                    let guard = epoch::pin();
+                    Self::reclaim_value(e.value(), guard);
+                }
             }
         }
 
@@ -372,36 +348,19 @@ mod atomic {
         pub fn get_vec(&self) -> Vec<Entry<u64, V>> {
             let mut vec = Vec::new();
 
-            for entry in &self.entries {
-                let key = entry.key().load(Ordering::Relaxed);
-                if KEY_EMPTY != key {
-                    // wait lock.
-                    let current = entry.value().load(Ordering::Relaxed);
-                    if VALUE_LOCKED == current as usize {
-                        // TODO: thread yield?
-                        continue;
-                    }
-                    // current is VALUE_EMPTY or a pointer that points to
-                    // a valid address.
-
-                    // try lock.
-                    let swapped = entry.value()
-                        .compare_and_swap(current, VALUE_LOCKED as *mut V, Ordering::Relaxed);
-                    if current != swapped {
-                        continue;
-                    }
-                    // we got lock!
-
-                    if VALUE_EMPTY != swapped as usize {
-                        let v = unsafe { (*swapped).clone() };
-                        vec.push(Entry::new(key, v));
-                    }
-
-                    // release lock, and replace it with the pervious value.
-                    let lock = entry.value()
-                        .compare_and_swap(VALUE_LOCKED as *mut V, swapped, Ordering::Relaxed);
-                    debug_assert_eq!(lock as usize, VALUE_LOCKED);
+            for e in &self.entries {
+                let k = e.key().load(Ordering::Relaxed);
+                if k == KEY_EMPTY {
+                    break;
                 }
+                if k == KEY_TOMBSTONE {
+                    continue;
+                }
+
+                let guard = epoch::pin();
+                e.value().load(Ordering::Relaxed, &guard).map(|v| {
+                    vec.push(Entry::new(k, (*v).clone()));
+                });
             }
 
             vec
@@ -412,7 +371,8 @@ mod atomic {
             self.entries
                 .iter()
                 .fold(0, |acc, v| {
-                    if KEY_EMPTY != v.key().load(Ordering::Relaxed) {
+                    let k = v.key().load(Ordering::Relaxed);
+                    if validate_key(k) {
                         return acc + 1;
                     }
                     acc
@@ -498,44 +458,131 @@ mod tests {
     }
 
     #[test]
-    fn test_mapvec_concurrent() {
-        lazy_static! {
-            static ref MV: Arc<MapVec<Arc<AtomicUsize>>> = Arc::new(MapVec::with_capacity(1024));
-        }
+    fn test_mapvec_concurrent_get_or_insert() {
+        let mapvec = Arc::new(MapVec::with_capacity(1024));
         let counter = Arc::new(AtomicUsize::new(0));
 
         let c1 = counter.clone();
-        let m1 = MV.as_ref();
-        let t1 = thread::Builder::new().name("t1".to_owned()).spawn(move || {
-            for i in 0..512 {
-                m1.get_or_insert(1, c1.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
-                m1.get(&1).or_else(|| {println!("{:?}", i); None}).unwrap().fetch_add(1, Ordering::Relaxed);
-                m1.remove(&1).unwrap().fetch_add(1, Ordering::Relaxed);
+        let m1 = mapvec.clone();
+        let t1 = thread::Builder::new()
+            .name("t1".to_owned())
+            .spawn(move || {
+                for i in 1..513 {
+                    m1.get_or_insert(i, c1.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
 
-                if 0 == i % 32 {
-                    thread::yield_now();
+                    if 0 == i % 32 {
+                        thread::yield_now();
+                    }
                 }
-            }
-        }).unwrap();
+            })
+            .unwrap();
 
         let c2 = counter.clone();
-        let m2 = MV.as_ref();
-        let t2 = thread::Builder::new().name("t2".to_owned()).spawn(move || {
-            for i in 0..512 {
-                m2.get_or_insert(2, c2.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
-                m2.get(&2).or_else(|| {println!("{:?}", i); None}).unwrap().fetch_add(1, Ordering::Relaxed);
-                m2.remove(&2).unwrap().fetch_add(1, Ordering::Relaxed);
+        let m2 = mapvec.clone();
+        let t2 = thread::Builder::new()
+            .name("t2".to_owned())
+            .spawn(move || {
+                for i in 1..513 {
+                    m2.get_or_insert(i, c2.clone()).unwrap().fetch_add(1, Ordering::Relaxed);
 
-                if 0 == i % 20 {
-                    thread::yield_now();
+                    if 0 == i % 20 {
+                        thread::yield_now();
+                    }
                 }
-            }
-        }).unwrap();
+            })
+            .unwrap();
 
         t1.join().unwrap();
         t2.join().unwrap();
 
-        assert_eq!(MV.len(), 0);
-        assert_eq!(counter.load(Ordering::Relaxed), 1024 * 3);
+        assert_eq!(mapvec.len(), 512);
+        assert_eq!(counter.load(Ordering::Relaxed), 1024);
+    }
+
+    #[test]
+    fn test_mapvec_concurrent_insert_get() {
+        let mapvec = Arc::new(MapVec::with_capacity(1024));
+        let counter = Arc::new(AtomicUsize::new(0));
+
+        let c1 = counter.clone();
+        let m1 = mapvec.clone();
+        let t1 = thread::Builder::new()
+            .name("t1".to_owned())
+            .spawn(move || {
+                for i in 1..513 {
+                    m1.get_or_insert(i, c1.clone()).unwrap();
+                    m1.get(&i).unwrap().fetch_add(1, Ordering::Relaxed);
+
+                    if 0 == i % 32 {
+                        thread::yield_now();
+                    }
+                }
+            })
+            .unwrap();
+
+        let c2 = counter.clone();
+        let m2 = mapvec.clone();
+        let t2 = thread::Builder::new()
+            .name("t2".to_owned())
+            .spawn(move || {
+                for i in 1..513 {
+                    m2.get_or_insert(i, c2.clone()).unwrap();
+                    m2.get(&i).unwrap().fetch_add(1, Ordering::Relaxed);
+
+                    if 0 == i % 20 {
+                        thread::yield_now();
+                    }
+                }
+            })
+            .unwrap();
+
+        t1.join().unwrap();
+        t2.join().unwrap();
+
+        assert_eq!(mapvec.len(), 512);
+        assert_eq!(counter.load(Ordering::Relaxed), 1024);
+    }
+
+    #[test]
+    fn test_mapvec_concurrent_insert_remove() {
+        let mapvec = Arc::new(MapVec::with_capacity(1024));
+        let counter = Arc::new(AtomicUsize::new(0));
+
+        let c1 = counter.clone();
+        let m1 = mapvec.clone();
+        let t1 = thread::Builder::new()
+            .name("t1".to_owned())
+            .spawn(move || {
+                for i in 1..513 {
+                    m1.get_or_insert(i, c1.clone()).unwrap();
+                    m1.remove(&i).map(|v| v.fetch_add(1, Ordering::Relaxed));
+
+                    if 0 == i % 32 {
+                        thread::yield_now();
+                    }
+                }
+            })
+            .unwrap();
+
+        let c2 = counter.clone();
+        let m2 = mapvec.clone();
+        let t2 = thread::Builder::new()
+            .name("t2".to_owned())
+            .spawn(move || {
+                for i in 1..513 {
+                    m2.get_or_insert(i, c2.clone()).unwrap();
+                    m2.remove(&i).map(|v| v.fetch_add(1, Ordering::Relaxed));
+
+                    if 0 == i % 20 {
+                        thread::yield_now();
+                    }
+                }
+            })
+            .unwrap();
+
+        t1.join().unwrap();
+        t2.join().unwrap();
+
+        assert_eq!(mapvec.len(), 0);
     }
 }
