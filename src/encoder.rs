@@ -254,7 +254,7 @@ mod tests {
         let mf = counter.collect();
         let mut writer = Vec::<u8>::new();
         let encoder = TextEncoder::new();
-        let txt = encoder.encode(&[mf], &mut writer);
+        let txt = encoder.encode(&mf, &mut writer);
         assert!(txt.is_ok());
 
         let counter_ans = r##"# HELP test_counter test help
@@ -271,7 +271,7 @@ test_counter{a="1",b="2"} 1
 
         let mf = gauge.collect();
         writer.clear();
-        let txt = encoder.encode(&[mf], &mut writer);
+        let txt = encoder.encode(&mf, &mut writer);
         assert!(txt.is_ok());
 
         let gauge_ans = r##"# HELP test_gauge test help
@@ -290,7 +290,7 @@ test_gauge{a="1",b="2"} 42
         let mf = histogram.collect();
         let mut writer = Vec::<u8>::new();
         let encoder = TextEncoder::new();
-        let res = encoder.encode(&[mf], &mut writer);
+        let res = encoder.encode(&mf, &mut writer);
         assert!(res.is_ok());
 
         let ans = r##"# HELP test_histogram test help

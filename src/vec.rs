@@ -283,12 +283,12 @@ impl<T: MetricVecBuilder> MetricVec<T> {
 
 
 impl<T: MetricVecBuilder> Collector for MetricVec<T> {
-    fn desc(&self) -> &Desc {
-        &self.v.desc
+    fn desc(&self) -> Vec<&Desc> {
+        vec![&self.v.desc]
     }
 
-    fn collect(&self) -> MetricFamily {
-        self.v.collect()
+    fn collect(&self) -> Vec<MetricFamily> {
+        vec![self.v.collect()]
     }
 }
 

@@ -28,10 +28,10 @@ struct RegistryCore {
 
 impl RegistryCore {
     fn register(&mut self, c: Box<Collector>) -> Result<()> {
-        // TODO: should simplify later.
-        let id = {
-            let desc = c.desc();
+        let mut id_set = Vec::new();
+        let mut collector_id = 0;
 
+        for desc in c.desc() {
             if let Some(hash) = self.dim_hashes_by_name.get(&desc.fq_name) {
                 if *hash != desc.dim_hash {
                     return Err(Error::Msg(format!("a previously registered descriptor with the \
@@ -48,17 +48,35 @@ impl RegistryCore {
 
             self.dim_hashes_by_name.insert(desc.fq_name.clone(), desc.dim_hash);
 
-            desc.id
-        };
+            // If it is not a duplicate desc in this collector, add it to
+            // the collector_id.
+            if let None = id_set.iter().find(|id| **id == desc.id) {
+                id_set.push(desc.id);
+                collector_id += desc.id;
+            } else {
+                // TODO: Should we allow duplicate descs within the same collector?
+                return Err(Error::Msg(format!("a duplicate descriptor within the same \
+                                               collector the same fully-qualified name: {:?}",
+                                              desc.fq_name)));
+            }
+        }
 
-        self.colloctors_by_id.insert(id, c);
+        self.colloctors_by_id.insert(collector_id, c);
         Ok(())
     }
 
     fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
-        let desc = c.desc();
-        if self.colloctors_by_id.remove(&desc.id).is_none() {
-            return Err(Error::Msg(format!("collector {:?} is not registered", desc)));
+        let mut id_set = Vec::new();
+        let mut collector_id = 0;
+        for desc in c.desc() {
+            if let None = id_set.iter().find(|id| **id == desc.id) {
+                id_set.push(desc.id);
+                collector_id += desc.id;
+            }
+        }
+
+        if self.colloctors_by_id.remove(&collector_id).is_none() {
+            return Err(Error::Msg(format!("collector {:?} is not registered", c.desc())));
         }
 
         // dim_hashes_by_name is left untouched as those must be consistent
@@ -70,21 +88,23 @@ impl RegistryCore {
         let mut mf_by_name = BTreeMap::new();
 
         for c in self.colloctors_by_id.values() {
-            let mut mf = c.collect();
-            let name = mf.get_name().to_owned();
+            let mfs = c.collect();
+            for mut mf in mfs {
+                let name = mf.get_name().to_owned();
 
-            match mf_by_name.entry(name) {
-                Entry::Vacant(entry) => {
-                    entry.insert(mf);
-                }
-                Entry::Occupied(mut entry) => {
-                    let mut existent_mf = entry.get_mut();
-                    let mut existent_metrics = existent_mf.mut_metric();
+                match mf_by_name.entry(name) {
+                    Entry::Vacant(entry) => {
+                        entry.insert(mf);
+                    }
+                    Entry::Occupied(mut entry) => {
+                        let mut existent_mf = entry.get_mut();
+                        let mut existent_metrics = existent_mf.mut_metric();
 
-                    // TODO: check type.
-                    // TODO: check consistency.
-                    for metric in mf.take_metric().into_iter() {
-                        existent_metrics.push(metric);
+                        // TODO: check type.
+                        // TODO: check consistency.
+                        for metric in mf.take_metric().into_iter() {
+                            existent_metrics.push(metric);
+                        }
                     }
                 }
             }
