@@ -24,6 +24,7 @@ extern crate lazy_static;
 extern crate hyper;
 extern crate libc;
 extern crate regex;
+extern crate procinfo;
 
 mod errors;
 mod encoder;
@@ -43,6 +44,7 @@ mod vec;
 mod histogram;
 mod push;
 mod atomic64;
+mod process_collector;
 
 // Mods
 
