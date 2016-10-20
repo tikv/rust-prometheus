@@ -134,11 +134,13 @@ mod tests {
         counter.inc_by(42.0).unwrap();
         assert_eq!(counter.get() as u64, 43);
 
-        for mf in counter.collect() {
-            let m = mf.get_metric().as_ref().get(0).unwrap();
-            assert_eq!(m.get_label().len(), 2);
-            assert_eq!(m.get_counter().get_value() as u64, 43);
-        }
+        let mut mfs = counter.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
+        let m = mf.get_metric().as_ref().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 2);
+        assert_eq!(m.get_counter().get_value() as u64, 43);
     }
 
     #[test]
