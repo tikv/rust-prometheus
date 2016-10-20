@@ -1,6 +1,6 @@
 [package]
 name = "prometheus"
-version = "0.2.6"
+version = "0.2.7"
 keywords = ["prometheus", "metrics"]
 authors = ["overvenus@gmail.com", "siddontang@gmail.com"]
 

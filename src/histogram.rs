@@ -322,18 +322,18 @@ impl Metric for Histogram {
 }
 
 impl Collector for Histogram {
-    fn desc(&self) -> &Desc {
-        &self.core.desc
+    fn desc(&self) -> Vec<&Desc> {
+        vec![&self.core.desc]
     }
 
-    fn collect(&self) -> proto::MetricFamily {
+    fn collect(&self) -> Vec<proto::MetricFamily> {
         let mut m = proto::MetricFamily::new();
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
         m.set_field_type(proto::MetricType::HISTOGRAM);
         m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
 
-        m
+        vec![m]
     }
 }
 
@@ -466,7 +466,10 @@ mod tests {
         });
         assert!(handler.join().is_ok());
 
-        let mf = histogram.collect();
+        let mut mfs = histogram.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
@@ -477,7 +480,10 @@ mod tests {
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test2", "test help").buckets(buckets.clone());
         let histogram = Histogram::with_opts(opts).unwrap();
-        let mf = histogram.collect();
+        let mut mfs = histogram.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 0);
         let proto_histogram = m.get_histogram();

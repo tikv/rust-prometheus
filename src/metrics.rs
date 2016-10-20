@@ -24,11 +24,11 @@ pub const SEPARATOR_BYTE: u8 = 0xFF;
 /// `Collector` is the trait that can be used to collect metrics.
 /// A Collector has to be registered for collection.
 pub trait Collector: Sync + Send {
-    /// `desc` returns the descriptor for the metric collector.
-    fn desc(&self) -> &Desc;
+    /// `desc` returns descriptors for metrics.
+    fn desc(&self) -> Vec<&Desc>;
 
-    /// `collect` collects the metric.
-    fn collect(&self) -> proto::MetricFamily;
+    /// `collect` collects metrics.
+    fn collect(&self) -> Vec<proto::MetricFamily>;
 }
 
 /// `Metric` is the trait that models a single sample value with its meta data being

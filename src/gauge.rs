@@ -87,12 +87,12 @@ impl Gauge {
 }
 
 impl Collector for Gauge {
-    fn desc(&self) -> &Desc {
-        &self.v.desc
+    fn desc(&self) -> Vec<&Desc> {
+        vec![&self.v.desc]
     }
 
-    fn collect(&self) -> proto::MetricFamily {
-        self.v.collect()
+    fn collect(&self) -> Vec<proto::MetricFamily> {
+        vec![self.v.collect()]
     }
 }
 
@@ -157,7 +157,10 @@ mod tests {
         gauge.set(42.0);
         assert_eq!(gauge.get() as u64, 42);
 
-        let mf = gauge.collect();
+        let mut mfs = gauge.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
         let m = mf.get_metric().as_ref().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_gauge().get_value() as u64, 42);
