@@ -14,8 +14,9 @@
 
 use std::sync::{Arc, RwLock};
 use std::iter::FromIterator;
-use std::collections::{HashMap, BTreeMap};
-use std::collections::btree_map::Entry;
+use std::collections::{HashMap, BTreeMap, HashSet};
+use std::collections::btree_map::Entry as BEntry;
+use std::collections::hash_map::Entry as HEntry;
 
 use proto;
 use metrics::Collector;
@@ -24,14 +25,23 @@ use errors::{Result, Error};
 struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
+    pub desc_ids: HashSet<u64>,
 }
 
 impl RegistryCore {
     fn register(&mut self, c: Box<Collector>) -> Result<()> {
-        let mut id_set = Vec::new();
+        let mut desc_id_set = HashSet::new();
         let mut collector_id = 0;
 
         for desc in c.desc() {
+            // Is the desc_id unique?
+            // (In other words: Is the fqName + constLabel combination unique?)
+            if self.desc_ids.contains(&desc.id) {
+                return Err(Error::Msg(format!("descriptor {:?} already exists with the same \
+                                               fully-qualified name and const label values",
+                                              desc)));
+            }
+
             if let Some(hash) = self.dim_hashes_by_name.get(&desc.fq_name) {
                 if *hash != desc.dim_hash {
                     return Err(Error::Msg(format!("a previously registered descriptor with the \
@@ -42,18 +52,16 @@ impl RegistryCore {
                 }
             }
 
-            if self.colloctors_by_id.contains_key(&desc.id) {
-                return Err(Error::AlreadyReg);
-            }
-
             self.dim_hashes_by_name.insert(desc.fq_name.clone(), desc.dim_hash);
 
             // If it is not a duplicate desc in this collector, add it to
             // the collector_id.
-            if let None = id_set.iter().find(|id| **id == desc.id) {
-                id_set.push(desc.id);
+            if desc_id_set.insert(desc.id) {
+                // The set did not have this value present, true is returned.
                 collector_id += desc.id;
             } else {
+                // The set did have this value present, false is returned.
+                //
                 // TODO: Should we allow duplicate descs within the same collector?
                 return Err(Error::Msg(format!("a duplicate descriptor within the same \
                                                collector the same fully-qualified name: {:?}",
@@ -61,8 +69,14 @@ impl RegistryCore {
             }
         }
 
-        self.colloctors_by_id.insert(collector_id, c);
-        Ok(())
+        match self.colloctors_by_id.entry(collector_id) {
+            HEntry::Vacant(vc) => {
+                self.desc_ids.extend(desc_id_set);
+                vc.insert(c);
+                Ok(())
+            }
+            HEntry::Occupied(_) => Err(Error::AlreadyReg),
+        }
     }
 
     fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
@@ -93,10 +107,10 @@ impl RegistryCore {
                 let name = mf.get_name().to_owned();
 
                 match mf_by_name.entry(name) {
-                    Entry::Vacant(entry) => {
+                    BEntry::Vacant(entry) => {
                         entry.insert(mf);
                     }
-                    Entry::Occupied(mut entry) => {
+                    BEntry::Occupied(mut entry) => {
                         let mut existent_mf = entry.get_mut();
                         let mut existent_metrics = existent_mf.mut_metric();
 
@@ -163,6 +177,7 @@ impl Default for Registry {
         let r = RegistryCore {
             colloctors_by_id: HashMap::new(),
             dim_hashes_by_name: HashMap::new(),
+            desc_ids: HashSet::new(),
         };
 
         Registry { r: Arc::new(RwLock::new(r)) }
