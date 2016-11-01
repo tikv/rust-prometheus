@@ -44,12 +44,12 @@ mod vec;
 mod histogram;
 mod push;
 mod atomic64;
-mod process_collector;
 
 // Mods
 
 /// Protocol buffers format of metrics.
 pub mod proto;
+pub mod process_collector;
 
 // Traits
 pub use self::encoder::Encoder;
