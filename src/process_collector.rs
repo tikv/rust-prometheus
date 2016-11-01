@@ -12,7 +12,6 @@
 // limitations under the License.
 
 use std::fs;
-use std::path::Path;
 
 use procinfo::pid;
 use libc::{self, pid_t};
@@ -129,8 +128,8 @@ pub fn get_pid() -> pid_t {
 }
 
 fn open_fds_num(pid: pid_t) -> Result<usize> {
-    // FIXME: path
-    try!(fs::read_dir("./")).fold(Ok(0), |acc, i| {
+    let path = format!("/proc/{}/fd", pid);
+    try!(fs::read_dir(path)).fold(Ok(0), |acc, i| {
         let mut acc = try!(acc);
 
         if !i.unwrap().file_type().unwrap().is_dir() {
