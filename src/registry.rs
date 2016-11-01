@@ -17,6 +17,7 @@ use std::iter::FromIterator;
 use std::collections::{HashMap, BTreeMap, HashSet};
 use std::collections::btree_map::Entry as BEntry;
 use std::collections::hash_map::Entry as HEntry;
+use std::num::Wrapping;
 
 use proto;
 use metrics::Collector;
@@ -58,7 +59,7 @@ impl RegistryCore {
             // the collector_id.
             if desc_id_set.insert(desc.id) {
                 // The set did not have this value present, true is returned.
-                collector_id ^= desc.id;
+                collector_id = (Wrapping(collector_id) + Wrapping(desc.id)).0;
             } else {
                 // The set did have this value present, false is returned.
                 //
@@ -400,7 +401,7 @@ mod tests {
         ];
 
         let descs = counters.iter()
-            .map(|c| c.desc().into_iter().map(|d| d.clone()))
+            .map(|c| c.desc().into_iter().cloned())
             .fold(Vec::new(), |mut acc, ds| {
                 acc.extend(ds);
                 acc
