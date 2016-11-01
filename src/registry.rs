@@ -17,7 +17,6 @@ use std::iter::FromIterator;
 use std::collections::{HashMap, BTreeMap, HashSet};
 use std::collections::btree_map::Entry as BEntry;
 use std::collections::hash_map::Entry as HEntry;
-use std::num::Wrapping;
 
 use proto;
 use metrics::Collector;
@@ -32,7 +31,7 @@ struct RegistryCore {
 impl RegistryCore {
     fn register(&mut self, c: Box<Collector>) -> Result<()> {
         let mut desc_id_set = HashSet::new();
-        let mut collector_id = 0;
+        let mut collector_id: u64 = 0;
 
         for desc in c.desc() {
             // Is the desc_id unique?
@@ -59,7 +58,7 @@ impl RegistryCore {
             // the collector_id.
             if desc_id_set.insert(desc.id) {
                 // The set did not have this value present, true is returned.
-                collector_id = (Wrapping(collector_id) + Wrapping(desc.id)).0;
+                collector_id = collector_id.wrapping_add(desc.id);
             } else {
                 // The set did have this value present, false is returned.
                 //
