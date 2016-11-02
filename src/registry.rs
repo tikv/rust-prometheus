@@ -31,7 +31,7 @@ struct RegistryCore {
 impl RegistryCore {
     fn register(&mut self, c: Box<Collector>) -> Result<()> {
         let mut desc_id_set = HashSet::new();
-        let mut collector_id = 0;
+        let mut collector_id: u64 = 0;
 
         for desc in c.desc() {
             // Is the desc_id unique?
@@ -58,7 +58,7 @@ impl RegistryCore {
             // the collector_id.
             if desc_id_set.insert(desc.id) {
                 // The set did not have this value present, true is returned.
-                collector_id += desc.id;
+                collector_id = collector_id.wrapping_add(desc.id);
             } else {
                 // The set did have this value present, false is returned.
                 //
@@ -253,7 +253,9 @@ mod tests {
     use std::collections::HashMap;
 
     use counter::{Counter, CounterVec};
-    use metrics::Opts;
+    use metrics::{Opts, Collector};
+    use desc::Desc;
+    use proto;
 
     use super::*;
 
@@ -366,5 +368,50 @@ mod tests {
         assert_eq!(ms[1].get_counter().get_value() as u64, 1);
         assert_eq!(ms[2].get_counter().get_value() as u64, 3);
         assert_eq!(ms[3].get_counter().get_value() as u64, 4);
+    }
+
+    struct MultipleCollector {
+        descs: Vec<Desc>,
+        counters: Vec<Counter>,
+    }
+
+    impl Collector for MultipleCollector {
+        fn desc(&self) -> Vec<&Desc> {
+            self.descs.iter().collect()
+        }
+
+        fn collect(&self) -> Vec<proto::MetricFamily> {
+            self.counters
+                .iter()
+                .inspect(|c| c.inc())
+                .map(|c| c.collect())
+                .fold(Vec::new(), |mut acc, mfs| {
+                    acc.extend(mfs);
+                    acc
+                })
+        }
+    }
+
+    #[test]
+    fn test_register_multiplecollector() {
+        let counters = vec![
+            Counter::new("c1", "c1 is a counter").unwrap(),
+            Counter::new("c2", "c2 is a counter").unwrap(),
+        ];
+
+        let descs = counters.iter()
+            .map(|c| c.desc().into_iter().cloned())
+            .fold(Vec::new(), |mut acc, ds| {
+                acc.extend(ds);
+                acc
+            });
+
+        let mc = MultipleCollector {
+            descs: descs,
+            counters: counters,
+        };
+
+        let r = Registry::new();
+        r.register(Box::new(mc)).unwrap();
     }
 }
