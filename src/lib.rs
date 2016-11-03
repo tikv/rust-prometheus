@@ -24,6 +24,7 @@ extern crate lazy_static;
 extern crate hyper;
 extern crate libc;
 extern crate regex;
+#[cfg(feature = "process")]
 extern crate procinfo;
 
 mod errors;
@@ -49,6 +50,7 @@ mod atomic64;
 
 /// Protocol buffers format of metrics.
 pub mod proto;
+#[cfg(feature = "process")]
 pub mod process_collector;
 
 // Traits
