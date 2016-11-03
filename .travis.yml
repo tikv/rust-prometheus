@@ -13,9 +13,10 @@ env:
 
 script:
   - cargo test
+  - cargo test --features="process"
 
 matrix:
   include:
   - rust: nightly
     script:
-      - cargo test --features="dev nightly process"
+      - cargo test --features="dev nightly"
