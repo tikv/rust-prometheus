@@ -15,7 +15,7 @@ use std::fs;
 use std::io::Read;
 use std::sync::Mutex;
 
-use procinfo::pid as Pid;
+use procinfo::pid as pid_info;
 use libc::{self, pid_t};
 
 use proto;
@@ -100,6 +100,7 @@ impl Collector for ProcessCollector {
 
     /// `collect` collects metrics.
     fn collect(&self) -> Vec<proto::MetricFamily> {
+
         // file descriptors
         if let Ok(num) = open_fds(self.pid) {
             self.open_fds.set(num as f64);
@@ -114,10 +115,19 @@ impl Collector for ProcessCollector {
             self.rss.set(vm_rss);
         }
 
+        let pid_stat = pid_info::stat(self.pid).ok();
+
+        // proc_start_time
+        if let Some(ref stat) = pid_stat {
+            let start_time = (stat.start_time as f64) / *CLK_TCK + BOOT_TIME.unwrap();
+            self.start_time.set(start_time);
+        }
+
         // cpu
         let cpu_total_mfs = {
             let cpu_total = self.cpu_total.lock().unwrap();
-            if let Ok(total) = total_cpu_sec(self.pid) {
+            if let Some(stat) = pid_stat {
+                let total = (stat.utime + stat.stime) as f64 / *CLK_TCK;
                 let past = cpu_total.get();
                 let delta = total - past;
                 if delta > 0.0 {
@@ -127,11 +137,6 @@ impl Collector for ProcessCollector {
 
             cpu_total.collect()
         };
-
-        // start time
-        if let Ok(start_time) = proc_start_time(self.pid) {
-            self.start_time.set(start_time);
-        }
 
         // collect MetricFamilys.
         let mut mfs = Vec::new();
@@ -151,12 +156,11 @@ pub fn get_pid() -> pid_t {
 }
 
 fn open_fds(pid: pid_t) -> Result<usize> {
-    // FIXME: linux only?
     let path = format!("/proc/{}/fd", pid);
     try!(fs::read_dir(path)).fold(Ok(0), |acc, i| {
         let mut acc = try!(acc);
-
-        if !i.unwrap().file_type().unwrap().is_dir() {
+        let ty = try!(try!(i).file_type());
+        if !ty.is_dir() {
             acc += 1;
         }
 
@@ -164,10 +168,31 @@ fn open_fds(pid: pid_t) -> Result<usize> {
     })
 }
 
-fn find_in_lines<'a>(all: &'a str, pat: &str) -> Option<&'a str> {
+// `find_statistic` match lines in pattern pat, it takes the first matching line,
+// and parse the first number literal in the matching line.
+//
+// Example:
+//  * all:
+// ```
+// ctxt 789298306
+// btime 1477460662
+// processes 302136
+// procs_running 1
+// procs_blocked 0
+// ```
+//  * pat: "btime"
+//
+// then it returns `Ok(1477460662.0)`
+fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     all.lines()
         .find(|line| line.contains(pat))
-        .and_then(|line| Some(&line[pat.len()..line.len()]))
+        .and_then(|line| {
+            (&line[pat.len()..line.len()])
+                .split(char::is_whitespace)
+                .find(|s| !s.is_empty())
+        })
+        .and_then(|literal| literal.parse().ok())
+        .ok_or(Error::Msg(format!("read statistic {} failed", pat)))
 }
 
 const MAX_FD_PATTERN: &'static str = "Max open files";
@@ -176,48 +201,21 @@ fn max_fds(pid: pid_t) -> Result<f64> {
     let path = format!("/proc/{}/limits", pid);
     let mut buffer = String::new();
     try!(fs::File::open(path).and_then(|mut f| f.read_to_string(&mut buffer)));
-    buffer.lines()
-        .find(|line| line.contains(MAX_FD_PATTERN))
-        .and_then(|line| {
-            (&line[MAX_FD_PATTERN.len()..line.len()])
-                .split(char::is_whitespace)
-                .filter(|s| !s.is_empty())
-                .next()
-                .and_then(|max| max.parse().ok())
-        })
-        .ok_or(Error::Msg("read max open files failed".to_owned()))
+    find_statistic(&buffer, MAX_FD_PATTERN)
 }
 
+// 1 KB = 1024 Byte
+const KB_TO_BYTE: f64 = 1024.0;
 const VM_SIZE_PATTERN: &'static str = "VmSize:";
 const VM_RSS_PATTERN: &'static str = "VmRSS:";
-const KB_TO_BYTE: f64 = 1024.0; // 1 KB = 1024 Byte
 
 fn mem_status(pid: pid_t) -> Result<(f64, f64)> {
     let path = format!("/proc/{}/status", pid);
     let mut buffer = String::new();
     try!(fs::File::open(path).and_then(|mut f| f.read_to_string(&mut buffer)));
 
-    let vm_size: f64 = try!(buffer.lines()
-        .find(|line| line.contains(VM_SIZE_PATTERN))
-        .and_then(|line| {
-            (&line[VM_SIZE_PATTERN.len()..line.len()])
-                .split(char::is_whitespace)
-                .filter(|s| !s.is_empty())
-                .next()
-                .and_then(|size| size.parse().ok())
-        })
-        .ok_or(Error::Msg("read virtual memory size failed".to_owned())));
-
-    let vm_rss: f64 = try!(buffer.lines()
-        .find(|line| line.contains(VM_RSS_PATTERN))
-        .and_then(|line| {
-            (&line[VM_RSS_PATTERN.len()..line.len()])
-                .split(char::is_whitespace)
-                .filter(|s| !s.is_empty())
-                .next()
-                .and_then(|size| size.parse().ok())
-        })
-        .ok_or(Error::Msg("read resident set size failed".to_owned())));
+    let vm_size = try!(find_statistic(&buffer, VM_SIZE_PATTERN));
+    let vm_rss = try!(find_statistic(&buffer, VM_RSS_PATTERN));
 
     Ok((vm_size * KB_TO_BYTE, vm_rss * KB_TO_BYTE))
 }
@@ -232,43 +230,14 @@ lazy_static! {
     };
 }
 
-fn total_cpu_sec(pid: pid_t) -> Result<f64> {
-    let stat = try!(Pid::stat(pid));
-    Ok((stat.utime + stat.stime) as f64 / *CLK_TCK)
-}
-
-
 const BOOT_TIME_PATTERN: &'static str = "btime";
 
 lazy_static! {
     static ref BOOT_TIME: Option<f64> = {
-        unsafe {
-            let mut info = ::std::mem::zeroed();
-            match libc::sysinfo(&mut info) {
-                0 => {
-                    let mut buffer = String::new();
-                    if let Err(_) = fs::File::open("/proc/stat")
-                                            .and_then(|mut f| f.read_to_string(&mut buffer))
-                    {
-                        return None;
-                    }
-                    buffer.lines()
-                        .find(|line| line.contains(BOOT_TIME_PATTERN))
-                        .and_then(|line| {
-                            (&line[BOOT_TIME_PATTERN.len()..line.len()])
-                                .split(char::is_whitespace)
-                                .filter(|s| !s.is_empty())
-                                .next()
-                                .and_then(|time| time.parse().ok())
-                        })
-                }
-                _ => None,
-            }
-        }
+        let mut buffer = String::new();
+        fs::File::open("/proc/stat")
+            .and_then(|mut f| f.read_to_string(&mut buffer)).ok().and_then(|_| {
+               find_statistic(&buffer, BOOT_TIME_PATTERN).ok()
+            })
     };
-}
-
-fn proc_start_time(pid: pid_t) -> Result<f64> {
-    let stat = try!(Pid::stat(pid));
-    Ok((stat.start_time as f64) / *CLK_TCK + BOOT_TIME.unwrap())
 }
