@@ -184,15 +184,20 @@ fn open_fds(pid: pid_t) -> Result<usize> {
 //
 // then it returns `Ok(1477460662.0)`
 fn find_statistic(all: &str, pat: &str) -> Result<f64> {
-    all.lines()
+    let literal = all.lines()
         .find(|line| line.contains(pat))
         .and_then(|line| {
             (&line[pat.len()..line.len()])
                 .split(char::is_whitespace)
                 .find(|s| !s.is_empty())
-        })
-        .and_then(|literal| literal.parse().ok())
-        .ok_or(Error::Msg(format!("read statistic {} failed", pat)))
+        });
+    match literal {
+        Some(literal) => {
+            literal.parse().map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)))
+        }
+        None => Err(Error::Msg(format!("read statistic {} failed", pat))),
+    }
+
 }
 
 const MAX_FD_PATTERN: &'static str = "Max open files";
