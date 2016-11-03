@@ -219,30 +219,37 @@ impl Registry {
     }
 }
 
+macro_rules! conditional_compile {
+    ($(#[$ATTR:meta])* { $COLLECTOR: tt }) => {
+        {
+            match 0 {
+                $(#[$ATTR])*
+                0 => $COLLECTOR,
+
+                // suppress clippy warnning `single_match`.
+                1 => (),
+                _ => (),
+            }
+        }
+    }
+}
 
 // Default registry for rust-prometheus.
 lazy_static! {
     static ref DEFAULT_REGISTRY: Registry = {
-        let reg = Some(Registry::default());
+        let reg = Registry::default();
 
-        match reg {
-            #[cfg(not(feature = "process"))]
-            Some(reg) => {
-                reg
-            },
-
-            // Register process collector.
+        conditional_compile!{
             #[cfg(feature = "process")]
-            Some(reg) => {
-                use process_collector::{get_pid, ProcessCollector};
+            {{
+                use process_collector::ProcessCollector;
 
-                let pc = ProcessCollector::new(get_pid(), "");
+                let pc = ProcessCollector::default();
                 reg.register(Box::new(pc)).unwrap();
-                reg
-            },
-
-            None => unreachable!(),
+            }}
         }
+
+        reg
     };
 }
 
