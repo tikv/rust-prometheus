@@ -11,6 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Monitor a process.
+//!
+//! This module only supports **Linux** platform.
+
 use std::fs;
 use std::io::Read;
 use std::sync::Mutex;
@@ -25,6 +29,9 @@ use counter::Counter;
 use gauge::Gauge;
 use errors::{Error, Result};
 
+/// `ProcessCollector` a collector which exports the current state of
+/// process metrics including cpu, memory and file descriptor usage as well as
+/// the process start time for the given process id.
 pub struct ProcessCollector {
     pid: pid_t,
     descs: Vec<Desc>,
@@ -37,6 +44,7 @@ pub struct ProcessCollector {
 }
 
 impl ProcessCollector {
+    /// Create a `ProcessCollector` with the given process id and namespace.
     pub fn new<S: Into<String>>(pid: pid_t, namespace: S) -> ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
@@ -93,14 +101,11 @@ impl ProcessCollector {
 }
 
 impl Collector for ProcessCollector {
-    /// `desc` returns descriptors for metrics.
     fn desc(&self) -> Vec<&Desc> {
         self.descs.iter().collect()
     }
 
-    /// `collect` collects metrics.
     fn collect(&self) -> Vec<proto::MetricFamily> {
-
         // file descriptors
         if let Ok(num) = open_fds(self.pid) {
             self.open_fds.set(num as f64);
@@ -150,7 +155,7 @@ impl Collector for ProcessCollector {
     }
 }
 
-/// getpid() returns the process ID of the calling process.
+/// getpid returns the process ID of the calling process.
 pub fn get_pid() -> pid_t {
     unsafe { libc::getpid() }
 }
@@ -225,8 +230,6 @@ fn mem_status(pid: pid_t) -> Result<(f64, f64)> {
     Ok((vm_size * KB_TO_BYTE, vm_rss * KB_TO_BYTE))
 }
 
-// This module only supports linux platform. It is safe to
-// retrieve USER_HZ value via a sysconf call.
 lazy_static! {
     static ref CLK_TCK: f64 = {
         unsafe {
