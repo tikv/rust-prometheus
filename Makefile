@@ -24,5 +24,7 @@ clean:
 examples:
 	cargo build --example example_embed
 	cargo build --example example_hyper
+	cargo build --example example_push
+	cargo build --features="process" --example example_process_collector
 
 .PHONY: all examples
