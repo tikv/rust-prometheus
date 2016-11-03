@@ -14,26 +14,41 @@
 #[macro_use]
 extern crate prometheus;
 
-use std::thread;
-use std::time::Duration;
+#[cfg(feature = "process")]
+mod process {
+    use std::thread;
+    use std::time::Duration;
 
-use prometheus::{process_collector, Encoder};
+    use prometheus::{self, process_collector, Encoder};
+
+    pub fn demo() {
+        let pid = process_collector::get_pid();
+        let pc = process_collector::ProcessCollector::new(pid, "example_process_collector");
+        prometheus::register(Box::new(pc)).unwrap();
+
+        let mut buffer = Vec::new();
+        let encoder = prometheus::TextEncoder::new();
+        for _ in 0..5 {
+            let metric_familys = prometheus::gather();
+            encoder.encode(&metric_familys, &mut buffer).unwrap();
+
+            // Output to the standard output.
+            println!("{}", String::from_utf8(buffer.clone()).unwrap());
+
+            buffer.clear();
+            thread::sleep(Duration::from_secs(1));
+        }
+    }
+}
+
+#[cfg(not(feature = "process"))]
+mod process {
+    pub fn demo() {
+        println!("Please enable feature \"process\", then try:\n\tcargo run \
+                  --features=\"process\" --example example_process_collector");
+    }
+}
 
 fn main() {
-    let pid = process_collector::get_pid();
-    let pc = process_collector::ProcessCollector::new(pid, "example_process_collector");
-    prometheus::register(Box::new(pc)).unwrap();
-
-    let mut buffer = Vec::new();
-    let encoder = prometheus::TextEncoder::new();
-    for _ in 0..5 {
-        let metric_familys = prometheus::gather();
-        encoder.encode(&metric_familys, &mut buffer).unwrap();
-
-        // Output to the standard output.
-        println!("{}", String::from_utf8(buffer.clone()).unwrap());
-
-        buffer.clear();
-        thread::sleep(Duration::from_secs(1));
-    }
+    process::demo();
 }
