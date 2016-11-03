@@ -222,7 +222,28 @@ impl Registry {
 
 // Default registry for rust-prometheus.
 lazy_static! {
-    static ref DEFAULT_REGISTRY: Registry = Registry::default();
+    static ref DEFAULT_REGISTRY: Registry = {
+        let reg = Some(Registry::default());
+
+        match reg {
+            #[cfg(not(feature = "process"))]
+            Some(reg) => {
+                reg
+            },
+
+            // Register process collector.
+            #[cfg(feature = "process")]
+            Some(reg) => {
+                use process_collector::{get_pid, ProcessCollector};
+
+                let pc = ProcessCollector::new(get_pid(), "");
+                reg.register(Box::new(pc)).unwrap();
+                reg
+            },
+
+            None => unreachable!(),
+        }
+    };
 }
 
 /// `register` registers a new Collector to be included in metrics collection. It
