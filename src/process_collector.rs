@@ -19,8 +19,8 @@ use std::fs;
 use std::io::Read;
 use std::sync::Mutex;
 
+use libc;
 use procinfo::pid as pid_info;
-use libc::{self, pid_t};
 
 use proto;
 use desc::Desc;
@@ -28,6 +28,9 @@ use metrics::{Opts, Collector};
 use counter::Counter;
 use gauge::Gauge;
 use errors::{Error, Result};
+
+/// The `pid_t` data type represents process IDs.
+pub use libc::pid_t;
 
 /// `ProcessCollector` a collector which exports the current state of
 /// process metrics including cpu, memory and file descriptor usage as well as
@@ -155,9 +158,12 @@ impl Collector for ProcessCollector {
     }
 }
 
-/// getpid returns the process ID of the calling process.
-pub fn get_pid() -> pid_t {
-    unsafe { libc::getpid() }
+impl Default for ProcessCollector {
+    /// Returns a `ProcessCollector` of the calling process.
+    fn default() -> Self {
+        let pid = unsafe { libc::getpid() };
+        ProcessCollector::new(pid, "")
+    }
 }
 
 fn open_fds(pid: pid_t) -> Result<usize> {
