@@ -259,18 +259,15 @@ fn time_status(pid: pid_t) -> Result<(f64, f64)> {
 
     // cpu
     let mut cpu_time = 0.0;
-    match (status[UTIME_INDEX].parse::<f64>(), status[STIME_INDEX].parse::<f64>()) {
-        (Ok(utime), Ok(stime)) => {
-            cpu_time = (utime + stime) / *CLK_TCK;
-        }
-        _ => (),
+    if let (Ok(utime), Ok(stime)) = (status[UTIME_INDEX].parse::<f64>(),
+                                     status[STIME_INDEX].parse::<f64>()) {
+        cpu_time = (utime + stime) / *CLK_TCK;
     }
 
     // proc_start_time
     let mut start_time = 0.0;
-    match (status[START_TIME_INDEX].parse::<f64>(), *BOOT_TIME) {
-        (Ok(start), Some(boot_time)) => start_time = start / *CLK_TCK + boot_time,
-        _ => (),
+    if let (Ok(start), Some(boot_time)) = (status[START_TIME_INDEX].parse::<f64>(), *BOOT_TIME) {
+        start_time = start / *CLK_TCK + boot_time
     }
 
     Ok((cpu_time, start_time))
