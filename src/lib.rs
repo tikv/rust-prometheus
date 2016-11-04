@@ -16,6 +16,8 @@
 #![cfg_attr(feature="nightly", feature(integer_atomics))]
 
 #[macro_use]
+extern crate cfg_if;
+#[macro_use]
 extern crate quick_error;
 extern crate protobuf;
 extern crate fnv;
