@@ -29,6 +29,7 @@ fnv = "1.0.3"
 lazy_static = "0.2.1"
 libc = "0.2"
 regex = "0.1"
+cfg-if = "0.1"
 
 [dependencies.hyper]
 version = "0.9"
