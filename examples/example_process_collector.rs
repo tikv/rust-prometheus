@@ -22,9 +22,7 @@ mod process {
     use prometheus::{self, process_collector, Encoder};
 
     pub fn demo() {
-        let pid = process_collector::get_pid();
-        let pc = process_collector::ProcessCollector::new(pid, "example_process_collector");
-        prometheus::register(Box::new(pc)).unwrap();
+        // A default ProcessCollector registers automatically.
 
         let mut buffer = Vec::new();
         let encoder = prometheus::TextEncoder::new();
