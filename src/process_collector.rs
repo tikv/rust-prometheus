@@ -209,6 +209,7 @@ fn find_statistic(all: &str, pat: &str) -> Result<f64> {
 
 }
 
+// See more `man 5 proc`, `/proc/[pid]/limits`
 const MAX_FD_PATTERN: &'static str = "Max open files";
 
 fn max_fds(pid: pid_t) -> Result<f64> {
@@ -220,6 +221,8 @@ fn max_fds(pid: pid_t) -> Result<f64> {
 
 // 1 KB = 1024 Byte
 const KB_TO_BYTE: f64 = 1024.0;
+
+// See more `man 5 proc`, `/proc/[pid]/status`
 const VM_SIZE_PATTERN: &'static str = "VmSize:";
 const VM_RSS_PATTERN: &'static str = "VmRSS:";
 
@@ -273,6 +276,8 @@ fn time_status(pid: pid_t) -> Result<(f64, f64)> {
     Ok((cpu_time, start_time))
 }
 
+
+// See more `man 5 proc`, `/proc/stat`
 const BOOT_TIME_PATTERN: &'static str = "btime";
 
 lazy_static! {
