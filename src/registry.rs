@@ -83,7 +83,7 @@ impl RegistryCore {
         let mut id_set = Vec::new();
         let mut collector_id = 0;
         for desc in c.desc() {
-            if let None = id_set.iter().find(|id| **id == desc.id) {
+            if id_set.iter().find(|id| **id == desc.id).is_none() {
                 id_set.push(desc.id);
                 collector_id += desc.id;
             }
