@@ -17,7 +17,7 @@ include = [
 default = []
 dev = ["clippy"]
 nightly = []
-process = ["procinfo"]
+process = []
 
 [[bench]]
 name = "benches"
@@ -30,7 +30,6 @@ fnv = "1.0.3"
 lazy_static = "0.2.1"
 libc = "0.2"
 regex = "0.1"
-procinfo = {version = "0.2", optional = true}
 
 [dependencies.hyper]
 version = "0.9"

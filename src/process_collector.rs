@@ -20,7 +20,6 @@ use std::io::Read;
 use std::sync::Mutex;
 
 use libc;
-use procinfo::pid as pid_info;
 
 use proto;
 use desc::Desc;
@@ -123,19 +122,13 @@ impl Collector for ProcessCollector {
             self.rss.set(vm_rss);
         }
 
-        let pid_stat = pid_info::stat(self.pid).ok();
-
-        // proc_start_time
-        if let Some(ref stat) = pid_stat {
-            let start_time = (stat.start_time as f64) / *CLK_TCK + BOOT_TIME.unwrap();
-            self.start_time.set(start_time);
-        }
+        let times = time_status(self.pid).unwrap_or((0.0, 0.0));
 
         // cpu
         let cpu_total_mfs = {
             let cpu_total = self.cpu_total.lock().unwrap();
-            if let Some(stat) = pid_stat {
-                let total = (stat.utime + stat.stime) as f64 / *CLK_TCK;
+            if times.0 > 0.0 {
+                let total = times.0;
                 let past = cpu_total.get();
                 let delta = total - past;
                 if delta > 0.0 {
@@ -145,6 +138,11 @@ impl Collector for ProcessCollector {
 
             cpu_total.collect()
         };
+
+        // proc_start_time
+        if times.1 > 0.0 {
+            self.start_time.set(times.1);
+        }
 
         // collect MetricFamilys.
         let mut mfs = Vec::new();
@@ -199,7 +197,7 @@ fn find_statistic(all: &str, pat: &str) -> Result<f64> {
         .find(|line| line.contains(pat))
         .and_then(|line| {
             (&line[pat.len()..line.len()])
-                .split(char::is_whitespace)
+                .split_whitespace()
                 .find(|s| !s.is_empty())
         });
     match literal {
@@ -242,6 +240,37 @@ lazy_static! {
             libc::sysconf(libc::_SC_CLK_TCK) as f64
         }
     };
+}
+
+// See more `man 5 proc`, `/proc/[pid]/stat`
+const UTIME_INDEX: usize = 14 - 1;
+const STIME_INDEX: usize = 15 - 1;
+const START_TIME_INDEX: usize = 22 - 1;
+
+fn time_status(pid: pid_t) -> Result<(f64, f64)> {
+    let path = format!("/proc/{}/stat", pid);
+    let mut buffer = String::new();
+    try!(fs::File::open(path).and_then(|mut f| f.read_to_string(&mut buffer)));
+
+    let status: Vec<_> = buffer.split_whitespace().collect();
+
+    // cpu
+    let mut cpu_time = 0.0;
+    match (status[UTIME_INDEX].parse::<f64>(), status[STIME_INDEX].parse::<f64>()) {
+        (Ok(utime), Ok(stime)) => {
+            cpu_time = (utime + stime) / *CLK_TCK;
+        }
+        _ => (),
+    }
+
+    // proc_start_time
+    let mut start_time = 0.0;
+    match (status[START_TIME_INDEX].parse::<f64>(), *BOOT_TIME) {
+        (Ok(start), Some(boot_time)) => start_time = start / *CLK_TCK + boot_time,
+        _ => (),
+    }
+
+    Ok((cpu_time, start_time))
 }
 
 const BOOT_TIME_PATTERN: &'static str = "btime";
