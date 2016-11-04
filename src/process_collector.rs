@@ -192,7 +192,9 @@ fn open_fds(pid: pid_t) -> Result<usize> {
 //  * pat: "btime"
 //
 // then it returns `Ok(1477460662.0)`
-fn find_statistic(all: &str, pat: &str) -> Result<f64> {
+//
+// pub for tests.
+pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     let literal = all.lines()
         .find(|line| line.contains(pat))
         .and_then(|line| {
@@ -273,7 +275,6 @@ fn time_status(pid: pid_t) -> Result<(f64, f64)> {
     Ok((cpu_time, start_time))
 }
 
-
 // See more `man 5 proc`, `/proc/stat`
 const BOOT_TIME_PATTERN: &'static str = "btime";
 
@@ -285,4 +286,94 @@ lazy_static! {
                find_statistic(&buffer, BOOT_TIME_PATTERN).ok()
             })
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use std::f64::EPSILON;
+
+    use registry;
+    use metrics::Collector;
+
+    use super::*;
+
+    #[test]
+    fn test_process_collector() {
+        let pc = ProcessCollector::default();
+        {
+            // 6 metrics per process collector.
+            let descs = pc.desc();
+            assert_eq!(descs.len(), 6);
+            let mfs = pc.collect();
+            assert_eq!(mfs.len(), 6);
+        }
+
+        let r = registry::Registry::new();
+        let res = r.register(Box::new(pc));
+        assert!(res.is_ok());
+    }
+
+    const STATUS_LITERAL: &'static str = r#"Name:	compiz
+State:	S (sleeping)
+Tgid:	3124
+Ngid:	0
+Pid:	3124
+PPid:	3038
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
+FDSize:	64
+Groups:	4 24 27 30 46 108 124 126 999 1000 
+NStgid:	3124
+NSpid:	3124
+NSpgid:	3038
+NSsid:	3038
+VmPeak:	 1452388 kB
+VmSize:	 1362696 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	  134316 kB
+VmRSS:	  112884 kB
+VmData:	  780020 kB
+VmStk:	     152 kB
+VmExe:	      12 kB
+VmLib:	   77504 kB
+VmPTE:	    1116 kB
+VmPMD:	      16 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+Threads:	8
+SigQ:	0/31457
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000001000
+SigCgt:	0000000180014003
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	0000003fffffffff
+CapAmb:	0000000000000000
+Seccomp:	0
+Cpus_allowed:	f
+Cpus_allowed_list:	0-3
+Mems_allowed:	00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	1713183
+nonvoluntary_ctxt_switches:	68606
+"#;
+
+    const VM_RSS: f64 = 112884.0;
+    const VM_SIZE: f64 = 1362696.0;
+
+    #[test]
+    fn test_find_statistic() {
+        let rss = super::find_statistic(STATUS_LITERAL, super::VM_RSS_PATTERN);
+        assert!(rss.is_ok());
+        assert!((rss.unwrap() - VM_RSS) < EPSILON);
+
+        let rss = find_statistic(STATUS_LITERAL, super::VM_SIZE_PATTERN);
+        assert!(rss.is_ok());
+        assert!((rss.unwrap() - VM_SIZE) < EPSILON);
+    }
 }
