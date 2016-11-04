@@ -1,13 +1,13 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::Ordering;
 use std::mem::transmute;
 
 pub struct F64 {
-    inner: AtomicU64,
+    inner: super::AtomicU64Type,
 }
 
 impl F64 {
     pub fn new(val: f64) -> F64 {
-        F64 { inner: AtomicU64::new(f64_to_u64(val)) }
+        F64 { inner: super::AtomicU64Type::new(f64_to_u64(val)) }
     }
 
     #[inline]
@@ -34,30 +34,30 @@ impl F64 {
     }
 }
 
-fn u64_to_f64(val: u64) -> f64 {
+fn u64_to_f64(val: super::U64Type) -> f64 {
     unsafe { transmute(val) }
 }
 
-fn f64_to_u64(val: f64) -> u64 {
+fn f64_to_u64(val: f64) -> super::U64Type {
     unsafe { transmute(val) }
 }
 
 pub struct U64 {
-    inner: AtomicU64,
+    inner: super::AtomicU64Type,
 }
 
 impl U64 {
     pub fn new(val: u64) -> U64 {
-        U64 { inner: AtomicU64::new(val) }
+        U64 { inner: super::AtomicU64Type::new(val as super::U64Type) }
     }
 
     #[inline]
     pub fn get(&self) -> u64 {
-        self.inner.load(Ordering::Acquire)
+        self.inner.load(Ordering::Acquire) as u64
     }
 
     #[inline]
     pub fn inc_by(&self, delta: u64) {
-        self.inner.fetch_add(delta, Ordering::Release);
+        self.inner.fetch_add(delta as super::U64Type, Ordering::Release);
     }
 }

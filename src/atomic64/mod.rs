@@ -16,6 +16,18 @@
 cfg_if! {
     if #[cfg(feature = "nightly")] {
         // Prefer AtomicU64 if available.
+        type AtomicU64Type = ::std::sync::atomic::AtomicU64;
+        type U64Type = u64;
+
+        #[path = "atomic.rs"]
+        mod imp;
+    } else if #[cfg(target_pointer_width = "64")] {
+        // Use AtomicUsize if pointer width is 64 bit. This *may* have issues if
+        // a target has 64 bit pointer width but no atomic pointer-sized type,
+        // but that is not the case for any of the major architectures.
+        type AtomicU64Type = ::std::sync::atomic::AtomicUsize;
+        type U64Type = usize;
+
         #[path = "atomic.rs"]
         mod imp;
     } else {
