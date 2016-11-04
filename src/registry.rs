@@ -219,18 +219,22 @@ impl Registry {
     }
 }
 
-macro_rules! conditional_compile {
-    ($(#[$ATTR:meta])* { $COLLECTOR: tt }) => {
-        {
-            match 0 {
-                $(#[$ATTR])*
-                0 => $COLLECTOR,
+// This module is only for conditional compilation.
+mod bridge {
+    use errors::Result;
+    use super::Registry;
 
-                // suppress clippy warnning `single_match`.
-                1 => (),
-                _ => (),
-            }
-        }
+    #[cfg(feature = "process")]
+    pub fn register_default_process_collector(reg: &Registry) -> Result<()> {
+        use process_collector::ProcessCollector;
+
+        let pc = ProcessCollector::default();
+        reg.register(Box::new(pc))
+    }
+
+    #[cfg(not(feature = "process"))]
+    pub fn register_default_process_collector(_: &Registry) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -239,15 +243,8 @@ lazy_static! {
     static ref DEFAULT_REGISTRY: Registry = {
         let reg = Registry::default();
 
-        conditional_compile!{
-            #[cfg(feature = "process")]
-            {{
-                use process_collector::ProcessCollector;
-
-                let pc = ProcessCollector::default();
-                reg.register(Box::new(pc)).unwrap();
-            }}
-        }
+        // Register a default process collector.
+        bridge::register_default_process_collector(&reg).unwrap();
 
         reg
     };

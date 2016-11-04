@@ -22,7 +22,7 @@ mod process {
     use prometheus::{self, process_collector, Encoder};
 
     pub fn demo() {
-        // A default ProcessCollector registers automatically.
+        // A default ProcessCollector is registered automatically.
 
         let mut buffer = Vec::new();
         let encoder = prometheus::TextEncoder::new();
