@@ -19,7 +19,7 @@ mod process {
     use std::thread;
     use std::time::Duration;
 
-    use prometheus::{self, process_collector, Encoder};
+    use prometheus::{self, Encoder};
 
     pub fn demo() {
         // A default ProcessCollector is registered automatically.
