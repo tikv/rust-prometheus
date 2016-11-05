@@ -17,59 +17,78 @@ extern crate prometheus;
 extern crate lazy_static;
 extern crate getopts;
 
-use std::env;
-use std::time;
-use std::thread;
+mod bridge {
+    #[cfg(feature="push")]
+    mod push {
+        use std::env;
+        use std::time;
+        use std::thread;
 
-use getopts::Options;
+        use getopts::Options;
+        use prometheus::{self, Histogram, Counter};
 
-use prometheus::{Histogram, Counter};
+        lazy_static! {
+            static ref PUSH_COUNTER: Counter = register_counter!(
+                opts!(
+                    "example_push_total",
+                    "Total number of prometheus client pushed."
+                )
+            ).unwrap();
 
-lazy_static! {
-    static ref PUSH_COUNTER: Counter = register_counter!(
-        opts!(
-            "example_push_total",
-            "Total number of prometheus client pushed."
-        )
-    ).unwrap();
+            static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
+                histogram_opts!(
+                    "example_push_request_duration_seconds",
+                    "The push request latencies in seconds."
+                )
+            ).unwrap();
+        }
 
-    static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
-        histogram_opts!(
-            "example_push_request_duration_seconds",
-            "The push request latencies in seconds."
-        )
-    ).unwrap();
+        pub fn demo() {
+            let args: Vec<String> = env::args().collect();
+            let program = args[0].clone();
+
+            let mut opts = Options::new();
+            opts.optopt("A",
+                        "addr",
+                        "prometheus pushgateway address",
+                        "default is 127.0.0.1:9091");
+            opts.optflag("h", "help", "print this help menu");
+
+            let matches = opts.parse(&args).unwrap();
+            if matches.opt_present("h") || !matches.opt_present("A") {
+                let brief = format!("Usage: {} [options]", program);
+                print!("{}", opts.usage(&brief));
+                return;
+            }
+            println!("Pushing, please start Pushgateway first.");
+
+            let address = matches.opt_str("A").unwrap_or("127.0.0.1:9091".to_owned());
+            for _ in 0..5 {
+                thread::sleep(time::Duration::from_secs(2));
+                PUSH_COUNTER.inc();
+                let metric_familys = prometheus::gather();
+                let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
+                prometheus::push::push_metrics("example_push",
+                                         labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
+                                         &address,
+                                         metric_familys)
+                    .unwrap();
+            }
+
+            println!("Okay, please check the Pushgateway.");
+        }
+    }
+
+    #[cfg(feature="push")]
+    pub use self::push::demo;
+
+    #[cfg(not(feature="push"))]
+    pub fn demo() {
+        println!("Please enable feature \"push\", try:\n\tcargo run \
+                  --features=\"push\" --example example_push");
+    }
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
-
-    let mut opts = Options::new();
-    opts.optopt("A",
-                "addr",
-                "prometheus pushgateway address",
-                "default is 127.0.0.1:9091");
-    opts.optflag("h", "help", "print this help menu");
-
-    let matches = opts.parse(&args).unwrap();
-    if matches.opt_present("h") {
-        let brief = format!("Usage: {} [options]", program);
-        print!("{}", opts.usage(&brief));
-        return;
-    }
-    println!("Pushing, please start pushgateway first and wait 10 seconds ...");
-
-    let address = matches.opt_str("A").unwrap_or("127.0.0.1:9091".to_owned());
-    for _ in 0..5 {
-        thread::sleep(time::Duration::from_secs(2));
-        PUSH_COUNTER.inc();
-        let metric_familys = prometheus::gather();
-        let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
-        prometheus::push_metrics("example_push",
-                                 labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
-                                 &address,
-                                 metric_familys)
-            .unwrap();
-    }
+    bridge::demo()
 }

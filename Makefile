@@ -4,11 +4,10 @@ build:
 	cargo build --features default
 
 test:
-	cargo test --features default -- --nocapture 
+	cargo test --features="push" -- --nocapture
 
 dev: format
-	cargo build --features dev
-	cargo test --features="nightly dev" -- --nocapture
+	cargo test --features="push nightly dev" -- --nocapture
 
 bench: format
 	cargo bench --features dev -- --nocapture
@@ -24,5 +23,6 @@ clean:
 examples:
 	cargo build --example example_embed
 	cargo build --example example_hyper
+	cargo build --features="push" --example example_push
 
 .PHONY: all examples
