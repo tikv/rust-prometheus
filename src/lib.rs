@@ -43,14 +43,14 @@ mod registry;
 #[allow(dead_code)]
 mod vec;
 mod histogram;
+#[cfg(feature="push")]
+mod push;
 mod atomic64;
 
 // Mods
 
 /// Protocol buffers format of metrics.
 pub mod proto;
-#[cfg(feature="push")]
-pub mod push;
 
 // Traits
 pub use self::encoder::Encoder;
@@ -69,6 +69,9 @@ pub use self::histogram::{Histogram, HistogramVec, HistogramOpts, HistogramTimer
 // Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::histogram::{linear_buckets, exponential_buckets};
+#[cfg(feature="push")]
+pub use self::push::{push_metrics, push_add_metrics, push_collector, push_add_collector,
+                     hostname_grouping_key};
 
 // Constants
 pub use self::encoder::TEXT_FORMAT;
