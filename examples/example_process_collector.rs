@@ -14,16 +14,16 @@
 #[macro_use]
 extern crate prometheus;
 
-#[cfg(feature = "process")]
-mod process {
-    use std::thread;
-    use std::time::Duration;
+mod bridge {
 
-    use prometheus::{self, Encoder};
-
+    #[cfg(feature = "process")]
     pub fn demo() {
-        // A default ProcessCollector is registered automatically.
+        use std::thread;
+        use std::time::Duration;
 
+        use prometheus::{self, Encoder};
+
+        // A default ProcessCollector is registered automatically.
         let mut buffer = Vec::new();
         let encoder = prometheus::TextEncoder::new();
         for _ in 0..5 {
@@ -37,16 +37,15 @@ mod process {
             thread::sleep(Duration::from_secs(1));
         }
     }
-}
 
-#[cfg(not(feature = "process"))]
-mod process {
+    #[cfg(not(feature = "process"))]
     pub fn demo() {
         println!("Please enable feature \"process\", then try:\n\tcargo run \
                   --features=\"process\" --example example_process_collector");
     }
+
 }
 
 fn main() {
-    process::demo();
+    bridge::demo();
 }
