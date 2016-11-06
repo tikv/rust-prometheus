@@ -30,7 +30,7 @@ pub struct Gauge {
 
 impl Gauge {
     /// `new` create a `Guage` with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Gauge> {
+    pub fn new(name: &str, help: &str) -> Result<Gauge> {
         let opts = Opts::new(name, help);
         Gauge::with_opts(opts)
     }
