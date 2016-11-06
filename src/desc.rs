@@ -197,8 +197,43 @@ pub trait Describer {
 mod tests {
     use std::collections::HashMap;
 
-    use desc::Desc;
+    use desc::{Desc, is_valid_metric_name, is_valid_label_name};
     use errors::Error;
+
+    #[test]
+    fn test_is_valid_metric_name() {
+        assert_eq!(is_valid_metric_name(":"),          true);
+        assert_eq!(is_valid_metric_name("_"),          true);
+        assert_eq!(is_valid_metric_name("a"),          true);
+        assert_eq!(is_valid_metric_name(":9"),         true);
+        assert_eq!(is_valid_metric_name("_9"),         true);
+        assert_eq!(is_valid_metric_name("a9"),         true);
+        assert_eq!(is_valid_metric_name("a_b_9_d:x_"), true);
+
+        assert_eq!(is_valid_metric_name("9"),          false);
+        assert_eq!(is_valid_metric_name("9:"),         false);
+        assert_eq!(is_valid_metric_name("9_"),         false);
+        assert_eq!(is_valid_metric_name("9a"),         false);
+        assert_eq!(is_valid_metric_name("a-"),         false);
+    }
+
+    #[test]
+    fn test_is_valid_label_name() {
+        assert_eq!(is_valid_label_name("_"),          true);
+        assert_eq!(is_valid_label_name("a"),          true);
+        assert_eq!(is_valid_label_name("_9"),         true);
+        assert_eq!(is_valid_label_name("a9"),         true);
+        assert_eq!(is_valid_label_name("a_b_9_dx_"),  true);
+
+        assert_eq!(is_valid_label_name(":"),          false);
+        assert_eq!(is_valid_label_name(":9"),         false);
+        assert_eq!(is_valid_label_name("9"),          false);
+        assert_eq!(is_valid_label_name("9:"),         false);
+        assert_eq!(is_valid_label_name("9_"),         false);
+        assert_eq!(is_valid_label_name("9a"),         false);
+        assert_eq!(is_valid_label_name("a-"),         false);
+        assert_eq!(is_valid_label_name("a_b_9_d:x_"), false);
+    }
 
     #[test]
     fn test_invalid_const_label_name() {
