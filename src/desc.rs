@@ -12,19 +12,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::ascii::AsciiExt;
 use std::collections::{HashMap, BTreeSet};
 use std::hash::Hasher;
 
 use fnv::FnvHasher;
-use regex::Regex;
 
 use proto::LabelPair;
 use errors::{Result, Error};
 use metrics::SEPARATOR_BYTE;
 
-lazy_static! {
-    static ref VALID_METRIC_NAME: Regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_:]*$").unwrap();
-    static ref VALID_LABEL_NAME: Regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*$").unwrap();
+// Details of required format are at
+//   https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+fn is_valid_metric_name(name: &str) -> bool {
+    // Valid metric names must match regex [a-zA-Z_:][a-zA-Z0-9_:]*.
+    fn valid_start(c: char) -> bool {
+        c.is_ascii() && match c as u8 {
+            b'a'...b'z' | b'A'...b'Z' | b'_' | b':' => true,
+            _ => false,
+        }
+    }
+
+    fn valid_char(c: char) -> bool {
+        c.is_ascii() && match c as u8 {
+            b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' | b':' => true,
+            _ => false
+        }
+    }
+
+    name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
+}
+
+fn is_valid_label_name(name: &str) -> bool {
+    // Valid label names must match regex [a-zA-Z_][a-zA-Z0-9_]*.
+    fn valid_start(c: char) -> bool {
+        c.is_ascii() && match c as u8 {
+            b'a'...b'z' | b'A'...b'Z' | b'_' => true,
+            _ => false,
+        }
+    }
+
+    fn valid_char(c: char) -> bool {
+        c.is_ascii() && match c as u8 {
+            b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' => true,
+            _ => false
+        }
+    }
+
+    name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
 }
 
 /// Desc is the descriptor used by every Prometheus Metric. It is essentially
@@ -83,7 +118,7 @@ impl Desc {
             return Err(Error::Msg("empty help string".into()));
         }
 
-        if !VALID_METRIC_NAME.is_match(&desc.fq_name) {
+        if !is_valid_metric_name(&desc.fq_name) {
             return Err(Error::Msg(format!("'{}' is not a valid metric name", desc.fq_name)));
         }
 
@@ -93,7 +128,7 @@ impl Desc {
         let mut label_names = BTreeSet::new();
 
         for label_name in const_labels.keys() {
-            if !VALID_LABEL_NAME.is_match(label_name) {
+            if !is_valid_label_name(label_name) {
                 return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)));
             }
 
@@ -111,7 +146,7 @@ impl Desc {
         // cannot be in a regular label name. That prevents matching the label
         // dimension with a different mix between preset and variable labels.
         for label_name in &desc.variable_labels {
-            if !VALID_LABEL_NAME.is_match(label_name) {
+            if !is_valid_label_name(label_name) {
                 return Err(Error::Msg(format!("'{}' is not a valid label name", &label_name)));
             }
 
@@ -198,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_invalid_metric_name() {
-        for &name in &["-dash", "9gag", ":colon", "has space"] {
+        for &name in &["-dash", "9gag", "has space"] {
             let res = Desc::new(name.into(), "help".into(), vec![], HashMap::new())
                 .err()
                 .expect(format!("expected error for {}", name).as_ref());
