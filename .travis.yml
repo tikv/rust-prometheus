@@ -35,4 +35,4 @@ matrix:
       - cargo test --features="dev nightly"
   - rust: nightly
     script:
-      - cargo test --features="nightly"
+      - cargo test --features="dev"
