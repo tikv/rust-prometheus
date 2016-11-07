@@ -217,7 +217,7 @@ mod tests {
             ("a-",         false),
         ];
 
-        for &(name, expected) in tbl.iter() {
+        for &(name, expected) in &tbl {
             assert_eq!(is_valid_metric_name(name), expected);
         }
     }
@@ -240,7 +240,7 @@ mod tests {
             ("a_b_9_d:x_", false),
         ];
 
-        for &(name, expected) in tbl.iter() {
+        for &(name, expected) in &tbl {
             assert_eq!(is_valid_label_name(name), expected);
         }
     }
