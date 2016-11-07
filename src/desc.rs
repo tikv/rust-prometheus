@@ -202,37 +202,47 @@ mod tests {
 
     #[test]
     fn test_is_valid_metric_name() {
-        assert_eq!(is_valid_metric_name(":"),          true);
-        assert_eq!(is_valid_metric_name("_"),          true);
-        assert_eq!(is_valid_metric_name("a"),          true);
-        assert_eq!(is_valid_metric_name(":9"),         true);
-        assert_eq!(is_valid_metric_name("_9"),         true);
-        assert_eq!(is_valid_metric_name("a9"),         true);
-        assert_eq!(is_valid_metric_name("a_b_9_d:x_"), true);
+        let tbl = [
+            (":",          true ),
+            ("_",          true ),
+            ("a",          true ),
+            (":9",         true ),
+            ("_9",         true ),
+            ("a9",         true ),
+            ("a_b_9_d:x_", true ),
+            ("9",          false),
+            ("9:",         false),
+            ("9_",         false),
+            ("9a",         false),
+            ("a-",         false),
+        ];
 
-        assert_eq!(is_valid_metric_name("9"),          false);
-        assert_eq!(is_valid_metric_name("9:"),         false);
-        assert_eq!(is_valid_metric_name("9_"),         false);
-        assert_eq!(is_valid_metric_name("9a"),         false);
-        assert_eq!(is_valid_metric_name("a-"),         false);
+        for &(name, expected) in tbl.iter() {
+            assert_eq!(is_valid_metric_name(name), expected);
+        }
     }
 
     #[test]
     fn test_is_valid_label_name() {
-        assert_eq!(is_valid_label_name("_"),          true);
-        assert_eq!(is_valid_label_name("a"),          true);
-        assert_eq!(is_valid_label_name("_9"),         true);
-        assert_eq!(is_valid_label_name("a9"),         true);
-        assert_eq!(is_valid_label_name("a_b_9_dx_"),  true);
+        let tbl = [
+            ("_",          true ),
+            ("a",          true ),
+            ("_9",         true ),
+            ("a9",         true ),
+            ("a_b_9_dx_",  true ),
+            (":",          false),
+            (":9",         false),
+            ("9",          false),
+            ("9:",         false),
+            ("9_",         false),
+            ("9a",         false),
+            ("a-",         false),
+            ("a_b_9_d:x_", false),
+        ];
 
-        assert_eq!(is_valid_label_name(":"),          false);
-        assert_eq!(is_valid_label_name(":9"),         false);
-        assert_eq!(is_valid_label_name("9"),          false);
-        assert_eq!(is_valid_label_name("9:"),         false);
-        assert_eq!(is_valid_label_name("9_"),         false);
-        assert_eq!(is_valid_label_name("9a"),         false);
-        assert_eq!(is_valid_label_name("a-"),         false);
-        assert_eq!(is_valid_label_name("a_b_9_d:x_"), false);
+        for &(name, expected) in tbl.iter() {
+            assert_eq!(is_valid_label_name(name), expected);
+        }
     }
 
     #[test]
