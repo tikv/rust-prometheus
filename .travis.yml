@@ -1,17 +1,38 @@
 language: rust
+sudo: false
 
 rust:
+  # TODO: pick an oldest supported release
   - stable
   - beta
+  - nightly
+
+addons:
+  apt:
+    packages:
+      - gcc-multilib
 
 env:
-  - RUSTFLAGS=-Dwarnings
+  global:
+    - RUSTFLAGS=--deny=warnings
+  matrix:
+    - ARCH=x86_64
+    - ARCH=i686
+
+os:
+  - linux
+  - osx
 
 script:
-  - cargo test
+  # Script to test 32-bit versions.
+  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
 
 matrix:
+  # TODO: Figure out weridness with `ARCH` being set twice.
   include:
   - rust: nightly
     script:
       - cargo test --features="dev nightly"
+  - rust: nightly
+    script:
+      - cargo test --features="dev"
