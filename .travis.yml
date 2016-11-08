@@ -15,6 +15,7 @@ addons:
 env:
   global:
     - RUSTFLAGS=--deny=warnings
+    - FEATURES=push
   matrix:
     - ARCH=x86_64
     - ARCH=i686
@@ -24,6 +25,7 @@ os:
   - osx
 
 script:
+  - export CARGOOPTS=--features="$FEATURES"
   # Script to test 32-bit versions.
   - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
 
@@ -32,7 +34,9 @@ matrix:
   include:
   - rust: nightly
     script:
-      - cargo test --features="dev nightly"
+      - export FEATURES="$FEATURES nightly dev"
+      - cargo test --features="$FEATURES"
   - rust: nightly
     script:
-      - cargo test --features="dev"
+      - export FEATURES="$FEATURES dev"
+      - cargo test --features="$FEATURES"
