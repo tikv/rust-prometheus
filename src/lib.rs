@@ -25,7 +25,6 @@ extern crate lazy_static;
 extern crate hyper;
 #[cfg(feature="push")]
 extern crate libc;
-extern crate regex;
 
 mod errors;
 mod encoder;
