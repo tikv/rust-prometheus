@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(not(feature = "push"), allow(unused_imports, dead_code))]
+
 #[macro_use]
 extern crate prometheus;
 #[macro_use]
@@ -22,7 +24,6 @@ use std::time;
 use std::thread;
 
 use getopts::Options;
-
 use prometheus::{Histogram, Counter};
 
 lazy_static! {
@@ -41,6 +42,7 @@ lazy_static! {
     ).unwrap();
 }
 
+#[cfg(feature="push")]
 fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
@@ -53,12 +55,12 @@ fn main() {
     opts.optflag("h", "help", "print this help menu");
 
     let matches = opts.parse(&args).unwrap();
-    if matches.opt_present("h") {
+    if matches.opt_present("h") || !matches.opt_present("A") {
         let brief = format!("Usage: {} [options]", program);
         print!("{}", opts.usage(&brief));
         return;
     }
-    println!("Pushing, please start pushgateway first and wait 10 seconds ...");
+    println!("Pushing, please start Pushgateway first.");
 
     let address = matches.opt_str("A").unwrap_or("127.0.0.1:9091".to_owned());
     for _ in 0..5 {
@@ -72,4 +74,12 @@ fn main() {
                                  metric_familys)
             .unwrap();
     }
+
+    println!("Okay, please check the Pushgateway.");
+}
+
+#[cfg(not(feature="push"))]
+fn main() {
+    println!(r#"Please enable feature "push", try:
+    cargo run --features="push" --example example_push"#);
 }
