@@ -107,7 +107,7 @@ macro_rules! opts {
 ///
 /// ```
 /// # #[macro_use] extern crate prometheus;
-/// # use prometheus::{linear_buckets, exponential_buckets};
+/// # use prometheus::linear_buckets;
 /// # fn main() {
 /// let name = "test_histogram_opts";
 /// let help = "test opts help";
@@ -116,72 +116,30 @@ macro_rules! opts {
 /// assert_eq!(opts.common_opts.name, name);
 /// assert_eq!(opts.common_opts.help, help);
 ///
-/// let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
-/// assert_eq!(opts.common_opts.const_labels.len(), 2);
-/// assert!(opts.common_opts.const_labels.get("foo").is_some());
-/// assert_eq!(opts.common_opts.const_labels.get("foo").unwrap(), "bar");
-///
-/// let opts = histogram_opts!(name, help, labels!{"test" => "hello", "foo" => "bar",});
-/// assert_eq!(opts.common_opts.const_labels.len(), 2);
-/// assert!(opts.common_opts.const_labels.get("test").is_some());
-/// assert_eq!(opts.common_opts.const_labels.get("test").unwrap(), "hello");
-///
-/// let opts = histogram_opts!(name, help, []);
-/// assert_eq!(opts.buckets.len(), 0);
-///
-/// let opts = histogram_opts!(name, help, [Vec::from(&[1.0, 2.0] as &[f64])]);
+/// let opts = histogram_opts!(name, help, vec![1.0, 2.0]);
 /// assert_eq!(opts.buckets.len(), 2);
 ///
-/// let opts = histogram_opts!(name,
-///                             help,
-///                             labels!{"a" => "c",},
-///                             [Vec::from(&[1.0, 2.0] as &[f64]), Vec::from(&[3.0] as &[f64])]);
-/// assert_eq!(opts.buckets.len(), 3);
-///
-/// let opts = histogram_opts!(name,
-///                             help,
-///                             labels!{"a" => "c",},
-///                             [linear_buckets(1.0, 0.5, 4).unwrap(),
-///                             exponential_buckets(4.0, 1.1, 4).unwrap()]);
-/// assert_eq!(opts.buckets.len(), 8);
+/// let opts = histogram_opts!(name, help, linear_buckets(1.0, 0.5, 4).unwrap());
+/// assert_eq!(opts.buckets.len(), 4);
 /// # }
 /// ```
 #[macro_export]
 macro_rules! histogram_opts {
-    ( $ NAME : expr , $ HELP : expr , [ $ ( $ BUCKETS : expr ) , * ] ) => {
+    ( $ NAME : expr , $ HELP : expr ) => {
+        {
+            $crate::HistogramOpts::new($NAME, $HELP)
+        }
+    };
+
+    ( $ NAME : expr , $ HELP : expr , $ BUCKETS : expr ) => {
         {
             let his_opts = $crate::HistogramOpts::new($NAME, $HELP);
-
-            let buckets = Vec::new();
-            $(
-                let mut buckets = buckets;
-                buckets.extend($BUCKETS);
-            )*;
-
-            his_opts.buckets(buckets)
+            his_opts.buckets($BUCKETS)
         }
     };
-
-    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
-        {
-            use std::collections::HashMap;
-            use std::iter::FromIterator;
-
-            let his_opts = histogram_opts!($NAME, $HELP, [ $( $BUCKETS ), + ]);
-
-            his_opts.const_labels(
-                HashMap::from_iter($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into()))))
-        }
-    };
-
-    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
-        {
-            let opts = opts!($NAME, $HELP $(, $CONST_LABELS ) *);
-
-            $crate::HistogramOpts::from(opts)
-        }
-    }
 }
+
+
 
 /// Create a Counter and register to default registry.
 ///
@@ -353,23 +311,17 @@ macro_rules! register_gauge_vec {
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
 /// let opts = histogram_opts!("test_macro_histogram",
-///                             "help",
-///                             labels!{"test" => "hello", "foo" => "bar",});
-///
+///                             "help");
 /// let res1 = register_histogram!(opts);
 /// assert!(res1.is_ok());
 ///
 /// let res2 = register_histogram!("test_macro_histogram_2", "help");
 /// assert!(res2.is_ok());
 ///
-/// let res3 = register_histogram!("test_macro_histogram_3", "help", labels!{"a" => "b",});
-/// assert!(res3.is_ok());
-///
-/// let res4 = register_histogram!("test_macro_histogram_4",
+/// let res3 = register_histogram!("test_macro_histogram_4",
 ///                                 "help",
-///                                 labels!{"a" => "b",},
-///                                 [Vec::from(&[1.0, 2.0] as &[f64])]);
-/// assert!(res4.is_ok());
+///                                 vec![1.0, 2.0]);
+/// assert!(res3.is_ok());
 /// # }
 /// ```
 #[macro_export]
@@ -378,13 +330,8 @@ macro_rules! register_histogram {
         register_histogram!(histogram_opts!($NAME, $HELP))
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr ) => {
-        register_histogram!(histogram_opts!($NAME, $HELP, $CONST_LABELS))
-    };
-
-    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , [ $ ( $ BUCKETS : expr ) , + ] ) => {
-        register_histogram!(
-            histogram_opts!($NAME, $HELP, $CONST_LABELS, [ $($BUCKETS), + ]))
+    ( $ NAME : expr , $ HELP : expr , $ BUCKETS : expr ) => {
+        register_histogram!(histogram_opts!($NAME, $HELP, $BUCKETS))
     };
 
     ( $ OPTS : expr ) => {
@@ -402,10 +349,7 @@ macro_rules! register_histogram {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = histogram_opts!("test_macro_histogram_vec_1",
-///                            "help",
-///                            labels!{"test" => "hello", "foo" => "bar",});
-///
+/// let opts = histogram_opts!("test_macro_histogram_vec_1", "help");
 /// let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
 /// assert!(histogram_vec.is_ok());
 ///
@@ -415,8 +359,8 @@ macro_rules! register_histogram {
 ///
 /// let histogram_vec = register_histogram_vec!("test_macro_histogram_vec_3",
 ///                                             "help",
-///                                             labels!{"test" => "hello", "foo" => "bar",},
-///                                             &["a", "b"]);
+///                                             &["test_label"],
+///                                             vec![0.0, 1.0, 2.0]);
 /// assert!(histogram_vec.is_ok());
 /// # }
 /// ```
@@ -435,9 +379,9 @@ macro_rules! register_histogram_vec {
         }
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
+    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr , $ BUCKETS : expr) => {
         {
-            register_histogram_vec!(histogram_opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
+            register_histogram_vec!(histogram_opts!($NAME, $HELP, $BUCKETS), $LABELS_NAMES)
         }
     };
 }

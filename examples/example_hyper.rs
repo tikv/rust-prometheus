@@ -21,7 +21,7 @@ use hyper::header::ContentType;
 use hyper::server::{Server, Request, Response};
 use hyper::mime::Mime;
 
-use prometheus::{Counter, Gauge, Histogram, Encoder, TextEncoder};
+use prometheus::{Counter, Gauge, HistogramVec, Encoder, TextEncoder};
 
 lazy_static! {
     static ref HTTP_COUNTER: Counter = register_counter!(
@@ -38,12 +38,12 @@ lazy_static! {
         labels!{"handler" => "all",}
     ).unwrap();
 
-    static ref HTTP_REQ_HISTOGRAM: Histogram = register_histogram!(
+    static ref HTTP_REQ_HISTOGRAM: HistogramVec = register_histogram_vec!(
         histogram_opts!(
             "example_http_request_duration_seconds",
-            "The HTTP request latencies in seconds.",
-            labels!{"handler" => "all",}
-        )
+            "The HTTP request latencies in seconds."
+        ),
+        &["handler"]
     ).unwrap();
 }
 
@@ -55,7 +55,7 @@ fn main() {
         .unwrap()
         .handle(move |_: Request, mut res: Response| {
             HTTP_COUNTER.inc();
-            let timer = HTTP_REQ_HISTOGRAM.start_timer();
+            let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
 
             let metric_familys = prometheus::gather();
             let mut buffer = vec![];
