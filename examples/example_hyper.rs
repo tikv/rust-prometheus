@@ -33,9 +33,11 @@ lazy_static! {
     ).unwrap();
 
     static ref HTTP_BODY_GAUGE: Gauge = register_gauge!(
-        "example_http_response_size_bytes",
-        "The HTTP response sizes in bytes.",
-        labels!{"handler" => "all",}
+        opts!(
+            "example_http_response_size_bytes",
+            "The HTTP response sizes in bytes.",
+            labels!{"handler" => "all",}
+        )
     ).unwrap();
 
     static ref HTTP_REQ_HISTOGRAM: HistogramVec = register_histogram_vec!(

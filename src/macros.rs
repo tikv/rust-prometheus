@@ -148,24 +148,18 @@ macro_rules! histogram_opts {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = opts!("test_macro_counter_1",
-///                     "help",
-///                     labels!{"test" => "hello", "foo" => "bar",});
-///
+/// let opts = opts!("test_macro_counter_1", "help");
 /// let res1 = register_counter!(opts);
 /// assert!(res1.is_ok());
 ///
 /// let res2 = register_counter!("test_macro_counter_2", "help");
 /// assert!(res2.is_ok());
-///
-/// let res3 = register_counter!("test_macro_counter_3", "help", labels!{ "a" => "b",});
-/// assert!(res3.is_ok());
 /// # }
 /// ```
 #[macro_export]
 macro_rules! register_counter {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
-        register_counter!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
+    ( $ NAME : expr , $ HELP : expr ) => {
+        register_counter!(opts!($NAME, $HELP))
     };
 
     ( $ OPTS : expr ) => {
@@ -183,20 +177,11 @@ macro_rules! register_counter {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = opts!("test_macro_counter_vec_1",
-///                   "help",
-///                   labels!{"test" => "hello", "foo" => "bar",});
-///
+/// let opts = opts!("test_macro_counter_vec_1", "help");
 /// let counter_vec = register_counter_vec!(opts, &["a", "b"]);
 /// assert!(counter_vec.is_ok());
 ///
 /// let counter_vec = register_counter_vec!("test_macro_counter_vec_2", "help", &["a", "b"]);
-/// assert!(counter_vec.is_ok());
-///
-/// let counter_vec = register_counter_vec!("test_macro_counter_vec_3",
-///                                         "help",
-///                                         labels!{"test" => "hello", "foo" => "bar",},
-///                                         &["a", "b"]);
 /// assert!(counter_vec.is_ok());
 /// # }
 /// ```
@@ -214,12 +199,6 @@ macro_rules! register_counter_vec {
             register_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
         }
     };
-
-    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_counter_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
-        }
-    };
 }
 
 /// Create a Gauge and register to default registry.
@@ -229,24 +208,18 @@ macro_rules! register_counter_vec {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = opts!("test_macro_gauge",
-///                     "help",
-///                     labels!{"test" => "hello", "foo" => "bar",});
-///
+/// let opts = opts!("test_macro_gauge", "help");
 /// let res1 = register_gauge!(opts);
 /// assert!(res1.is_ok());
 ///
 /// let res2 = register_gauge!("test_macro_gauge_2", "help");
 /// assert!(res2.is_ok());
-///
-/// let res3 = register_gauge!("test_macro_gauge_3", "help", labels!{"a" => "b",});
-/// assert!(res3.is_ok());
 /// # }
 /// ```
 #[macro_export]
 macro_rules! register_gauge {
-    ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
-        register_gauge!(opts!($NAME, $HELP $(, $CONST_LABELS)*))
+    ( $ NAME : expr , $ HELP : expr ) => {
+        register_gauge!(opts!($NAME, $HELP))
     };
 
     ( $ OPTS : expr ) => {
@@ -264,20 +237,11 @@ macro_rules! register_gauge {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = opts!("test_macro_gauge_vec_1",
-///                  "help",
-///                  labels!{"test" => "hello", "foo" => "bar",});
-///
+/// let opts = opts!("test_macro_gauge_vec_1", "help");
 /// let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
 /// assert!(gauge_vec.is_ok());
 ///
 /// let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_2", "help", &["a", "b"]);
-/// assert!(gauge_vec.is_ok());
-///
-/// let gauge_vec = register_gauge_vec!("test_macro_gauge_vec_3",
-///                                     "help",
-///                                     labels!{"test" => "hello", "foo" => "bar",},
-///                                     &["a", "b"]);
 /// assert!(gauge_vec.is_ok());
 /// # }
 /// ```
@@ -293,12 +257,6 @@ macro_rules! register_gauge_vec {
     ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
         {
             register_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
-        }
-    };
-
-    ( $ NAME : expr , $ HELP : expr , $ CONST_LABELS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_gauge_vec!(opts!($NAME, $HELP, $CONST_LABELS), $LABELS_NAMES)
         }
     };
 }
