@@ -41,10 +41,8 @@ lazy_static! {
     ).unwrap();
 
     static ref HTTP_REQ_HISTOGRAM: HistogramVec = register_histogram_vec!(
-        histogram_opts!(
-            "example_http_request_duration_seconds",
-            "The HTTP request latencies in seconds."
-        ),
+        "example_http_request_duration_seconds",
+        "The HTTP request latencies in seconds.",
         &["handler"]
     ).unwrap();
 }

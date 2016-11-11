@@ -35,10 +35,8 @@ lazy_static! {
     ).unwrap();
 
     static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
-        histogram_opts!(
-            "example_push_request_duration_seconds",
-            "The push request latencies in seconds."
-        )
+        "example_push_request_duration_seconds",
+        "The push request latencies in seconds."
     ).unwrap();
 }
 

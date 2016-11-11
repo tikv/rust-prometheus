@@ -111,12 +111,13 @@ macro_rules! opts {
 /// # fn main() {
 /// let name = "test_histogram_opts";
 /// let help = "test opts help";
-///
-/// let opts = histogram_opts!(name, help);
+/// let opts = histogram_opts!(opts!(name, help, labels!{"key" => "value",}));
 /// assert_eq!(opts.common_opts.name, name);
 /// assert_eq!(opts.common_opts.help, help);
+/// assert!(opts.common_opts.const_labels.get("key").is_some());
+/// assert_eq!(opts.common_opts.const_labels.get("key").unwrap(), "value");
 ///
-/// let opts = histogram_opts!(name, help, vec![1.0, 2.0]);
+/// let opts = histogram_opts!(opts!(name, help), vec![1.0, 2.0]);
 /// assert_eq!(opts.buckets.len(), 2);
 ///
 /// let opts = histogram_opts!(name, help, linear_buckets(1.0, 0.5, 4).unwrap());
@@ -125,9 +126,16 @@ macro_rules! opts {
 /// ```
 #[macro_export]
 macro_rules! histogram_opts {
-    ( $ NAME : expr , $ HELP : expr ) => {
+    ( $ OPTS : expr ) => {
         {
-            $crate::HistogramOpts::new($NAME, $HELP)
+            $crate::HistogramOpts::from($OPTS)
+        }
+    };
+
+    ( $ OPT : expr , $ BUCKETS : expr ) => {
+        {
+            let his_opts = $crate::HistogramOpts::from($OPT);
+            his_opts.buckets($BUCKETS)
         }
     };
 
@@ -138,8 +146,6 @@ macro_rules! histogram_opts {
         }
     };
 }
-
-
 
 /// Create a Counter and register to default registry.
 ///
@@ -268,8 +274,7 @@ macro_rules! register_gauge_vec {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = histogram_opts!("test_macro_histogram",
-///                             "help");
+/// let opts = histogram_opts!(opts!("test_macro_histogram", "help"));
 /// let res1 = register_histogram!(opts);
 /// assert!(res1.is_ok());
 ///
@@ -285,16 +290,16 @@ macro_rules! register_gauge_vec {
 #[macro_export]
 macro_rules! register_histogram {
     ( $ NAME : expr , $ HELP : expr ) => {
-        register_histogram!(histogram_opts!($NAME, $HELP))
+        register_histogram!(histogram_opts!(opts!($NAME, $HELP)))
     };
 
     ( $ NAME : expr , $ HELP : expr , $ BUCKETS : expr ) => {
         register_histogram!(histogram_opts!($NAME, $HELP, $BUCKETS))
     };
 
-    ( $ OPTS : expr ) => {
+    ( $ HOPTS : expr ) => {
         {
-            let histogram = $crate::Histogram::with_opts($OPTS).unwrap();
+            let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
             $crate::register(Box::new(histogram.clone())).map(|_| histogram)
         }
     }
@@ -307,7 +312,7 @@ macro_rules! register_histogram {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # fn main() {
-/// let opts = histogram_opts!("test_macro_histogram_vec_1", "help");
+/// let opts = histogram_opts!(opts!("test_macro_histogram_vec_1", "help"));
 /// let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);
 /// assert!(histogram_vec.is_ok());
 ///
@@ -324,16 +329,16 @@ macro_rules! register_histogram {
 /// ```
 #[macro_export]
 macro_rules! register_histogram_vec {
-    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
+    ( $ HOPTS : expr , $ LABELS_NAMES : expr ) => {
         {
-            let histogram_vec = $crate::HistogramVec::new($OPTS, $LABELS_NAMES).unwrap();
+            let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
             $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
         }
     };
 
     ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
         {
-            register_histogram_vec!(histogram_opts!($NAME, $HELP), $LABELS_NAMES)
+            register_histogram_vec!(histogram_opts!(opts!($NAME, $HELP)), $LABELS_NAMES)
         }
     };
 
