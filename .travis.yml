@@ -1,22 +1,48 @@
 language: rust
+sudo: false
 
 os:
  - linux
  - osx
 
 rust:
+  # TODO: pick an oldest supported release
   - stable
   - beta
+  - nightly
+
+addons:
+  apt:
+    packages:
+      - gcc-multilib
 
 env:
-  - RUSTFLAGS=-Dwarnings
+  global:
+    - RUSTFLAGS=--deny=warnings
+    - FEATURES=push
+  matrix:
+    - ARCH=x86_64
+    - ARCH=i686
+
+os:
+  - linux
+  - osx
 
 script:
-  - cargo test
-  - cargo test --features="process"
+  # Script to test 32-bit versions.
+  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
+  # Tests again with features enabled.
+  - export CARGOOPTS=--features="$FEATURES"
+  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
 
 matrix:
+  # TODO: Figure out weridness with `ARCH` being set twice.
   include:
   - rust: nightly
     script:
-      - cargo test --features="dev nightly"
+      - export FEATURES="$FEATURES nightly dev"
+      - cargo test --features="$FEATURES"
+  - rust: nightly
+    script:
+      - export FEATURES="$FEATURES dev"
+      - cargo test --features="$FEATURES"
