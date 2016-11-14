@@ -32,7 +32,7 @@ script:
   # Script to test 32-bit versions.
   - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
   # Tests again with features enabled.
-  - export CARGOOPTS=--features="'$FEATURES'"
+  - export CARGOOPTS=--features=\"$FEATURES\"
   - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
 
 matrix:
