@@ -1,16 +1,18 @@
+ENABLE_FEATURES ?= default
+
 all: format build test examples
 
 build:
-	cargo build --features default
+	cargo build --features ENABLE_FEATURES
 
 test:
-	cargo test --features="push" -- --nocapture
+	cargo test --features="${ENABLE_FEATURES}" -- --nocapture
 
 dev: format
-	cargo test --features="push nightly dev" -- --nocapture
+	cargo test --features="${ENABLE_FEATURES} dev" -- --nocapture
 
 bench: format
-	cargo bench --features dev -- --nocapture
+	cargo bench --features=${ENABLE_FEATURES} -- --nocapture
 
 format:
 	@( cargo fmt -- --write-mode diff > /dev/null || cargo fmt -- --write-mode overwrite ) && \

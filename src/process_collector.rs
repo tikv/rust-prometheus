@@ -20,6 +20,7 @@ use std::io::Read;
 use std::sync::Mutex;
 
 use libc;
+use procinfo::pid as pid_info;
 
 use proto;
 use desc::Desc;
@@ -122,13 +123,19 @@ impl Collector for ProcessCollector {
             self.rss.set(vm_rss);
         }
 
-        let times = time_status(self.pid).unwrap_or((0.0, 0.0));
+        let pid_stat = pid_info::stat(self.pid).ok();
+
+        // proc_start_time
+        if let Some(ref stat) = pid_stat {
+            let start_time = (stat.start_time as f64) / *CLK_TCK + BOOT_TIME.unwrap();
+            self.start_time.set(start_time);
+        }
 
         // cpu
         let cpu_total_mfs = {
             let cpu_total = self.cpu_total.lock().unwrap();
-            if times.0 > 0.0 {
-                let total = times.0;
+            if let Some(ref stat) = pid_stat {
+                let total = (stat.utime + stat.stime) as f64 / *CLK_TCK;
                 let past = cpu_total.get();
                 let delta = total - past;
                 if delta > 0.0 {
@@ -140,8 +147,8 @@ impl Collector for ProcessCollector {
         };
 
         // proc_start_time
-        if times.1 > 0.0 {
-            self.start_time.set(times.1);
+        if let (Some(ref stat), Some(boot_time)) = (pid_stat, *BOOT_TIME) {
+            self.start_time.set(stat.start_time as f64 / *CLK_TCK + boot_time);
         }
 
         // collect MetricFamilys.
@@ -247,34 +254,6 @@ lazy_static! {
     };
 }
 
-// See more `man 5 proc`, `/proc/[pid]/stat`
-const UTIME_INDEX: usize = 14 - 1;
-const STIME_INDEX: usize = 15 - 1;
-const START_TIME_INDEX: usize = 22 - 1;
-
-fn time_status(pid: pid_t) -> Result<(f64, f64)> {
-    let path = format!("/proc/{}/stat", pid);
-    let mut buffer = String::new();
-    try!(fs::File::open(path).and_then(|mut f| f.read_to_string(&mut buffer)));
-
-    let status: Vec<_> = buffer.split_whitespace().collect();
-
-    // cpu
-    let mut cpu_time = 0.0;
-    if let (Ok(utime), Ok(stime)) = (status[UTIME_INDEX].parse::<f64>(),
-                                     status[STIME_INDEX].parse::<f64>()) {
-        cpu_time = (utime + stime) / *CLK_TCK;
-    }
-
-    // proc_start_time
-    let mut start_time = 0.0;
-    if let (Ok(start), Some(boot_time)) = (status[START_TIME_INDEX].parse::<f64>(), *BOOT_TIME) {
-        start_time = start / *CLK_TCK + boot_time
-    }
-
-    Ok((cpu_time, start_time))
-}
-
 // See more `man 5 proc`, `/proc/stat`
 const BOOT_TIME_PATTERN: &'static str = "btime";
 
@@ -323,7 +302,7 @@ TracerPid:	0
 Uid:	1000	1000	1000	1000
 Gid:	1000	1000	1000	1000
 FDSize:	64
-Groups:	4 24 27 30 46 108 124 126 999 1000 
+Groups:	4 24 27 30 46 108 124 126 999 1000
 NStgid:	3124
 NSpid:	3124
 NSpgid:	3038

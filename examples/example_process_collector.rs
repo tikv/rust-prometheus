@@ -14,38 +14,30 @@
 #[macro_use]
 extern crate prometheus;
 
-mod bridge {
+#[cfg(all(feature = "process", target_os="linux"))]
+fn main() {
+    use std::thread;
+    use std::time::Duration;
 
-    #[cfg(feature = "process")]
-    pub fn demo() {
-        use std::thread;
-        use std::time::Duration;
+    use prometheus::{self, Encoder};
 
-        use prometheus::{self, Encoder};
+    // A default ProcessCollector is registered automatically.
+    let mut buffer = Vec::new();
+    let encoder = prometheus::TextEncoder::new();
+    for _ in 0..5 {
+        let metric_familys = prometheus::gather();
+        encoder.encode(&metric_familys, &mut buffer).unwrap();
 
-        // A default ProcessCollector is registered automatically.
-        let mut buffer = Vec::new();
-        let encoder = prometheus::TextEncoder::new();
-        for _ in 0..5 {
-            let metric_familys = prometheus::gather();
-            encoder.encode(&metric_familys, &mut buffer).unwrap();
+        // Output to the standard output.
+        println!("{}", String::from_utf8(buffer.clone()).unwrap());
 
-            // Output to the standard output.
-            println!("{}", String::from_utf8(buffer.clone()).unwrap());
-
-            buffer.clear();
-            thread::sleep(Duration::from_secs(1));
-        }
+        buffer.clear();
+        thread::sleep(Duration::from_secs(1));
     }
-
-    #[cfg(not(feature = "process"))]
-    pub fn demo() {
-        println!("Please enable feature \"process\", then try:\n\tcargo run \
-                  --features=\"process\" --example example_process_collector");
-    }
-
 }
 
+#[cfg(any(not(feature = "process"), not(target_os="linux")))]
 fn main() {
-    bridge::demo();
+    println!(r#"Please enable feature "process", try:
+    cargo run --features="process" --example example_process_collector"#);
 }
