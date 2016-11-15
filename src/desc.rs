@@ -27,16 +27,18 @@ use metrics::SEPARATOR_BYTE;
 fn is_valid_metric_name(name: &str) -> bool {
     // Valid metric names must match regex [a-zA-Z_:][a-zA-Z0-9_:]*.
     fn valid_start(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
+        c.is_ascii() &&
+        match c as u8 {
             b'a'...b'z' | b'A'...b'Z' | b'_' | b':' => true,
             _ => false,
         }
     }
 
     fn valid_char(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
+        c.is_ascii() &&
+        match c as u8 {
             b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' | b':' => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -46,16 +48,18 @@ fn is_valid_metric_name(name: &str) -> bool {
 fn is_valid_label_name(name: &str) -> bool {
     // Valid label names must match regex [a-zA-Z_][a-zA-Z0-9_]*.
     fn valid_start(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
+        c.is_ascii() &&
+        match c as u8 {
             b'a'...b'z' | b'A'...b'Z' | b'_' => true,
             _ => false,
         }
     }
 
     fn valid_char(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
+        c.is_ascii() &&
+        match c as u8 {
             b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -202,20 +206,18 @@ mod tests {
 
     #[test]
     fn test_is_valid_metric_name() {
-        let tbl = [
-            (":",          true ),
-            ("_",          true ),
-            ("a",          true ),
-            (":9",         true ),
-            ("_9",         true ),
-            ("a9",         true ),
-            ("a_b_9_d:x_", true ),
-            ("9",          false),
-            ("9:",         false),
-            ("9_",         false),
-            ("9a",         false),
-            ("a-",         false),
-        ];
+        let tbl = [(":", true),
+                   ("_", true),
+                   ("a", true),
+                   (":9", true),
+                   ("_9", true),
+                   ("a9", true),
+                   ("a_b_9_d:x_", true),
+                   ("9", false),
+                   ("9:", false),
+                   ("9_", false),
+                   ("9a", false),
+                   ("a-", false)];
 
         for &(name, expected) in &tbl {
             assert_eq!(is_valid_metric_name(name), expected);
@@ -224,21 +226,19 @@ mod tests {
 
     #[test]
     fn test_is_valid_label_name() {
-        let tbl = [
-            ("_",          true ),
-            ("a",          true ),
-            ("_9",         true ),
-            ("a9",         true ),
-            ("a_b_9_dx_",  true ),
-            (":",          false),
-            (":9",         false),
-            ("9",          false),
-            ("9:",         false),
-            ("9_",         false),
-            ("9a",         false),
-            ("a-",         false),
-            ("a_b_9_d:x_", false),
-        ];
+        let tbl = [("_", true),
+                   ("a", true),
+                   ("_9", true),
+                   ("a9", true),
+                   ("a_b_9_dx_", true),
+                   (":", false),
+                   (":9", false),
+                   ("9", false),
+                   ("9:", false),
+                   ("9_", false),
+                   ("9a", false),
+                   ("a-", false),
+                   ("a_b_9_d:x_", false)];
 
         for &(name, expected) in &tbl {
             assert_eq!(is_valid_label_name(name), expected);

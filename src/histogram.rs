@@ -16,6 +16,8 @@ use std::convert::From;
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use proto;
 use protobuf::RepeatedField;
@@ -306,6 +308,11 @@ impl Histogram {
     pub fn start_timer(&self) -> HistogramTimer {
         HistogramTimer::new(self.clone())
     }
+
+    /// `local` returns a `LocalHistogram` for single thread usage.
+    pub fn local(&self) -> LocalHistogram {
+        LocalHistogram::new(self.clone())
+    }
 }
 
 
@@ -434,6 +441,117 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 pub fn duration_to_seconds(d: Duration) -> f64 {
     let nanos = d.subsec_nanos() as f64 / 1e9;
     d.as_secs() as f64 + nanos
+}
+
+pub struct LocalHistogramCore {
+    histogram: Histogram,
+    upper_bounds: Vec<f64>,
+    counts: Vec<u64>,
+    count: u64,
+    sum: f64,
+}
+
+/// `LocalHistogram` is used for performance and in single-thread.
+/// Sometimes, if you very care the performance, you can use the LocalHistogram
+// and then flush the metric interval.
+#[derive(Clone)]
+pub struct LocalHistogram {
+    core: Rc<RefCell<LocalHistogramCore>>,
+}
+
+pub struct LocalHistogramTimer {
+    local: LocalHistogram,
+    start: Instant,
+}
+
+/// `LocalHistogramTimer` represents an event being timed. When the timer goes out of
+/// scope, the duration will be observed, or call `observe_duration` to manually
+/// observe.
+///
+/// NOTICE: A timer can be observed only once (automatically or manually).
+impl LocalHistogramTimer {
+    /// `observe_duration` observes the amount of time in seconds since
+    /// `LocalHistogram.start_timer` was called.
+    pub fn observe_duration(self) {
+        drop(self);
+    }
+
+    fn observe(&mut self) {
+        let v = duration_to_seconds(self.start.elapsed());
+        self.local.observe(v)
+    }
+}
+
+impl<'a> Drop for LocalHistogramTimer {
+    fn drop(&mut self) {
+        self.observe()
+    }
+}
+
+impl LocalHistogramCore {
+    fn new(histogram: Histogram) -> LocalHistogramCore {
+        let bounds = histogram.core.upper_bounds.clone();
+        let counts = vec![0;bounds.len()];
+
+        LocalHistogramCore {
+            histogram: histogram,
+            upper_bounds: bounds,
+            counts: counts,
+            count: 0,
+            sum: 0.0,
+        }
+    }
+
+    pub fn observe(&mut self, v: f64) {
+        // Try find the bucket.
+        let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
+        if let Some((i, _)) = iter.next() {
+            self.counts[i] += 1;
+        }
+
+        self.count += 1;
+        self.sum += v;
+    }
+
+    pub fn flush(&mut self) {
+        let h = self.histogram.clone();
+
+        for (i, v) in self.counts.iter_mut().enumerate() {
+            h.core.counts[i].inc_by(*v);
+            *v = 0;
+        }
+
+        h.core.count.inc_by(self.count);
+        h.core.sum.inc_by(self.sum);
+
+        self.count = 0;
+        self.sum = 0.0;
+    }
+}
+
+impl LocalHistogram {
+    fn new(histogram: Histogram) -> LocalHistogram {
+        let core = LocalHistogramCore::new(histogram);
+        LocalHistogram { core: Rc::new(RefCell::new(core)) }
+    }
+
+    /// `observe` adds a single observation to the `Histogram`.
+    pub fn observe(&self, v: f64) {
+        self.core.borrow_mut().observe(v);
+    }
+
+    /// `start_timer`
+    pub fn start_timer(&self) -> LocalHistogramTimer {
+        LocalHistogramTimer {
+            local: self.clone(),
+            start: Instant::now(),
+        }
+    }
+
+    /// `flush` flushes the local metric to the Histogram metric.
+    pub fn flush(&self) {
+        self.core.borrow_mut().flush();
+    }
 }
 
 #[cfg(test)]
@@ -586,5 +704,36 @@ mod tests {
         assert_eq!(proto_histogram.get_sample_count(), 1);
         assert!((proto_histogram.get_sample_sum() - 1.0) < EPSILON);
         assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
+    }
+
+    #[test]
+    fn test_histogram_local() {
+        let buckets = vec![1.0, 2.0, 3.0];
+        let opts = HistogramOpts::new("test_histogram_local", "test histogram local help")
+            .buckets(buckets.clone());
+        let histogram = Histogram::with_opts(opts).unwrap();
+        let local = histogram.local();
+
+        local.observe(1.0);
+        local.observe(4.0);
+
+        let m = histogram.metric();
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 0);
+
+        local.flush();
+
+        let m = histogram.metric();
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert_eq!(proto_histogram.get_sample_sum(), 5.0);
+
+        local.observe(2.0);
+        local.flush();
+
+        let m = histogram.metric();
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 3);
+        assert_eq!(proto_histogram.get_sample_sum(), 7.0);
     }
 }
