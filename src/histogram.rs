@@ -445,7 +445,6 @@ pub fn duration_to_seconds(d: Duration) -> f64 {
 
 pub struct LocalHistogramCore {
     histogram: Histogram,
-    upper_bounds: Vec<f64>,
     counts: Vec<u64>,
     count: u64,
     sum: f64,
@@ -490,12 +489,10 @@ impl<'a> Drop for LocalHistogramTimer {
 
 impl LocalHistogramCore {
     fn new(histogram: Histogram) -> LocalHistogramCore {
-        let bounds = histogram.core.upper_bounds.clone();
-        let counts = vec![0;bounds.len()];
+        let counts = vec![0;histogram.core.counts.len()];
 
         LocalHistogramCore {
             histogram: histogram,
-            upper_bounds: bounds,
             counts: counts,
             count: 0,
             sum: 0.0,
@@ -504,7 +501,8 @@ impl LocalHistogramCore {
 
     pub fn observe(&mut self, v: f64) {
         // Try find the bucket.
-        let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
+        let mut iter =
+            self.histogram.core.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
             self.counts[i] += 1;
         }
