@@ -451,7 +451,7 @@ pub struct LocalHistogramCore {
 }
 
 /// `LocalHistogram` is used for performance and in single-thread.
-/// Sometimes, if you very care the performance, you can use the LocalHistogram
+/// Sometimes, if you very care the performance, you can use the `LocalHistogram`
 // and then flush the metric interval.
 #[derive(Clone)]
 pub struct LocalHistogram {
@@ -515,8 +515,10 @@ impl LocalHistogramCore {
         let h = self.histogram.clone();
 
         for (i, v) in self.counts.iter_mut().enumerate() {
-            h.core.counts[i].inc_by(*v);
-            *v = 0;
+            if *v > 0 {
+                h.core.counts[i].inc_by(*v);
+                *v = 0;
+            }
         }
 
         h.core.count.inc_by(self.count);
@@ -549,6 +551,12 @@ impl LocalHistogram {
     /// `flush` flushes the local metric to the Histogram metric.
     pub fn flush(&self) {
         self.core.borrow_mut().flush();
+    }
+}
+
+impl Drop for LocalHistogram {
+    fn drop(&mut self) {
+        self.flush()
     }
 }
 
@@ -727,7 +735,7 @@ mod tests {
         assert_eq!(proto_histogram.get_sample_sum(), 5.0);
 
         local.observe(2.0);
-        local.flush();
+        drop(local);
 
         let m = histogram.metric();
         let proto_histogram = m.get_histogram();
