@@ -121,22 +121,22 @@ impl Collector for ProcessCollector {
         }
 
         // memory
-        if let Ok((vm_size, vm_rss)) = mem_status(self.pid) {
-            self.vsize.set(vm_size);
-            self.rss.set(vm_rss);
+        if let Ok(statm) = pid_info::statm(self.pid) {
+            self.vsize.set(statm.size as f64 * *PAGESIZE);
+            self.rss.set(statm.resident as f64 * *PAGESIZE);
         }
 
-        let pid_stat = pid_info::stat(self.pid).ok();
+        let pid_stat = pid_info::stat(self.pid);
 
         // proc_start_time
-        if let (&Some(ref stat), Some(boot_time)) = (&pid_stat, *BOOT_TIME) {
+        if let (&Ok(ref stat), Some(boot_time)) = (&pid_stat, *BOOT_TIME) {
             self.start_time.set(stat.start_time as f64 / *CLK_TCK + boot_time);
         }
 
         // cpu
         let cpu_total_mfs = {
             let cpu_total = self.cpu_total.lock().unwrap();
-            if let Some(stat) = pid_stat {
+            if let Ok(stat) = pid_stat {
                 let total = (stat.utime + stat.stime) as f64 / *CLK_TCK;
                 let past = cpu_total.get();
                 let delta = total - past;
@@ -225,28 +225,18 @@ fn max_fds(pid: pid_t) -> Result<f64> {
     find_statistic(&buffer, MAX_FD_PATTERN)
 }
 
-// 1 KB = 1024 Byte
-const KB: f64 = 1024.0;
-
-// See more `man 5 proc`, `/proc/[pid]/status`
-const VM_SIZE_PATTERN: &'static str = "VmSize:";
-const VM_RSS_PATTERN: &'static str = "VmRSS:";
-
-fn mem_status(pid: pid_t) -> Result<(f64, f64)> {
-    let path = format!("/proc/{}/status", pid);
-    let mut buffer = String::new();
-    try!(fs::File::open(path).and_then(|mut f| f.read_to_string(&mut buffer)));
-
-    let vm_size = try!(find_statistic(&buffer, VM_SIZE_PATTERN));
-    let vm_rss = try!(find_statistic(&buffer, VM_RSS_PATTERN));
-
-    Ok((vm_size * KB, vm_rss * KB))
-}
-
 lazy_static! {
+    // getconf CLK_TCK
     static ref CLK_TCK: f64 = {
         unsafe {
             libc::sysconf(libc::_SC_CLK_TCK) as f64
+        }
+    };
+
+    // getconf PAGESIZE
+    static ref PAGESIZE: f64 = {
+        unsafe {
+            libc::sysconf(libc::_SC_PAGESIZE) as f64
         }
     };
 }
@@ -339,6 +329,8 @@ voluntary_ctxt_switches:	1713183
 nonvoluntary_ctxt_switches:	68606
 "#;
 
+    const VM_SIZE_PATTERN: &'static str = "VmSize:";
+    const VM_RSS_PATTERN: &'static str = "VmRSS:";
     const VM_RSS: f64 = 112884.0;
     const VM_SIZE: f64 = 1362696.0;
 
