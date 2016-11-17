@@ -58,3 +58,10 @@ println!("{}", String::from_utf8(buffer).unwrap());
 ```
 
 [More Examples](./examples)
+
+## Thanks
+
++ [brian-brazil](https://github.com/brian-brazil)
++ [ccmtaylor](https://github.com/ccmtaylor)
++ [kamalmarhubi](https://github.com/kamalmarhubi)
++ [lucab](https://github.com/lucab)
