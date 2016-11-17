@@ -215,14 +215,16 @@ pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
 
 }
 
-// See more `man 5 proc`, `/proc/[pid]/limits`
-const MAX_FD_PATTERN: &'static str = "Max open files";
-
 fn max_fds(pid: pid_t) -> Result<f64> {
-    let path = format!("/proc/{}/limits", pid);
-    let mut buffer = String::new();
-    try!(fs::File::open(path).and_then(|mut f| f.read_to_string(&mut buffer)));
-    find_statistic(&buffer, MAX_FD_PATTERN)
+    unsafe {
+        use std::{mem, ptr};
+
+        let mut fd_limit = mem::zeroed();
+        match libc::prlimit(pid, libc::RLIMIT_NOFILE, ptr::null(), &mut fd_limit) {
+            0 => Ok(fd_limit.rlim_cur as f64),
+            _ => Err(Error::Msg("check_max_open_fds failed".to_owned())),
+        }
+    }
 }
 
 lazy_static! {
@@ -336,11 +338,11 @@ nonvoluntary_ctxt_switches:	68606
 
     #[test]
     fn test_find_statistic() {
-        let rss = super::find_statistic(STATUS_LITERAL, super::VM_RSS_PATTERN);
+        let rss = super::find_statistic(STATUS_LITERAL, VM_RSS_PATTERN);
         assert!(rss.is_ok());
         assert!((rss.unwrap() - VM_RSS) < EPSILON);
 
-        let rss = find_statistic(STATUS_LITERAL, super::VM_SIZE_PATTERN);
+        let rss = find_statistic(STATUS_LITERAL, VM_SIZE_PATTERN);
         assert!(rss.is_ok());
         assert!((rss.unwrap() - VM_SIZE) < EPSILON);
     }
