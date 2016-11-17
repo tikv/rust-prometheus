@@ -219,22 +219,18 @@ impl Registry {
     }
 }
 
-// This module is only for conditional compilation.
-mod bridge {
-    use errors::Result;
-    use super::Registry;
+cfg_if! {
+    if #[cfg(feature = "process")] {
+        fn register_default_process_collector(reg: &Registry) -> Result<()> {
+            use process_collector::ProcessCollector;
 
-    #[cfg(feature = "process")]
-    pub fn register_default_process_collector(reg: &Registry) -> Result<()> {
-        use process_collector::ProcessCollector;
-
-        let pc = ProcessCollector::default();
-        reg.register(Box::new(pc))
-    }
-
-    #[cfg(not(feature = "process"))]
-    pub fn register_default_process_collector(_: &Registry) -> Result<()> {
-        Ok(())
+            let pc = ProcessCollector::default();
+            reg.register(Box::new(pc))
+        }
+    } else {
+        fn register_default_process_collector(_: &Registry) -> Result<()> {
+            Ok(())
+        }
     }
 }
 
@@ -244,7 +240,9 @@ lazy_static! {
         let reg = Registry::default();
 
         // Register a default process collector.
-        bridge::register_default_process_collector(&reg).unwrap();
+        if cfg!(feature = "process") {
+            register_default_process_collector(&reg).unwrap();
+        }
 
         reg
     };

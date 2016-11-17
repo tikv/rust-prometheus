@@ -27,6 +27,8 @@ extern crate hyper;
 extern crate libc;
 #[cfg(all(feature = "process", target_os="linux"))]
 extern crate procinfo;
+#[macro_use]
+extern crate cfg_if;
 
 mod errors;
 mod encoder;

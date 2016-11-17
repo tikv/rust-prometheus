@@ -32,6 +32,9 @@ use errors::{Error, Result};
 /// The `pid_t` data type represents process IDs.
 pub use libc::pid_t;
 
+// Six metrics per ProcessCollector.
+const MERTICS_NUMBER: usize = 6;
+
 /// `ProcessCollector` a collector which exports the current state of
 /// process metrics including cpu, memory and file descriptor usage as well as
 /// the process start time for the given process id.
@@ -126,15 +129,14 @@ impl Collector for ProcessCollector {
         let pid_stat = pid_info::stat(self.pid).ok();
 
         // proc_start_time
-        if let Some(ref stat) = pid_stat {
-            let start_time = (stat.start_time as f64) / *CLK_TCK + BOOT_TIME.unwrap();
-            self.start_time.set(start_time);
+        if let (&Some(ref stat), Some(boot_time)) = (&pid_stat, *BOOT_TIME) {
+            self.start_time.set(stat.start_time as f64 / *CLK_TCK + boot_time);
         }
 
         // cpu
         let cpu_total_mfs = {
             let cpu_total = self.cpu_total.lock().unwrap();
-            if let Some(ref stat) = pid_stat {
+            if let Some(stat) = pid_stat {
                 let total = (stat.utime + stat.stime) as f64 / *CLK_TCK;
                 let past = cpu_total.get();
                 let delta = total - past;
@@ -146,13 +148,8 @@ impl Collector for ProcessCollector {
             cpu_total.collect()
         };
 
-        // proc_start_time
-        if let (Some(ref stat), Some(boot_time)) = (pid_stat, *BOOT_TIME) {
-            self.start_time.set(stat.start_time as f64 / *CLK_TCK + boot_time);
-        }
-
         // collect MetricFamilys.
-        let mut mfs = Vec::new();
+        let mut mfs = Vec::with_capacity(MERTICS_NUMBER);
         mfs.extend(cpu_total_mfs);
         mfs.extend(self.open_fds.collect());
         mfs.extend(self.max_fds.collect());
@@ -229,7 +226,7 @@ fn max_fds(pid: pid_t) -> Result<f64> {
 }
 
 // 1 KB = 1024 Byte
-const KB_TO_BYTE: f64 = 1024.0;
+const KB: f64 = 1024.0;
 
 // See more `man 5 proc`, `/proc/[pid]/status`
 const VM_SIZE_PATTERN: &'static str = "VmSize:";
@@ -243,7 +240,7 @@ fn mem_status(pid: pid_t) -> Result<(f64, f64)> {
     let vm_size = try!(find_statistic(&buffer, VM_SIZE_PATTERN));
     let vm_rss = try!(find_statistic(&buffer, VM_RSS_PATTERN));
 
-    Ok((vm_size * KB_TO_BYTE, vm_rss * KB_TO_BYTE))
+    Ok((vm_size * KB, vm_rss * KB))
 }
 
 lazy_static! {
