@@ -511,21 +511,33 @@ impl LocalHistogramCore {
         self.sum += v;
     }
 
+    pub fn clear(&mut self) {
+        for v in self.counts.iter_mut() {
+            *v = 0
+        }
+
+        self.count = 0;
+        self.sum = 0.0;
+    }
+
     pub fn flush(&mut self) {
+        // No cached metric, return.
+        if self.count == 0 {
+            return;
+        }
+
         let h = self.histogram.clone();
 
-        for (i, v) in self.counts.iter_mut().enumerate() {
+        for (i, v) in self.counts.iter().enumerate() {
             if *v > 0 {
                 h.core.counts[i].inc_by(*v);
-                *v = 0;
             }
         }
 
         h.core.count.inc_by(self.count);
         h.core.sum.inc_by(self.sum);
 
-        self.count = 0;
-        self.sum = 0.0;
+        self.clear()
     }
 }
 
@@ -546,6 +558,11 @@ impl LocalHistogram {
             local: self.clone(),
             start: Instant::now(),
         }
+    }
+
+    /// `clear` clears the local metric.
+    pub fn clear(&self) {
+        self.core.borrow_mut().clear();
     }
 
     /// `flush` flushes the local metric to the Histogram metric.
@@ -720,26 +737,26 @@ mod tests {
         let histogram = Histogram::with_opts(opts).unwrap();
         let local = histogram.local();
 
+        let check = |count, sum| {
+            let m = histogram.metric();
+            let proto_histogram = m.get_histogram();
+            assert_eq!(proto_histogram.get_sample_count(), count);
+            assert_eq!(proto_histogram.get_sample_sum(), sum);
+        };
+
         local.observe(1.0);
         local.observe(4.0);
-
-        let m = histogram.metric();
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 0);
+        check(0, 0.0);
 
         local.flush();
+        check(2, 5.0);
 
-        let m = histogram.metric();
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 2);
-        assert_eq!(proto_histogram.get_sample_sum(), 5.0);
+        local.observe(2.0);
+        local.clear();
+        check(2, 5.0);
 
         local.observe(2.0);
         drop(local);
-
-        let m = histogram.metric();
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 3);
-        assert_eq!(proto_histogram.get_sample_sum(), 7.0);
+        check(3, 7.0);
     }
 }
