@@ -32,8 +32,10 @@ script:
   # Script to test 32-bit versions.
   - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
   # Tests again with features enabled.
-  - export CARGOOPTS=--features=\"$FEATURES\"
-  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
+  # TODO: This is a workaround for testing multiple features.
+  #       Bash incorrectly escapes `--features=\"$FEATURES\"` to `'--features="push' 'process"'`
+  #       See more: https://travis-ci.org/pingcap/rust-prometheus/jobs/175653505#L413
+  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/df450e9556b1d732399b8a56f396eec14d9d88bd/test | sed 's/\$CARGOOPTS/--features\ \"\$FEATURES\"/' | bash
 
 matrix:
   # TODO: Figure out weridness with `ARCH` being set twice.
