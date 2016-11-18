@@ -452,7 +452,7 @@ pub struct LocalHistogramCore {
 
 /// `LocalHistogram` is used for performance and in single-thread.
 /// Sometimes, if you very care the performance, you can use the `LocalHistogram`
-// and then flush the metric interval.
+/// and then flush the metric interval.
 #[derive(Clone)]
 pub struct LocalHistogram {
     core: Rc<RefCell<LocalHistogramCore>>,
