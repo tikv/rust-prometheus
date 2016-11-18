@@ -481,7 +481,7 @@ impl LocalHistogramTimer {
     }
 }
 
-impl<'a> Drop for LocalHistogramTimer {
+impl Drop for LocalHistogramTimer {
     fn drop(&mut self) {
         self.observe()
     }
