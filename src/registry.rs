@@ -224,7 +224,7 @@ cfg_if! {
         fn register_default_process_collector(reg: &Registry) -> Result<()> {
             use process_collector::ProcessCollector;
 
-            let pc = ProcessCollector::default();
+            let pc = ProcessCollector::for_self();
             reg.register(Box::new(pc))
         }
     } else {

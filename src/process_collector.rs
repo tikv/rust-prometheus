@@ -104,6 +104,12 @@ impl ProcessCollector {
             start_time: start_time,
         }
     }
+
+    /// Returns a `ProcessCollector` of the calling process.
+    pub fn for_self() -> ProcessCollector {
+        let pid = unsafe { libc::getpid() };
+        ProcessCollector::new(pid, "")
+    }
 }
 
 impl Collector for ProcessCollector {
@@ -160,14 +166,6 @@ impl Collector for ProcessCollector {
     }
 }
 
-impl Default for ProcessCollector {
-    /// Returns a `ProcessCollector` of the calling process.
-    fn default() -> Self {
-        let pid = unsafe { libc::getpid() };
-        ProcessCollector::new(pid, "")
-    }
-}
-
 fn open_fds(pid: pid_t) -> Result<usize> {
     let path = format!("/proc/{}/fd", pid);
     try!(fs::read_dir(path)).fold(Ok(0), |acc, i| {
@@ -212,7 +210,6 @@ pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
         }
         None => Err(Error::Msg(format!("read statistic {} failed", pat))),
     }
-
 }
 
 fn max_fds(pid: pid_t) -> Result<f64> {
@@ -267,13 +264,13 @@ mod tests {
 
     #[test]
     fn test_process_collector() {
-        let pc = ProcessCollector::default();
+        let pc = ProcessCollector::for_self();
         {
-            // 6 metrics per process collector.
+            // Six metrics per process collector.
             let descs = pc.desc();
-            assert_eq!(descs.len(), 6);
+            assert_eq!(descs.len(), super::MERTICS_NUMBER);
             let mfs = pc.collect();
-            assert_eq!(mfs.len(), 6);
+            assert_eq!(mfs.len(), super::MERTICS_NUMBER);
         }
 
         let r = registry::Registry::new();
