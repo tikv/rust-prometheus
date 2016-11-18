@@ -220,7 +220,7 @@ impl Registry {
 }
 
 cfg_if! {
-    if #[cfg(feature = "process")] {
+    if #[cfg(all(feature = "process", target_os="linux"))] {
         fn register_default_process_collector(reg: &Registry) -> Result<()> {
             use process_collector::ProcessCollector;
 
