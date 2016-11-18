@@ -512,7 +512,7 @@ impl LocalHistogramCore {
     }
 
     pub fn clear(&mut self) {
-        for v in self.counts.iter_mut() {
+        for v in &mut self.counts {
             *v = 0
         }
 
@@ -526,16 +526,18 @@ impl LocalHistogramCore {
             return;
         }
 
-        let h = self.histogram.clone();
+        {
+            let h = &self.histogram;
 
-        for (i, v) in self.counts.iter().enumerate() {
-            if *v > 0 {
-                h.core.counts[i].inc_by(*v);
+            for (i, v) in self.counts.iter().enumerate() {
+                if *v > 0 {
+                    h.core.counts[i].inc_by(*v);
+                }
             }
-        }
 
-        h.core.count.inc_by(self.count);
-        h.core.sum.inc_by(self.sum);
+            h.core.count.inc_by(self.count);
+            h.core.sum.inc_by(self.sum);
+        }
 
         self.clear()
     }
@@ -552,7 +554,7 @@ impl LocalHistogram {
         self.core.borrow_mut().observe(v);
     }
 
-    /// `start_timer`
+    /// `start_timer` returns a `LocalHistogramTimer` to track a duration.
     pub fn start_timer(&self) -> LocalHistogramTimer {
         LocalHistogramTimer {
             local: self.clone(),
@@ -741,7 +743,7 @@ mod tests {
             let m = histogram.metric();
             let proto_histogram = m.get_histogram();
             assert_eq!(proto_histogram.get_sample_count(), count);
-            assert_eq!(proto_histogram.get_sample_sum(), sum);
+            assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
         };
 
         local.observe(1.0);
