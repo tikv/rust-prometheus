@@ -39,3 +39,23 @@ fn bench_histogram_timer(b: &mut Bencher) {
         .unwrap();
     b.iter(|| histogram.start_timer())
 }
+
+#[bench]
+fn bench_histogram_local(b: &mut Bencher) {
+    let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_local",
+                                                            "A histogram to benchmark it."))
+        .unwrap();
+    let local = histogram.local();
+    b.iter(|| local.observe(3.1415));
+    local.flush();
+}
+
+#[bench]
+fn bench_histogram_local_timer(b: &mut Bencher) {
+    let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_local_timer",
+                                                            "A histogram to benchmark it."))
+        .unwrap();
+    let local = histogram.local();
+    b.iter(|| local.start_timer());
+    local.flush();
+}
