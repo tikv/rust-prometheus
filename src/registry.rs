@@ -240,9 +240,7 @@ lazy_static! {
         let reg = Registry::default();
 
         // Register a default process collector.
-        if cfg!(feature = "process") {
-            register_default_process_collector(&reg).unwrap();
-        }
+        register_default_process_collector(&reg).unwrap();
 
         reg
     };
