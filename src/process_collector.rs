@@ -179,8 +179,8 @@ fn open_fds(pid: pid_t) -> Result<usize> {
     })
 }
 
-// `find_statistic` match lines in pattern pat, it takes the first matching line,
-// and parse the first number literal in the matching line.
+// `find_statistic` matches lines in pattern pat, it takes the first matching line,
+// and parses the first number literal in the matching line.
 //
 // Example:
 //  * all:
@@ -197,19 +197,16 @@ fn open_fds(pid: pid_t) -> Result<usize> {
 //
 // pub for tests.
 pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
-    let literal = all.lines()
-        .find(|line| line.contains(pat))
-        .and_then(|line| {
-            (&line[pat.len()..line.len()])
-                .split_whitespace()
-                .find(|s| !s.is_empty())
-        });
-    match literal {
-        Some(literal) => {
-            literal.parse().map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)))
+    for line in all.lines() {
+        let kv: Vec<&str> = line.split_whitespace().collect();
+        if kv.len() >= 2 && kv[0].contains(pat) {
+            return kv[1]
+                .parse()
+                .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
         }
-        None => Err(Error::Msg(format!("read statistic {} failed", pat))),
     }
+
+    Err(Error::Msg(format!("read statistic {} failed", pat)))
 }
 
 fn max_fds(pid: pid_t) -> Result<f64> {
