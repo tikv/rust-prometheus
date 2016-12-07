@@ -219,10 +219,31 @@ impl Registry {
     }
 }
 
+cfg_if! {
+    if #[cfg(all(feature = "process", target_os="linux"))] {
+        fn register_default_process_collector(reg: &Registry) -> Result<()> {
+            use process_collector::ProcessCollector;
+
+            let pc = ProcessCollector::for_self();
+            reg.register(Box::new(pc))
+        }
+    } else {
+        fn register_default_process_collector(_: &Registry) -> Result<()> {
+            Ok(())
+        }
+    }
+}
 
 // Default registry for rust-prometheus.
 lazy_static! {
-    static ref DEFAULT_REGISTRY: Registry = Registry::default();
+    static ref DEFAULT_REGISTRY: Registry = {
+        let reg = Registry::default();
+
+        // Register a default process collector.
+        register_default_process_collector(&reg).unwrap();
+
+        reg
+    };
 }
 
 /// `register` registers a new Collector to be included in metrics collection. It

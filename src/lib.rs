@@ -23,8 +23,12 @@ extern crate fnv;
 extern crate lazy_static;
 #[cfg(feature="push")]
 extern crate hyper;
-#[cfg(feature="push")]
+#[cfg(any(feature="push", feature="process"))]
 extern crate libc;
+#[cfg(all(feature = "process", target_os="linux"))]
+extern crate procinfo;
+#[macro_use]
+extern crate cfg_if;
 
 mod errors;
 mod encoder;
@@ -50,6 +54,8 @@ mod atomic64;
 
 /// Protocol buffers format of metrics.
 pub mod proto;
+#[cfg(all(feature = "process", target_os="linux"))]
+pub mod process_collector;
 
 // Traits
 pub use self::encoder::Encoder;
