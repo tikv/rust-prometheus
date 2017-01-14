@@ -3,7 +3,7 @@ ENABLE_FEATURES ?= default
 all: format build test examples
 
 build:
-	cargo build --features ENABLE_FEATURES
+	cargo build --features="${ENABLE_FEATURES}"
 
 test:
 	cargo test --features="${ENABLE_FEATURES}" -- --nocapture
