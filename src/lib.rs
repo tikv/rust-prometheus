@@ -49,10 +49,12 @@ mod histogram;
 #[cfg(feature="push")]
 mod push;
 mod atomic64;
+pub mod local;
 
 // Mods
 
 /// Protocol buffers format of metrics.
+#[allow(deprecated)]
 pub mod proto;
 #[cfg(all(feature = "process", target_os="linux"))]
 pub mod process_collector;
@@ -69,8 +71,7 @@ pub use self::registry::Registry;
 pub use self::metrics::Opts;
 pub use self::counter::{Counter, CounterVec};
 pub use self::gauge::{Gauge, GaugeVec};
-pub use self::histogram::{Histogram, HistogramVec, LocalHistogram, LocalHistogramTimer,
-                          HistogramOpts, HistogramTimer};
+pub use self::histogram::{Histogram, HistogramVec, HistogramOpts, HistogramTimer};
 
 // Functions
 pub use self::registry::{gather, register, unregister};
