@@ -128,7 +128,7 @@ impl RegistryCore {
 
         // Now that MetricFamilies are all set, sort their Metrics
         // lexicographically by their label values.
-        for ref mut mf in mf_by_name.values_mut() {
+        for mf in mf_by_name.values_mut() {
             mf.mut_metric().sort_by(|&ref m1, &ref m2| {
                 let lps1 = m1.get_label();
                 let lps2 = m2.get_label();
