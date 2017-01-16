@@ -14,6 +14,8 @@
 use std::result;
 use std::io::Error as IoError;
 
+use protobuf::error::ProtobufError;
+
 quick_error!{
     /// The error types for prometheus.
     #[derive(Debug)]
@@ -38,6 +40,12 @@ quick_error!{
             cause(err)
             description(err.description())
             display("Io {}", err)
+        }
+        Protobuf(err: ProtobufError) {
+            from()
+            cause(err)
+            description(err.description())
+            display("Protobuf {}", err)
         }
     }
 }

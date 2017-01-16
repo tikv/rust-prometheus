@@ -64,7 +64,7 @@ pub use self::metrics::Collector;
 
 // Structs
 pub use self::errors::{Result, Error};
-pub use self::encoder::TextEncoder;
+pub use self::encoder::{TextEncoder, ProtobufEncoder};
 pub use self::desc::Desc;
 pub use self::registry::Registry;
 pub use self::metrics::Opts;
@@ -81,4 +81,5 @@ pub use self::push::{push_metrics, push_add_metrics, push_collector, push_add_co
 
 // Constants
 pub use self::encoder::TEXT_FORMAT;
+pub use self::encoder::PROTOBUF_FORMAT;
 pub use self::histogram::DEFAULT_BUCKETS;

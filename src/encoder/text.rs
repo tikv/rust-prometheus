@@ -1,4 +1,4 @@
-// Copyright 2016 PingCAP, Inc.
+// Copyright 2017 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,19 +18,7 @@ use proto::MetricFamily;
 use proto::{self, MetricType};
 use histogram::BUCKET_LABEL;
 
-/// `Encoder` types encode metric families into an underlying wire protocol.
-pub trait Encoder {
-    /// `encode` converts a slice of MetricFamily proto messages into target
-    /// format and writes the resulting lines to `writer`. It returns the number
-    /// of bytes written and any error encountered. This function does not
-    /// perform checks on the content of the metric and label names,
-    /// i.e. invalid metric or label names will result in invalid text format
-    /// output.
-    fn encode(&self, &[MetricFamily], &mut Write) -> Result<()>;
-
-    /// `format_type` returns target format.
-    fn format_type(&self) -> &str;
-}
+use super::Encoder;
 
 /// The text format of metric family.
 pub const TEXT_FORMAT: &'static str = "text/plain; version=0.0.4";
