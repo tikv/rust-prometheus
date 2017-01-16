@@ -54,7 +54,6 @@ pub mod local;
 // Mods
 
 /// Protocol buffers format of metrics.
-#[allow(deprecated)]
 pub mod proto;
 #[cfg(all(feature = "process", target_os="linux"))]
 pub mod process_collector;
