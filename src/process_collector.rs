@@ -199,10 +199,9 @@ fn open_fds(pid: pid_t) -> Result<usize> {
 pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     for line in all.lines() {
         if let Some(idx) = line.find(pat) {
-            let kv: Vec<&str> = (line[idx + pat.len()..]).split_whitespace().collect();
-            if kv.len() >= 1 {
-                return kv[0]
-                    .parse()
+            let mut iter = (line[idx + pat.len()..]).split_whitespace();
+            if let Some(v) = iter.next() {
+                return v.parse()
                     .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
             }
         }
