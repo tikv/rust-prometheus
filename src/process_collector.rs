@@ -198,27 +198,26 @@ fn open_fds(pid: pid_t) -> Result<usize> {
 // pub for tests.
 pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     for line in all.lines() {
-        let kv: Vec<&str> = line.split_whitespace().collect();
-        if kv.len() >= 2 && kv[0].contains(pat) {
-            return kv[1]
-                .parse()
-                .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
+        if let Some(idx) = line.find(pat) {
+            let mut iter = (line[idx + pat.len()..]).split_whitespace();
+            if let Some(v) = iter.next() {
+                return v.parse()
+                    .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
+            }
         }
     }
 
     Err(Error::Msg(format!("read statistic {} failed", pat)))
 }
 
-fn max_fds(pid: pid_t) -> Result<f64> {
-    unsafe {
-        use std::{mem, ptr};
+const MAXFD_PATTERN: &'static str = "Max open files";
 
-        let mut fd_limit = mem::zeroed();
-        match libc::prlimit(pid, libc::RLIMIT_NOFILE, ptr::null(), &mut fd_limit) {
-            0 => Ok(fd_limit.rlim_cur as f64),
-            _ => Err(Error::Msg("check_max_open_fds failed".to_owned())),
-        }
-    }
+fn max_fds(pid: pid_t) -> Result<f64> {
+    let mut buffer = String::new();
+    try!(fs::File::open(&format!("/proc/{}/limits", pid))
+        .and_then(|mut f| f.read_to_string(&mut buffer)));
+
+    find_statistic(&buffer, MAXFD_PATTERN)
 }
 
 lazy_static! {
@@ -330,14 +329,38 @@ nonvoluntary_ctxt_switches:	68606
     const VM_RSS: f64 = 112884.0;
     const VM_SIZE: f64 = 1362696.0;
 
+    const LIMITS_LITERAL: &'static str = r#"
+Limit                     Soft Limit           Hard Limit           Units     
+Max cpu time              unlimited            unlimited            seconds   
+Max file size             unlimited            unlimited            bytes     
+Max data size             unlimited            unlimited            bytes     
+Max stack size            8388608              unlimited            bytes     
+Max core file size        0                    unlimited            bytes     
+Max resident set          unlimited            unlimited            bytes     
+Max processes             31454                31454                processes 
+Max open files            1024                 4096                 files     
+Max locked memory         65536                65536                bytes     
+Max address space         unlimited            unlimited            bytes     
+Max file locks            unlimited            unlimited            locks     
+Max pending signals       31454                31454                signals   
+Max msgqueue size         819200               819200               bytes     
+Max nice priority         0                    0                    
+Max realtime priority     0                    0                    
+Max realtime timeout      unlimited            unlimited            us "#;
+
+    const MAXFD: f64 = 1024.0;
+
     #[test]
     fn test_find_statistic() {
         let rss = super::find_statistic(STATUS_LITERAL, VM_RSS_PATTERN);
         assert!(rss.is_ok());
         assert!((rss.unwrap() - VM_RSS) < EPSILON);
 
-        let rss = find_statistic(STATUS_LITERAL, VM_SIZE_PATTERN);
-        assert!(rss.is_ok());
-        assert!((rss.unwrap() - VM_SIZE) < EPSILON);
+        let size = super::find_statistic(STATUS_LITERAL, VM_SIZE_PATTERN);
+        assert!(size.is_ok());
+        assert!((size.unwrap() - VM_SIZE) < EPSILON);
+
+        let maxfd = super::find_statistic(LIMITS_LITERAL, super::MAXFD_PATTERN).unwrap();
+        assert!((maxfd - MAXFD) < EPSILON);
     }
 }
