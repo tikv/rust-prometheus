@@ -54,6 +54,7 @@ pub mod local;
 // Mods
 
 /// Protocol buffers format of metrics.
+#[path="../proto/metrics.rs"]
 pub mod proto;
 #[cfg(all(feature = "process", target_os="linux"))]
 pub mod process_collector;
