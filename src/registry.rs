@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Clippy warns `zero_ptr` and suggests using `std::ptr::null`, but
+// the `const_fn` feature does not land in stable rust yet.
+#![cfg_attr(feature="dev", allow(zero_ptr))]
+
 use std::sync::{Arc, RwLock};
 use std::iter::FromIterator;
 use std::collections::{HashMap, BTreeMap, HashSet};
@@ -312,7 +316,7 @@ mod tests {
         let counter = Counter::new("test", "test help").unwrap();
 
         assert!(register(Box::new(counter.clone())).is_ok());
-        assert!(gather().len() != 0);
+        assert_eq!(gather().len(), 1);
 
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
@@ -415,10 +419,8 @@ mod tests {
 
     #[test]
     fn test_register_multiplecollector() {
-        let counters = vec![
-            Counter::new("c1", "c1 is a counter").unwrap(),
-            Counter::new("c2", "c2 is a counter").unwrap(),
-        ];
+        let counters = vec![Counter::new("c1", "c1 is a counter").unwrap(),
+                            Counter::new("c2", "c2 is a counter").unwrap()];
 
         let descs = counters.iter()
             .map(|c| c.desc().into_iter().cloned())
