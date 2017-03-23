@@ -15,6 +15,11 @@
 #![cfg_attr(feature="dev", plugin(clippy))]
 #![cfg_attr(feature="nightly", feature(integer_atomics))]
 
+// Allow zero_ptr, caused by lazy_static.
+// Clippy warns `zero_ptr` and suggests using `std::ptr::null`, but
+// the `const_fn` feature does not land in stable rust yet.
+#![cfg_attr(feature="dev", allow(zero_ptr))]
+
 #[macro_use]
 extern crate quick_error;
 extern crate protobuf;

@@ -55,7 +55,7 @@ macro_rules! labels {
     }
 }
 
-/// Create an Opts.
+/// Create an `Opts`.
 ///
 /// # Examples
 ///
@@ -101,7 +101,7 @@ macro_rules! opts {
     }
 }
 
-/// Create a HistogramOpts
+/// Create a `HistogramOpts`
 ///
 /// # Examples
 ///
@@ -155,7 +155,7 @@ macro_rules! histogram_opts {
     };
 }
 
-/// Create a Counter and register to default registry.
+/// Create a `Counter` and register to default registry.
 ///
 /// # Examples
 ///
@@ -184,7 +184,7 @@ macro_rules! register_counter {
     }
 }
 
-/// Create a CounterVec and register to default registry.
+/// Create a `CounterVec` and register to default registry.
 ///
 /// # Examples
 ///
@@ -215,7 +215,7 @@ macro_rules! register_counter_vec {
     };
 }
 
-/// Create a Gauge and register to default registry.
+/// Create a `Gauge` and register to default registry.
 ///
 /// # Examples
 ///
@@ -244,7 +244,7 @@ macro_rules! register_gauge {
     }
 }
 
-/// Create a GaugeVec and register to default registry.
+/// Create a `GaugeVec` and register to default registry.
 ///
 /// # Examples
 ///
@@ -275,7 +275,7 @@ macro_rules! register_gauge_vec {
     };
 }
 
-/// Create a Histogram and register to default registry.
+/// Create a `Histogram` and register to default registry.
 ///
 /// # Examples
 ///
@@ -313,7 +313,7 @@ macro_rules! register_histogram {
     }
 }
 
-/// Create a HistogramVec and register to default registry.
+/// Create a `HistogramVec` and register to default registry.
 ///
 /// # Examples
 ///

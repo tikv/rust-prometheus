@@ -312,7 +312,7 @@ mod tests {
         let counter = Counter::new("test", "test help").unwrap();
 
         assert!(register(Box::new(counter.clone())).is_ok());
-        assert!(gather().len() != 0);
+        assert_ne!(gather().len(), 0);
 
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
@@ -415,10 +415,8 @@ mod tests {
 
     #[test]
     fn test_register_multiplecollector() {
-        let counters = vec![
-            Counter::new("c1", "c1 is a counter").unwrap(),
-            Counter::new("c2", "c2 is a counter").unwrap(),
-        ];
+        let counters = vec![Counter::new("c1", "c1 is a counter").unwrap(),
+                            Counter::new("c2", "c2 is a counter").unwrap()];
 
         let descs = counters.iter()
             .map(|c| c.desc().into_iter().cloned())
