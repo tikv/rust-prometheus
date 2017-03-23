@@ -25,7 +25,7 @@ use proto;
 use registry::Registry;
 use metrics::Collector;
 use errors::{Result, Error};
-use encoder::{Encoder, TextEncoder};
+use encoder::{Encoder, ProtobufEncoder};
 
 const HYPER_MAX_IDLE: usize = 1;
 
@@ -132,7 +132,7 @@ fn push(job: &str,
         }
     }
 
-    let encoder = TextEncoder::new();
+    let encoder = ProtobufEncoder::new();
     let mut buf = Vec::new();
     try!(encoder.encode(&mfs, &mut buf));
 

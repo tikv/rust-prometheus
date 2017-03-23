@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Clippy warns `zero_ptr` and suggests using `std::ptr::null`, but
+// the `const_fn` feature does not land in stable rust yet.
+#![cfg_attr(feature="dev", allow(zero_ptr))]
+
 use std::sync::{Arc, RwLock};
 use std::iter::FromIterator;
 use std::collections::{HashMap, BTreeMap, HashSet};
