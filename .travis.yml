@@ -43,8 +43,11 @@ matrix:
   - rust: nightly
     script:
       - export FEATURES="$FEATURES nightly dev"
+      # Use latest clippy
+      - cargo update -p clippy
       - cargo test --features="$FEATURES"
   - rust: nightly
     script:
       - export FEATURES="$FEATURES dev"
+      - cargo update -p clippy
       - cargo test --features="$FEATURES"

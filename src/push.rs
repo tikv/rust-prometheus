@@ -80,6 +80,10 @@ fn push(job: &str,
         method: &str)
         -> Result<()> {
 
+    // Suppress clippy warning needless_pass_by_value.
+    let grouping = grouping;
+    let mfs = mfs;
+
     let mut push_url = if url.contains("://") {
         url.to_owned()
     } else {
