@@ -228,8 +228,9 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use protobuf::RepeatedField;
+    use std::error::Error;
 
+    use protobuf::RepeatedField;
     use proto;
 
     use super::*;
@@ -255,7 +256,7 @@ mod tests {
             let mut mf = proto::MetricFamily::new();
             mf.set_metric(RepeatedField::from_vec(vec![m]));
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf]);
-            assert!(format!("{}", res.unwrap_err()).contains(case.1));
+            assert!(res.unwrap_err().description().contains(case.1));
         }
     }
 }

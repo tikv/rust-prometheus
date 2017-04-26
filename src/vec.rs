@@ -62,7 +62,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 
     pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
-        let h = try!(self.hash_label_values(&vals));
+        let h = try!(self.hash_label_values(vals));
 
         if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
             return Ok(metric);
@@ -83,7 +83,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 
     pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
-        let h = try!(self.hash_label_values(&vals));
+        let h = try!(self.hash_label_values(vals));
 
         let mut children = self.children.write().unwrap();
         if children.remove(&h).is_none() {
@@ -401,7 +401,7 @@ mod tests {
         let label_pairs = m.get_label();
         assert_eq!(label_pairs.len(), labels.len());
         for lp in label_pairs.iter() {
-            assert_eq!(lp.get_value(), *labels.get(&lp.get_name()).unwrap());
+            assert_eq!(lp.get_value(), labels[lp.get_name()]);
         }
     }
 }
