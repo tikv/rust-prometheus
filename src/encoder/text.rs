@@ -37,7 +37,7 @@ impl TextEncoder {
 }
 
 impl Encoder for TextEncoder {
-    fn encode(&self, metric_familys: &[MetricFamily], writer: &mut Write) -> Result<()> {
+    fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
         for mf in metric_familys {
             let name = mf.get_name();
             if name.is_empty() {
