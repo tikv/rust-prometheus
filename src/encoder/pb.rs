@@ -36,7 +36,7 @@ impl ProtobufEncoder {
 }
 
 impl Encoder for ProtobufEncoder {
-    fn encode(&self, metric_familys: &[MetricFamily], writer: &mut Write) -> Result<()> {
+    fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
         for mf in metric_familys {
             try!(mf.write_length_delimited_to_writer(writer));
         }

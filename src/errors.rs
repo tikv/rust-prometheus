@@ -28,7 +28,7 @@ quick_error!{
             display("expect {} label values, but got {}", expect, got)
         }
         Msg(msg: String) {
-            description(&msg)
+            description(msg)
             display("Error: {}", msg)
         }
         DecreaseCounter(v: f64) {

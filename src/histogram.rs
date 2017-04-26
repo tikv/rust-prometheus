@@ -174,7 +174,7 @@ impl HistogramCore {
         let desc = try!(opts.describe());
 
         for name in &desc.variable_labels {
-            try!(check_bucket_lable(&name));
+            try!(check_bucket_lable(name));
         }
         for pair in &desc.const_label_pairs {
             try!(check_bucket_lable(pair.get_name()));

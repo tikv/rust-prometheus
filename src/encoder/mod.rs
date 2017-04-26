@@ -30,7 +30,7 @@ pub trait Encoder {
     /// perform checks on the content of the metric and label names,
     /// i.e. invalid metric or label names will result in invalid text format
     /// output.
-    fn encode(&self, &[MetricFamily], &mut Write) -> Result<()>;
+    fn encode<W: Write>(&self, &[MetricFamily], &mut W) -> Result<()>;
 
     /// `format_type` returns target format.
     fn format_type(&self) -> &str;
