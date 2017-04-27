@@ -30,7 +30,7 @@ pub struct Counter {
 
 impl Counter {
     /// `new` creates a `Counter` with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Counter> {
+    pub fn new(name: &str, help: &str) -> Result<Counter> {
         let opts = Opts::new(name, help);
         Counter::with_opts(opts)
     }

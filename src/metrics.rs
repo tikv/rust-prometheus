@@ -87,26 +87,26 @@ pub struct Opts {
 
 impl Opts {
     /// `new` creates the Opts with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
+    pub fn new(name: &str, help: &str) -> Opts {
         Opts {
-            namespace: "".to_owned(),
-            subsystem: "".to_owned(),
-            name: name.into(),
-            help: help.into(),
+            namespace: String::new(),
+            subsystem: String::new(),
+            name: name.to_string(),
+            help: help.to_string(),
             const_labels: HashMap::new(),
             variable_labels: Vec::new(),
         }
     }
 
     /// `namespace` sets the namespace.
-    pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
-        self.namespace = namesapce.into();
+    pub fn namespace(mut self, namesapce: &str) -> Self {
+        self.namespace = namesapce.to_string();
         self
     }
 
     /// `subsystem` sets the sub system.
-    pub fn subsystem<S: Into<String>>(mut self, subsystem: S) -> Self {
-        self.subsystem = subsystem.into();
+    pub fn subsystem(mut self, subsystem: &str) -> Self {
+        self.subsystem = subsystem.to_string();
         self
     }
 
@@ -117,8 +117,8 @@ impl Opts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
-        self.const_labels.insert(name.into(), value.into());
+    pub fn const_label(mut self, name: &str, value: &str) -> Self {
+        self.const_labels.insert(name.to_string(), value.to_string());
         self
     }
 
@@ -129,8 +129,8 @@ impl Opts {
     }
 
     /// `variable_label` adds a variable label.
-    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
-        self.variable_labels.push(name.into());
+    pub fn variable_label(mut self, name: &str) -> Self {
+        self.variable_labels.push(name.to_string());
         self
     }
 
