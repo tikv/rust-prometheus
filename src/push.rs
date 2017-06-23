@@ -13,10 +13,11 @@
 // limitations under the License.
 
 use std::str;
-use std::collections::HashMap;
-use std::net::TcpStream;
 use std::time;
+use std::collections::hash_map::{HashMap, Entry};
+use std::net::TcpStream;
 use std::io::{Write, BufRead, BufWriter, BufReader};
+use std::sync::Mutex;
 
 use url::Url;
 
@@ -24,7 +25,11 @@ use proto;
 use registry::Registry;
 use metrics::Collector;
 use errors::{Result, Error};
-use encoder::{Encoder, TextEncoder};
+use encoder::{Encoder, ProtobufEncoder};
+
+lazy_static! {
+    static ref STREAMS: Mutex<HashMap<Url, TcpStream>> = Mutex::new(HashMap::new());
+}
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
 /// url, using the provided job name and the (optional) further grouping labels
@@ -63,11 +68,11 @@ pub fn push_add_metrics(job: &str,
 pub const LABEL_NAME_JOB: &'static str = "job";
 
 fn push(job: &str,
-          grouping: HashMap<String, String>,
-          url: &str,
-          mfs: Vec<proto::MetricFamily>,
-          method: &str)
-          -> Result<()> {
+        grouping: HashMap<String, String>,
+        url: &str,
+        mfs: Vec<proto::MetricFamily>,
+        method: &str)
+        -> Result<()> {
 
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -122,48 +127,60 @@ fn push(job: &str,
     }
 
     let push_url: Url = Url::parse(&push_url).map_err(|e| Error::Msg(format!("{:?}", e)))?;
-    let stream: TcpStream = TcpStream::connect(&push_url)?;
-    stream.set_write_timeout(Some(time::Duration::from_secs(5)))?;
-    stream.set_read_timeout(Some(time::Duration::from_secs(5)))?;
+    let mut map = STREAMS.lock().unwrap();
+    let mut entry = map.entry(push_url.clone());
+    let mut stream = match entry {
+        Entry::Occupied(ref mut entry) => entry.get_mut(),
+        Entry::Vacant(entry) => {
+            let stream = TcpStream::connect(entry.key())?;
+            stream.set_write_timeout(Some(time::Duration::from_secs(5)))?;
+            stream.set_read_timeout(Some(time::Duration::from_secs(5)))?;
+            entry.insert(stream)
+        }
+    };
 
+    let mut buf = Vec::new();
     {
-        let mut buf = Vec::with_capacity(200);
-        let encoder = TextEncoder::new();
+        let encoder = ProtobufEncoder::new();
         encoder.encode(&mfs, &mut buf)?;
 
-        let mut bw = BufWriter::new(&stream);
+        let mut bw = BufWriter::new(stream.by_ref());
         bw.write_fmt(format_args!("{} {} HTTP/1.1\r\n", method, push_url.path()))?;
         bw.write_fmt(format_args!("Host: {}\r\n", push_url.host_str().unwrap()))?;
         bw.write_fmt(format_args!("Content-Type: {}\r\n", encoder.format_type()))?;
         bw.write_fmt(format_args!("Content-Length: {}\r\n", buf.len()))?;
-        bw.write(b"\r\n")?;
-        bw.write(&buf)?;
+        bw.write_all(b"Connection: Keep-Alive\r\n")?;
+        bw.write_all(b"\r\n")?;
+        bw.write_all(&buf)?;
         bw.flush()?;
     }
-
     let resp = {
-        let mut buf = String::with_capacity(200);
-        let mut br = BufReader::new(&stream);
+        buf.clear();
+        let mut resp = String::from_utf8(buf).unwrap();
+        let mut br = BufReader::new(stream);
         loop {
-            let num = br.read_line(&mut buf)?;
-            if num == 2 { // "\r\n" end of headers.
+            let num = br.read_line(&mut resp)?;
+            if num == 2 {
+                // "\r\n" end of headers.
                 // Pushgateway's responses have no body.
-                break
+                break;
             }
         }
-        buf
+        resp
     };
     let status_code = parse_resp(&resp)?;
     if status_code != "202" {
-        return Err(Error::Msg(format!("unexpected status code {} while pushing to {}", status_code, push_url)));
+        return Err(Error::Msg(format!("unexpected status code {} while pushing to {}",
+                                      status_code,
+                                      push_url)));
     }
 
     Ok(())
 }
 
 fn parse_resp(resp: &str) -> Result<&str> {
-    let status_line = resp.lines().next().ok_or(Error::Msg("empty response".to_owned()))?;
-    status_line.split(' ').nth(1).ok_or(Error::Msg("empty status code".to_owned()))
+    let status_line = resp.lines().next().ok_or_else(|| Error::Msg("empty response".to_owned()))?;
+    status_line.split(' ').nth(1).ok_or_else(|| Error::Msg("empty status code".to_owned()))
 }
 
 fn push_from_collector(job: &str,

@@ -8,11 +8,6 @@ description = "a rust Prometheus client"
 repository = "https://github.com/pingcap/rust-prometheus"
 license = "Apache-2.0"
 
-include = [
-    "src/*.rs",
-    "Cargo.toml",
-]
-
 [features]
 default = []
 dev = ["clippy"]
