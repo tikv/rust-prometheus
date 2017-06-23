@@ -27,7 +27,7 @@ extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
 #[cfg(feature="push")]
-extern crate hyper;
+extern crate url;
 #[cfg(any(feature="push", feature="process"))]
 extern crate libc;
 #[cfg(all(feature = "process", target_os="linux"))]

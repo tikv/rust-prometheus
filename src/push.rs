@@ -12,30 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::str::{self, FromStr};
+use std::str;
 use std::collections::HashMap;
+use std::net::TcpStream;
+use std::time;
+use std::io::{Write, BufRead, BufWriter, BufReader};
 
-use hyper::client::Client;
-use hyper::client::pool::Config;
-use hyper::method::Method;
-use hyper::status::StatusCode;
-use hyper::header::ContentType;
+use url::Url;
 
 use proto;
 use registry::Registry;
 use metrics::Collector;
 use errors::{Result, Error};
-use encoder::{Encoder, ProtobufEncoder};
-
-const HYPER_MAX_IDLE: usize = 1;
-
-lazy_static!{
-    static ref HTTP_CLIENT: Client = Client::with_pool_config(
-            Config{
-                max_idle: HYPER_MAX_IDLE,
-            }
-        );
-}
+use encoder::{Encoder, TextEncoder};
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
 /// url, using the provided job name and the (optional) further grouping labels
@@ -74,11 +63,11 @@ pub fn push_add_metrics(job: &str,
 pub const LABEL_NAME_JOB: &'static str = "job";
 
 fn push(job: &str,
-        grouping: HashMap<String, String>,
-        url: &str,
-        mfs: Vec<proto::MetricFamily>,
-        method: &str)
-        -> Result<()> {
+          grouping: HashMap<String, String>,
+          url: &str,
+          mfs: Vec<proto::MetricFamily>,
+          method: &str)
+          -> Result<()> {
 
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -132,23 +121,49 @@ fn push(job: &str,
         }
     }
 
-    let encoder = ProtobufEncoder::new();
-    let mut buf = Vec::new();
-    try!(encoder.encode(&mfs, &mut buf));
+    let push_url: Url = Url::parse(&push_url).map_err(|e| Error::Msg(format!("{:?}", e)))?;
+    let stream: TcpStream = TcpStream::connect(&push_url)?;
+    stream.set_write_timeout(Some(time::Duration::from_secs(5)))?;
+    stream.set_read_timeout(Some(time::Duration::from_secs(5)))?;
 
-    let request = HTTP_CLIENT.request(Method::from_str(method).unwrap(), &push_url)
-        .header(ContentType(encoder.format_type().parse().unwrap()))
-        .body(buf.as_slice());
+    {
+        let mut buf = Vec::with_capacity(200);
+        let encoder = TextEncoder::new();
+        encoder.encode(&mfs, &mut buf)?;
 
-    let response = try!(request.send().map_err(|e| Error::Msg(format!("{}", e))));
-    match response.status {
-        StatusCode::Accepted => Ok(()),
-        _ => {
-            Err(Error::Msg(format!("unexpected status code {} while pushing to {}",
-                                   response.status,
-                                   push_url)))
-        }
+        let mut bw = BufWriter::new(&stream);
+        bw.write_fmt(format_args!("{} {} HTTP/1.1\r\n", method, push_url.path()))?;
+        bw.write_fmt(format_args!("Host: {}\r\n", push_url.host_str().unwrap()))?;
+        bw.write_fmt(format_args!("Content-Type: {}\r\n", encoder.format_type()))?;
+        bw.write_fmt(format_args!("Content-Length: {}\r\n", buf.len()))?;
+        bw.write(b"\r\n")?;
+        bw.write(&buf)?;
+        bw.flush()?;
     }
+
+    let resp = {
+        let mut buf = String::with_capacity(200);
+        let mut br = BufReader::new(&stream);
+        loop {
+            let num = br.read_line(&mut buf)?;
+            if num == 2 { // "\r\n" end of headers.
+                // Pushgateway's responses have no body.
+                break
+            }
+        }
+        buf
+    };
+    let status_code = parse_resp(&resp)?;
+    if status_code != "202" {
+        return Err(Error::Msg(format!("unexpected status code {} while pushing to {}", status_code, push_url)));
+    }
+
+    Ok(())
+}
+
+fn parse_resp(resp: &str) -> Result<&str> {
+    let status_line = resp.lines().next().ok_or(Error::Msg("empty response".to_owned()))?;
+    status_line.split(' ').nth(1).ok_or(Error::Msg("empty status code".to_owned()))
 }
 
 fn push_from_collector(job: &str,
@@ -159,7 +174,7 @@ fn push_from_collector(job: &str,
                        -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
-        try!(registry.register(bc));
+        registry.register(bc)?;
     }
 
     let mfs = registry.gather();
