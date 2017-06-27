@@ -330,22 +330,22 @@ nonvoluntary_ctxt_switches:	68606
     const VM_SIZE: f64 = 1362696.0;
 
     const LIMITS_LITERAL: &'static str = r#"
-Limit                     Soft Limit           Hard Limit           Units     
-Max cpu time              unlimited            unlimited            seconds   
-Max file size             unlimited            unlimited            bytes     
-Max data size             unlimited            unlimited            bytes     
-Max stack size            8388608              unlimited            bytes     
-Max core file size        0                    unlimited            bytes     
-Max resident set          unlimited            unlimited            bytes     
-Max processes             31454                31454                processes 
-Max open files            1024                 4096                 files     
-Max locked memory         65536                65536                bytes     
-Max address space         unlimited            unlimited            bytes     
-Max file locks            unlimited            unlimited            locks     
-Max pending signals       31454                31454                signals   
-Max msgqueue size         819200               819200               bytes     
-Max nice priority         0                    0                    
-Max realtime priority     0                    0                    
+Limit                     Soft Limit           Hard Limit           Units
+Max cpu time              unlimited            unlimited            seconds
+Max file size             unlimited            unlimited            bytes
+Max data size             unlimited            unlimited            bytes
+Max stack size            8388608              unlimited            bytes
+Max core file size        0                    unlimited            bytes
+Max resident set          unlimited            unlimited            bytes
+Max processes             31454                31454                processes
+Max open files            1024                 4096                 files
+Max locked memory         65536                65536                bytes
+Max address space         unlimited            unlimited            bytes
+Max file locks            unlimited            unlimited            locks
+Max pending signals       31454                31454                signals
+Max msgqueue size         819200               819200               bytes
+Max nice priority         0                    0
+Max realtime priority     0                    0
 Max realtime timeout      unlimited            unlimited            us "#;
 
     const MAXFD: f64 = 1024.0;
