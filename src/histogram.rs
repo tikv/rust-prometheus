@@ -19,7 +19,7 @@ use std::time::{Instant as StdInstant, Duration};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[cfg(feature="nightly")]
+#[cfg(all(feature="nightly", target_os="linux"))]
 use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE, timespec, clock_t};
 
 use proto;
