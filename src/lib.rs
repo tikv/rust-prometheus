@@ -13,7 +13,7 @@
 
 #![cfg_attr(feature="dev", feature(plugin))]
 #![cfg_attr(feature="dev", plugin(clippy))]
-#![cfg_attr(feature="nightly", feature(integer_atomics, libc))]
+#![cfg_attr(feature="nightly", feature(integer_atomics))]
 
 // Allow zero_ptr, caused by lazy_static.
 // Clippy warns `zero_ptr` and suggests using `std::ptr::null`, but

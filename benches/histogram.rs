@@ -41,7 +41,7 @@ fn bench_histogram_timer(b: &mut Bencher) {
 }
 
 #[bench]
-#[cfg(all(feature="nightly", target_os="linux"))]
+#[cfg(feature="nightly")]
 fn bench_histogram_coarse_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_timer",
                                                             "A histogram to benchmark it."))
@@ -70,7 +70,7 @@ fn bench_local_histogram_timer(b: &mut Bencher) {
 }
 
 #[bench]
-#[cfg(all(feature="nightly", target_os="linux"))]
+#[cfg(feature="nightly")]
 fn bench_local_histogram_coarse_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_timer",
                                                             "A histogram to benchmark it."))

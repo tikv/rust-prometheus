@@ -19,7 +19,7 @@ use std::time::{Instant as StdInstant, Duration};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[cfg(all(feature="nightly", target_os="linux"))]
+#[cfg(feature="nightly")]
 use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE, timespec, clock_t};
 
 use proto;
@@ -248,6 +248,11 @@ impl Instant {
         Instant::MonotonicCoarse(get_time(CLOCK_MONOTONIC_COARSE as clock_t))
     }
 
+    #[cfg(all(feature="nightly", not(target_os="linux")))]
+    fn now_coarse() -> Instant {
+        Instant::Monotonic(StdInstant::now())
+    }
+
     fn elapsed(&self) -> Duration {
         match *self {
             Instant::Monotonic(i) => i.elapsed(),
@@ -275,9 +280,7 @@ fn get_time(clock: clock_t) -> timespec {
         tv_sec: 0,
         tv_nsec: 0,
     };
-
-    let errno = unsafe { clock_gettime(clock as i32, &mut t) };
-    assert_eq!(errno, 0);
+    assert_eq!(unsafe { clock_gettime(clock as _, &mut t) }, 0);
     t
 }
 
@@ -299,7 +302,7 @@ impl HistogramTimer {
         }
     }
 
-    #[cfg(all(feature="nightly", target_os="linux"))]
+    #[cfg(feature="nightly")]
     fn new_coarse(histogram: Histogram) -> HistogramTimer {
         HistogramTimer {
             histogram: histogram,
@@ -371,7 +374,7 @@ impl Histogram {
 
     /// `start_coarse_timer` returns a `HistogramTimer` to track a duration,
     /// it is faster but less precise.
-    #[cfg(all(feature="nightly", target_os="linux"))]
+    #[cfg(feature="nightly")]
     pub fn start_coarse_timer(&self) -> HistogramTimer {
         HistogramTimer::new_coarse(self.clone())
     }
@@ -631,7 +634,7 @@ impl LocalHistogram {
 
     /// `start_coarse_timer` returns a `LocalHistogramTimer` to track a duration.
     /// it is faster but less precise.
-    #[cfg(all(feature="nightly", target_os="linux"))]
+    #[cfg(feature="nightly")]
     pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
         LocalHistogramTimer {
             local: self.clone(),
@@ -713,7 +716,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(feature="nightly", target_os="linux"))]
+    #[cfg(feature="nightly")]
     fn test_histogram_coarse_timer() {
         let opts = HistogramOpts::new("test1", "test help");
         let histogram = Histogram::with_opts(opts).unwrap();
@@ -790,7 +793,7 @@ mod tests {
 
     #[test]
     fn test_duration_to_seconds() {
-        let tbls = vec![(1000, 1.0), (1100, 1.1), (100111, 100.111)];
+        let tbls = vec![(1000, 1.0), (1100, 1.1), (100_111, 100.111)];
         for (millis, seconds) in tbls {
             let d = Duration::from_millis(millis);
             let v = duration_to_seconds(d);

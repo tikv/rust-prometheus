@@ -16,7 +16,7 @@ include = [
 [features]
 default = []
 dev = ["clippy"]
-nightly = []
+nightly = ["libc"]
 push = ["hyper", "libc"]
 process = ["libc", "procinfo"]
 
