@@ -41,6 +41,15 @@ fn bench_histogram_timer(b: &mut Bencher) {
 }
 
 #[bench]
+#[cfg(feature="nightly")]
+fn bench_histogram_coarse_timer(b: &mut Bencher) {
+    let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_timer",
+                                                            "A histogram to benchmark it."))
+        .unwrap();
+    b.iter(|| histogram.start_coarse_timer())
+}
+
+#[bench]
 fn bench_histogram_local(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_local",
                                                             "A histogram to benchmark it."))
@@ -51,11 +60,22 @@ fn bench_histogram_local(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_histogram_local_timer(b: &mut Bencher) {
+fn bench_local_histogram_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_local_timer",
                                                             "A histogram to benchmark it."))
         .unwrap();
     let local = histogram.local();
     b.iter(|| local.start_timer());
+    local.flush();
+}
+
+#[bench]
+#[cfg(feature="nightly")]
+fn bench_local_histogram_coarse_timer(b: &mut Bencher) {
+    let histogram = Histogram::with_opts(HistogramOpts::new("benchmark_histogram_timer",
+                                                            "A histogram to benchmark it."))
+        .unwrap();
+    let local = histogram.local();
+    b.iter(|| local.start_coarse_timer());
     local.flush();
 }

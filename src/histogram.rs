@@ -15,9 +15,12 @@
 use std::convert::From;
 use std::sync::Arc;
 use std::collections::HashMap;
-use std::time::{Instant, Duration};
+use std::time::{Instant as StdInstant, Duration};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+#[cfg(all(feature="nightly", target_os="linux"))]
+use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE, timespec, clock_t};
 
 use proto;
 use protobuf::RepeatedField;
@@ -229,6 +232,58 @@ impl HistogramCore {
     }
 }
 
+enum Instant {
+    Monotonic(StdInstant),
+    #[cfg(all(feature="nightly", target_os="linux"))]
+    MonotonicCoarse(timespec),
+}
+
+impl Instant {
+    fn now() -> Instant {
+        Instant::Monotonic(StdInstant::now())
+    }
+
+    #[cfg(all(feature="nightly", target_os="linux"))]
+    fn now_coarse() -> Instant {
+        Instant::MonotonicCoarse(get_time(CLOCK_MONOTONIC_COARSE as clock_t))
+    }
+
+    #[cfg(all(feature="nightly", not(target_os="linux")))]
+    fn now_coarse() -> Instant {
+        Instant::Monotonic(StdInstant::now())
+    }
+
+    fn elapsed(&self) -> Duration {
+        match *self {
+            Instant::Monotonic(i) => i.elapsed(),
+
+            #[cfg(all(feature="nightly", target_os="linux"))]
+            Instant::MonotonicCoarse(t) => {
+                const NANOS_PER_SEC: f64 = 1_000_000_000.0;
+                let now = get_time(CLOCK_MONOTONIC_COARSE as clock_t);
+                if now.tv_sec > t.tv_sec || (now.tv_sec == t.tv_sec && now.tv_nsec >= t.tv_nsec) {
+                    Duration::new((t.tv_sec - now.tv_sec) as u64,
+                                  (t.tv_nsec - now.tv_nsec) as u32)
+                } else {
+                    panic!("system time jumped back, {:.9} -> {:.9}",
+                           t.tv_sec as f64 + t.tv_nsec as f64 / NANOS_PER_SEC,
+                           now.tv_sec as f64 + now.tv_nsec as f64 / NANOS_PER_SEC);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(all(feature="nightly", target_os="linux"))]
+fn get_time(clock: clock_t) -> timespec {
+    let mut t = timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    assert_eq!(unsafe { clock_gettime(clock as _, &mut t) }, 0);
+    t
+}
+
 /// `HistogramTimer` represents an event being timed. When the timer goes out of
 /// scope, the duration will be observed, or call `observe_duration` to manually
 /// observe.
@@ -244,6 +299,14 @@ impl HistogramTimer {
         HistogramTimer {
             histogram: histogram,
             start: Instant::now(),
+        }
+    }
+
+    #[cfg(feature="nightly")]
+    fn new_coarse(histogram: Histogram) -> HistogramTimer {
+        HistogramTimer {
+            histogram: histogram,
+            start: Instant::now_coarse(),
         }
     }
 
@@ -307,6 +370,13 @@ impl Histogram {
     /// `start_timer` returns a `HistogramTimer` to track a duration.
     pub fn start_timer(&self) -> HistogramTimer {
         HistogramTimer::new(self.clone())
+    }
+
+    /// `start_coarse_timer` returns a `HistogramTimer` to track a duration,
+    /// it is faster but less precise.
+    #[cfg(feature="nightly")]
+    pub fn start_coarse_timer(&self) -> HistogramTimer {
+        HistogramTimer::new_coarse(self.clone())
     }
 
     /// `local` returns a `LocalHistogram` for single thread usage.
@@ -562,6 +632,16 @@ impl LocalHistogram {
         }
     }
 
+    /// `start_coarse_timer` returns a `LocalHistogramTimer` to track a duration.
+    /// it is faster but less precise.
+    #[cfg(feature="nightly")]
+    pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
+        LocalHistogramTimer {
+            local: self.clone(),
+            start: Instant::now_coarse(),
+        }
+    }
+
     /// `clear` clears the local metric.
     pub fn clear(&self) {
         self.core.borrow_mut().clear();
@@ -636,6 +716,33 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature="nightly")]
+    fn test_histogram_coarse_timer() {
+        let opts = HistogramOpts::new("test1", "test help");
+        let histogram = Histogram::with_opts(opts).unwrap();
+
+        let timer = histogram.start_coarse_timer();
+        thread::sleep(Duration::from_millis(100));
+        timer.observe_duration();
+
+        let timer = histogram.start_coarse_timer();
+        let handler = thread::spawn(move || {
+            let _timer = timer;
+            thread::sleep(Duration::from_millis(400));
+        });
+        assert!(handler.join().is_ok());
+
+        let mut mfs = histogram.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
+        let m = mf.get_metric().as_ref().get(0).unwrap();
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
+    }
+
+    #[test]
     fn test_buckets_invalidation() {
         let table = vec![
             (vec![], true, DEFAULT_BUCKETS.len()),
@@ -686,7 +793,7 @@ mod tests {
 
     #[test]
     fn test_duration_to_seconds() {
-        let tbls = vec![(1000, 1.0), (1100, 1.1), (100111, 100.111)];
+        let tbls = vec![(1000, 1.0), (1100, 1.1), (100_111, 100.111)];
         for (millis, seconds) in tbls {
             let d = Duration::from_millis(millis);
             let v = duration_to_seconds(d);

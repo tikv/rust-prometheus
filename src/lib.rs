@@ -28,7 +28,7 @@ extern crate fnv;
 extern crate lazy_static;
 #[cfg(feature="push")]
 extern crate hyper;
-#[cfg(any(feature="push", feature="process"))]
+#[cfg(any(feature="nightly", feature="push", feature="process"))]
 extern crate libc;
 #[cfg(all(feature = "process", target_os="linux"))]
 extern crate procinfo;
@@ -54,7 +54,6 @@ mod histogram;
 #[cfg(feature="push")]
 mod push;
 mod atomic64;
-pub mod local;
 
 // Mods
 
@@ -63,6 +62,7 @@ pub mod local;
 pub mod proto;
 #[cfg(all(feature = "process", target_os="linux"))]
 pub mod process_collector;
+pub mod local;
 
 // Traits
 pub use self::encoder::Encoder;
