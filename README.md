@@ -13,7 +13,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 
     ```toml
     [dependencies]
-    prometheus = "0.2"
+    prometheus = "0.3"
     ```
 
 + Add this to your crate in `lib.rs`:
@@ -22,7 +22,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
     extern crate prometheus
     ```
 
-+ Or enable nightly feature for better performance. 
++ Or enable nightly feature for better performance.
 
     ```toml
     [dependencies.prometheus]
@@ -40,7 +40,7 @@ use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
 let counter_opts = Opts::new("test_counter", "test counter help");
 let counter = Counter::with_opts(counter_opts).unwrap();
 
-// Create a Registry and register Counter. 
+// Create a Registry and register Counter.
 let r = Registry::new();
 r.register(Box::new(counter.clone())).unwrap();
 
