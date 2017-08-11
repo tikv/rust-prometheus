@@ -20,6 +20,10 @@
 // the `const_fn` feature does not land in stable rust yet.
 #![cfg_attr(feature="dev", allow(zero_ptr))]
 
+// TODO: Remove it. It is a workaround for
+// https://github.com/rust-lang/rust/issues/43809 .
+#![allow(unknown_lints)]
+
 #[macro_use]
 extern crate quick_error;
 extern crate protobuf;
