@@ -257,17 +257,25 @@ impl Instant {
         match *self {
             Instant::Monotonic(i) => i.elapsed(),
 
+            // It is different from `Instant::Monotonic`, the resolution here is millisecond.
+            // The processors in an SMP system do not start all at exactly the same time
+            // and therefore the timer registers are typically running at an offset.
+            // Use millisecond resolution for ignoring the error.
             #[cfg(all(feature="nightly", target_os="linux"))]
             Instant::MonotonicCoarse(t) => {
                 const NANOS_PER_SEC: f64 = 1_000_000_000.0;
+                const NANOS_PER_MILLI: i64 = 1_000_000;
+                const MILLIS_PER_SEC: i64 = 1_000;
+
                 let now = get_time(CLOCK_MONOTONIC_COARSE as clock_t);
-                if now.tv_sec > t.tv_sec || (now.tv_sec == t.tv_sec && now.tv_nsec >= t.tv_nsec) {
-                    Duration::new((t.tv_sec - now.tv_sec) as u64,
-                                  (t.tv_nsec - now.tv_nsec) as u32)
+                let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
+                let t_ms = t.tv_sec * MILLIS_PER_SEC + t.tv_nsec / NANOS_PER_MILLI;
+                if now_ms >= t_ms {
+                    Duration::from_millis((now_ms - t_ms) as u64)
                 } else {
-                    panic!("system time jumped back, {:.9} -> {:.9}",
-                           t.tv_sec as f64 + t.tv_nsec as f64 / NANOS_PER_SEC,
-                           now.tv_sec as f64 + now.tv_nsec as f64 / NANOS_PER_SEC);
+                    panic!("system time jumped back, {:.3} -> {:.3}",
+                           t.tv_sec as f64 + t.tv_nsec as f64 / NANOS_PER_SEC as f64,
+                           now.tv_sec as f64 + now.tv_nsec as f64 / NANOS_PER_SEC as f64);
                 }
             }
         }
@@ -740,6 +748,25 @@ mod tests {
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
         assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
+    }
+
+    #[test]
+    #[cfg(feature="nightly")]
+    fn test_instant_on_smp() {
+        for i in 0..100000 {
+            let now = Instant::now_coarse();
+            if i % 100 == 0 {
+                thread::yield_now();
+            }
+            now.elapsed();
+        }
+        for i in 0..100000 {
+            let now = Instant::now();
+            if i % 100 == 0 {
+                thread::yield_now();
+            }
+            now.elapsed();
+        }
     }
 
     #[test]
