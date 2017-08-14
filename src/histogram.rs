@@ -261,6 +261,7 @@ impl Instant {
             // The processors in an SMP system do not start all at exactly the same time
             // and therefore the timer registers are typically running at an offset.
             // Use millisecond resolution for ignoring the error.
+            // See more: https://linux.die.net/man/2/clock_gettime
             #[cfg(all(feature="nightly", target_os="linux"))]
             Instant::MonotonicCoarse(t) => {
                 const NANOS_PER_SEC: f64 = 1_000_000_000.0;
