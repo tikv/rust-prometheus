@@ -115,8 +115,8 @@ impl RegistryCore {
                         entry.insert(mf);
                     }
                     BEntry::Occupied(mut entry) => {
-                        let mut existent_mf = entry.get_mut();
-                        let mut existent_metrics = existent_mf.mut_metric();
+                        let existent_mf = entry.get_mut();
+                        let existent_metrics = existent_mf.mut_metric();
 
                         // TODO: check type.
                         // TODO: check consistency.
