@@ -754,18 +754,13 @@ mod tests {
     #[cfg(feature="nightly")]
     fn test_instant_on_smp() {
         for i in 0..100000 {
-            let now = Instant::now_coarse();
-            if i % 100 == 0 {
-                thread::yield_now();
-            }
-            now.elapsed();
-        }
-        for i in 0..100000 {
             let now = Instant::now();
+            let now_coarse = Instant::now_coarse();
             if i % 100 == 0 {
                 thread::yield_now();
             }
             now.elapsed();
+            now_coarse.elapsed();
         }
     }
 
