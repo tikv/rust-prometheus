@@ -772,7 +772,7 @@ mod tests {
     #[test]
     #[cfg(feature="nightly")]
     fn test_instant_on_smp() {
-        for i in 0..100000 {
+        for i in 0..100_000 {
             let now = Instant::now();
             let now_coarse = Instant::now_coarse();
             if i % 100 == 0 {
