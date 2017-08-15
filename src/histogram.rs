@@ -19,9 +19,6 @@ use std::time::{Instant as StdInstant, Duration};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[cfg(all(feature="nightly", target_os="linux"))]
-use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE, timespec, clock_t};
-
 use proto;
 use protobuf::RepeatedField;
 use desc::{Desc, Describer};
@@ -245,7 +242,7 @@ impl Instant {
 
     #[cfg(all(feature="nightly", target_os="linux"))]
     fn now_coarse() -> Instant {
-        Instant::MonotonicCoarse(get_time(CLOCK_MONOTONIC_COARSE as clock_t))
+        Instant::MonotonicCoarse(get_time_coarse())
     }
 
     #[cfg(all(feature="nightly", not(target_os="linux")))]
@@ -264,15 +261,12 @@ impl Instant {
             // See more: https://linux.die.net/man/2/clock_gettime
             #[cfg(all(feature="nightly", target_os="linux"))]
             Instant::MonotonicCoarse(t) => {
-                const NANOS_PER_SEC: f64 = 1_000_000_000.0;
-                const NANOS_PER_MILLI: i64 = 1_000_000;
-                const MILLIS_PER_SEC: i64 = 1_000;
-
-                let now = get_time(CLOCK_MONOTONIC_COARSE as clock_t);
+                let now = get_time_coarse();
                 let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
                 let t_ms = t.tv_sec * MILLIS_PER_SEC + t.tv_nsec / NANOS_PER_MILLI;
-                if now_ms >= t_ms {
-                    Duration::from_millis((now_ms - t_ms) as u64)
+                let dur = now_ms - t_ms;
+                if dur >= *CORASE_ERROR {
+                    Duration::from_millis(if dur > 0 { dur as u64 } else { 0 })
                 } else {
                     panic!("system time jumped back, {:.3} -> {:.3}",
                            t.tv_sec as f64 + t.tv_nsec as f64 / NANOS_PER_SEC as f64,
@@ -284,13 +278,37 @@ impl Instant {
 }
 
 #[cfg(all(feature="nightly", target_os="linux"))]
-fn get_time(clock: clock_t) -> timespec {
-    let mut t = timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    assert_eq!(unsafe { clock_gettime(clock as _, &mut t) }, 0);
-    t
+use self::coarse::*;
+
+#[cfg(all(feature="nightly", target_os="linux"))]
+mod coarse {
+    use libc::{clock_gettime, clock_getres, CLOCK_MONOTONIC_COARSE};
+
+    pub use libc::timespec;
+
+    pub const NANOS_PER_SEC: f64 = 1_000_000_000.0;
+    pub const NANOS_PER_MILLI: i64 = 1_000_000;
+    pub const MILLIS_PER_SEC: i64 = 1_000;
+
+    pub fn get_time_coarse() -> timespec {
+        let mut t = timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        assert_eq!(unsafe { clock_gettime(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
+        t
+    }
+
+    lazy_static! {
+        pub static ref CORASE_ERROR: i64 = {
+            let mut t = timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            };
+            assert_eq!(unsafe { clock_getres(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
+            - t.tv_nsec / NANOS_PER_MILLI
+        };
+    }
 }
 
 /// `HistogramTimer` represents an event being timed. When the timer goes out of
