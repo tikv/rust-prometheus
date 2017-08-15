@@ -265,7 +265,7 @@ impl Instant {
                 let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
                 let t_ms = t.tv_sec * MILLIS_PER_SEC + t.tv_nsec / NANOS_PER_MILLI;
                 let dur = now_ms - t_ms;
-                if dur >= *CORASE_ERROR {
+                if dur >= -*CORASE_ERROR {
                     Duration::from_millis(if dur > 0 { dur as u64 } else { 0 })
                 } else {
                     panic!("system time jumped back, {:.3} -> {:.3}",
@@ -306,7 +306,7 @@ mod coarse {
                 tv_nsec: 0,
             };
             assert_eq!(unsafe { clock_getres(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
-            - t.tv_nsec / NANOS_PER_MILLI
+            t.tv_nsec / NANOS_PER_MILLI
         };
     }
 }
