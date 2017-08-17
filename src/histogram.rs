@@ -19,9 +19,6 @@ use std::time::{Instant as StdInstant, Duration};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[cfg(all(feature="nightly", target_os="linux"))]
-use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE, timespec, clock_t};
-
 use proto;
 use protobuf::RepeatedField;
 use desc::{Desc, Describer};
@@ -245,7 +242,7 @@ impl Instant {
 
     #[cfg(all(feature="nightly", target_os="linux"))]
     fn now_coarse() -> Instant {
-        Instant::MonotonicCoarse(get_time(CLOCK_MONOTONIC_COARSE as clock_t))
+        Instant::MonotonicCoarse(get_time_coarse())
     }
 
     #[cfg(all(feature="nightly", not(target_os="linux")))]
@@ -257,17 +254,21 @@ impl Instant {
         match *self {
             Instant::Monotonic(i) => i.elapsed(),
 
+            // It is different from `Instant::Monotonic`, the resolution here is millisecond.
+            // The processors in an SMP system do not start all at exactly the same time
+            // and therefore the timer registers are typically running at an offset.
+            // Use millisecond resolution for ignoring the error.
+            // See more: https://linux.die.net/man/2/clock_gettime
             #[cfg(all(feature="nightly", target_os="linux"))]
             Instant::MonotonicCoarse(t) => {
-                const NANOS_PER_SEC: f64 = 1_000_000_000.0;
-                let now = get_time(CLOCK_MONOTONIC_COARSE as clock_t);
-                if now.tv_sec > t.tv_sec || (now.tv_sec == t.tv_sec && now.tv_nsec >= t.tv_nsec) {
-                    Duration::new((t.tv_sec - now.tv_sec) as u64,
-                                  (t.tv_nsec - now.tv_nsec) as u32)
+                let now = get_time_coarse();
+                let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
+                let t_ms = t.tv_sec * MILLIS_PER_SEC + t.tv_nsec / NANOS_PER_MILLI;
+                let dur = now_ms - t_ms;
+                if dur >= 0 {
+                    Duration::from_millis(dur as u64)
                 } else {
-                    panic!("system time jumped back, {:.9} -> {:.9}",
-                           t.tv_sec as f64 + t.tv_nsec as f64 / NANOS_PER_SEC,
-                           now.tv_sec as f64 + now.tv_nsec as f64 / NANOS_PER_SEC);
+                    Duration::from_millis(0)
                 }
             }
         }
@@ -275,13 +276,25 @@ impl Instant {
 }
 
 #[cfg(all(feature="nightly", target_os="linux"))]
-fn get_time(clock: clock_t) -> timespec {
-    let mut t = timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    assert_eq!(unsafe { clock_gettime(clock as _, &mut t) }, 0);
-    t
+use self::coarse::*;
+
+#[cfg(all(feature="nightly", target_os="linux"))]
+mod coarse {
+    use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
+
+    pub use libc::timespec;
+
+    pub const NANOS_PER_MILLI: i64 = 1_000_000;
+    pub const MILLIS_PER_SEC: i64 = 1_000;
+
+    pub fn get_time_coarse() -> timespec {
+        let mut t = timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        assert_eq!(unsafe { clock_gettime(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
+        t
+    }
 }
 
 /// `HistogramTimer` represents an event being timed. When the timer goes out of
@@ -740,6 +753,21 @@ mod tests {
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
         assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
+    }
+
+    #[test]
+    #[cfg(feature="nightly")]
+    fn test_instant_on_smp() {
+        let zero = Duration::from_millis(0);
+        for i in 0..100_000 {
+            let now = Instant::now();
+            let now_coarse = Instant::now_coarse();
+            if i % 100 == 0 {
+                thread::yield_now();
+            }
+            assert!(now.elapsed() >= zero);
+            assert!(now_coarse.elapsed() >= zero);
+        }
     }
 
     #[test]
