@@ -265,12 +265,10 @@ impl Instant {
                 let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
                 let t_ms = t.tv_sec * MILLIS_PER_SEC + t.tv_nsec / NANOS_PER_MILLI;
                 let dur = now_ms - t_ms;
-                if dur >= -*CORASE_ERROR {
-                    Duration::from_millis(if dur > 0 { dur as u64 } else { 0 })
+                if dur >= 0 {
+                    Duration::from_millis(dur as u64)
                 } else {
-                    panic!("system time jumped back, {:.3} -> {:.3}",
-                           t.tv_sec as f64 + t.tv_nsec as f64 / NANOS_PER_SEC as f64,
-                           now.tv_sec as f64 + now.tv_nsec as f64 / NANOS_PER_SEC as f64);
+                    Duration::from_millis(0)
                 }
             }
         }
@@ -282,11 +280,10 @@ use self::coarse::*;
 
 #[cfg(all(feature="nightly", target_os="linux"))]
 mod coarse {
-    use libc::{clock_gettime, clock_getres, CLOCK_MONOTONIC_COARSE};
+    use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
 
     pub use libc::timespec;
 
-    pub const NANOS_PER_SEC: f64 = 1_000_000_000.0;
     pub const NANOS_PER_MILLI: i64 = 1_000_000;
     pub const MILLIS_PER_SEC: i64 = 1_000;
 
@@ -297,17 +294,6 @@ mod coarse {
         };
         assert_eq!(unsafe { clock_gettime(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
         t
-    }
-
-    lazy_static! {
-        pub static ref CORASE_ERROR: i64 = {
-            let mut t = timespec {
-                tv_sec: 0,
-                tv_nsec: 0,
-            };
-            assert_eq!(unsafe { clock_getres(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
-            t.tv_nsec / NANOS_PER_MILLI
-        };
     }
 }
 
@@ -772,14 +758,15 @@ mod tests {
     #[test]
     #[cfg(feature="nightly")]
     fn test_instant_on_smp() {
+        let zero = Duration::from_millis(0);
         for i in 0..100_000 {
             let now = Instant::now();
             let now_coarse = Instant::now_coarse();
             if i % 100 == 0 {
                 thread::yield_now();
             }
-            now.elapsed();
-            now_coarse.elapsed();
+            assert!(now.elapsed() >= zero);
+            assert!(now_coarse.elapsed() >= zero);
         }
     }
 
