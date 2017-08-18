@@ -194,9 +194,7 @@ fn open_fds(pid: pid_t) -> Result<usize> {
 //  * pat: "btime"
 //
 // then it returns `Ok(1477460662.0)`
-//
-// pub for tests.
-pub fn find_statistic(all: &str, pat: &str) -> Result<f64> {
+fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     if let Some(idx) = all.find(pat) {
         let mut iter = (all[idx + pat.len()..]).split_whitespace();
         if let Some(v) = iter.next() {
