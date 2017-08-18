@@ -24,6 +24,7 @@ use atomic64::AtomicF64;
 pub enum ValueType {
     Counter,
     Gauge,
+    #[allow(dead_code)]
     Untyped,
 }
 

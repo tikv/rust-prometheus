@@ -42,10 +42,6 @@ struct MetricVecCore<T: MetricVecBuilder> {
 }
 
 impl<T: MetricVecBuilder> MetricVecCore<T> {
-    pub fn desc(&self) -> &Desc {
-        &self.desc
-    }
-
     pub fn collect(&self) -> MetricFamily {
         let mut m = MetricFamily::new();
         m.set_name(self.desc.fq_name.clone());
