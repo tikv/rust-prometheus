@@ -14,18 +14,16 @@
 
 use protobuf::RepeatedField;
 
-use proto::{LabelPair, Metric, Counter, Gauge, Untyped, MetricFamily, MetricType};
+use proto::{LabelPair, Metric, Counter, Gauge, MetricFamily, MetricType};
 use desc::{Describer, Desc};
 use errors::{Result, Error};
 use atomic64::AtomicF64;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
-/// for `Counter`, `Gauge`, and `Untyped`.
+/// for `Counter` and `Gauge`.
 pub enum ValueType {
     Counter,
     Gauge,
-    #[allow(dead_code)]
-    Untyped,
 }
 
 impl ValueType {
@@ -34,7 +32,6 @@ impl ValueType {
         match *self {
             ValueType::Counter => MetricType::COUNTER,
             ValueType::Gauge => MetricType::GAUGE,
-            ValueType::Untyped => MetricType::UNTYPED,
         }
     }
 }
@@ -117,11 +114,6 @@ impl Value {
                 let mut gauge = Gauge::new();
                 gauge.set_value(val);
                 m.set_gauge(gauge);
-            }
-            ValueType::Untyped => {
-                let mut untyped = Untyped::new();
-                untyped.set_value(val);
-                m.set_untyped(untyped);
             }
         }
 
