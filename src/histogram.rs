@@ -48,7 +48,7 @@ fn check_bucket_lable(label: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
+fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
     if buckets.is_empty() {
         buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
     }
@@ -521,7 +521,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 
 /// `duration_to_seconds` converts Duration to seconds.
 #[inline]
-pub fn duration_to_seconds(d: Duration) -> f64 {
+fn duration_to_seconds(d: Duration) -> f64 {
     let nanos = d.subsec_nanos() as f64 / 1e9;
     d.as_secs() as f64 + nanos
 }

@@ -56,13 +56,13 @@ impl Gauge {
     /// `inc` increments the gauge by 1.
     #[inline]
     pub fn inc(&self) {
-        self.add(1.0);
+        self.v.inc();
     }
 
     /// `dec` decrements the gauge by 1.
     #[inline]
     pub fn dec(&self) {
-        self.sub(1.0);
+        self.v.dec();
     }
 
     /// `add` adds the given value to the gauge. (The value can be

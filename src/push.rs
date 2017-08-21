@@ -70,8 +70,7 @@ pub fn push_add_metrics(job: &str,
     push(job, grouping, url, mfs, "POST")
 }
 
-// pub for tests
-pub const LABEL_NAME_JOB: &'static str = "job";
+const LABEL_NAME_JOB: &'static str = "job";
 
 fn push(job: &str,
         grouping: HashMap<String, String>,
@@ -186,8 +185,7 @@ pub fn push_add_collector(job: &str,
     push_from_collector(job, grouping, url, collectors, "POST")
 }
 
-// pub for tests
-pub const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("instance", "unknown");
+const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("instance", "unknown");
 
 /// `hostname_grouping_key` returns a label map with the only entry
 /// {instance="<hostname>"}. This can be conveniently used as the grouping
