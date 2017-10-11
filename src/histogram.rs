@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Instant as StdInstant, Duration};
 use std::cell::RefCell;
-use std::rc::Rc;
 
 use proto;
 use protobuf::RepeatedField;
@@ -522,10 +521,11 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 /// `duration_to_seconds` converts Duration to seconds.
 #[inline]
 fn duration_to_seconds(d: Duration) -> f64 {
-    let nanos = d.subsec_nanos() as f64 / 1e9;
+    let nanos = f64::from(d.subsec_nanos()) / 1e9;
     d.as_secs() as f64 + nanos
 }
 
+#[derive(Clone)]
 pub struct LocalHistogramCore {
     histogram: Histogram,
     counts: Vec<u64>,
@@ -538,7 +538,7 @@ pub struct LocalHistogramCore {
 /// and then flush the metric interval.
 #[derive(Clone)]
 pub struct LocalHistogram {
-    core: Rc<RefCell<LocalHistogramCore>>,
+    core: RefCell<LocalHistogramCore>,
 }
 
 pub struct LocalHistogramTimer {
@@ -629,7 +629,7 @@ impl LocalHistogramCore {
 impl LocalHistogram {
     fn new(histogram: Histogram) -> LocalHistogram {
         let core = LocalHistogramCore::new(histogram);
-        LocalHistogram { core: Rc::new(RefCell::new(core)) }
+        LocalHistogram { core: RefCell::new(core) }
     }
 
     /// `observe` adds a single observation to the `Histogram`.
