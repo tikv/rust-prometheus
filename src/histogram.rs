@@ -521,7 +521,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 /// `duration_to_seconds` converts Duration to seconds.
 #[inline]
 fn duration_to_seconds(d: Duration) -> f64 {
-    let nanos = d.subsec_nanos() as f64 / 1e9;
+    let nanos = f64::from(d.subsec_nanos()) / 1e9;
     d.as_secs() as f64 + nanos
 }
 
