@@ -71,7 +71,7 @@ mod rwlock {
 #[cfg(feature = "nightly")]
 mod atomic {
     use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
-    use std::mem::transmute;
+    use std::f64;
 
     pub struct AtomicF64 {
         inner: StdAtomicU64,
@@ -107,11 +107,11 @@ mod atomic {
     }
 
     fn u64_to_f64(val: u64) -> f64 {
-        unsafe { transmute(val) }
+        f64::from_bits(val)
     }
 
     fn f64_to_u64(val: f64) -> u64 {
-        unsafe { transmute(val) }
+        f64::to_bits(val)
     }
 
     pub struct AtomicU64 {
