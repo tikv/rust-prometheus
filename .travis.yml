@@ -8,6 +8,7 @@ os:
 rust:
   # TODO: pick an oldest supported release
   - stable
+  - beta
   - nightly
 
 addons:
@@ -19,29 +20,24 @@ env:
   global:
     - RUSTFLAGS=--deny=warnings
     - FEATURES="push process"
+    - ARCH=i686
 
 script:
+  # Test common features.
   - cargo test --features="$FEATURES"
-
-matrix:
-  include:
-  - rust: nightly
-    script:
-      # Use latest clippy
-      - cargo update -p clippy
-      # Enable dev for clippy linting.
-      - FEATURES="$FEATURES dev" cargo test --features="$FEATURES"
-      # Lint nightly feature
-      - FEATURES="$FEATURES dev nightly" cargo test --features="$FEATURES"
-
-  # Test 32-bit versions. rust-prometheus only supports stable rust on 32-bit platforms.
-  - rust: stable
-    os: linux
-    script:
-      - export ARCH=i686
-      - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
-  - rust: stable
-    os: osx
-    script:
-      - export ARCH=i686
-      - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
+  - |
+    if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
+        # Use latest clippy.
+        cargo update -p clippy;
+        # Enable dev for clippy linting.
+        cargo test --features="$FEATURES dev";
+        # Lint nightly feature.
+        cargo test --features="$FEATURES nightly dev";
+    fi
+  - |
+    if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
+        # Clean up.
+        cargo clean;
+        # Test 32-bit versions. rust-prometheus only supports stable rust on 32-bit platforms.
+        curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash;
+    fi
