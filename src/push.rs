@@ -14,6 +14,7 @@
 
 use std::str::{self, FromStr};
 use std::collections::HashMap;
+use std::hash::BuildHasher;
 
 use hyper::client::Client;
 use hyper::client::pool::Config;
@@ -51,33 +52,33 @@ lazy_static!{
 /// Note that all previously pushed metrics with the same job and other grouping
 /// labels will be replaced with the metrics pushed by this call. (It uses HTTP
 /// method 'PUT' to push to the Pushgateway.)
-pub fn push_metrics(job: &str,
-                    grouping: HashMap<String, String>,
-                    url: &str,
-                    mfs: Vec<proto::MetricFamily>)
-                    -> Result<()> {
+pub fn push_metrics<S: BuildHasher>(job: &str,
+                                    grouping: HashMap<String, String, S>,
+                                    url: &str,
+                                    mfs: Vec<proto::MetricFamily>)
+                                    -> Result<()> {
     push(job, grouping, url, mfs, "PUT")
 }
 
 /// `push_add_metrics` works like `push_metrics`, but only previously pushed
 /// metrics with the same name (and the same job and other grouping labels) will
 /// be replaced. (It uses HTTP method 'POST' to push to the Pushgateway.)
-pub fn push_add_metrics(job: &str,
-                        grouping: HashMap<String, String>,
-                        url: &str,
-                        mfs: Vec<proto::MetricFamily>)
-                        -> Result<()> {
+pub fn push_add_metrics<S: BuildHasher>(job: &str,
+                                        grouping: HashMap<String, String, S>,
+                                        url: &str,
+                                        mfs: Vec<proto::MetricFamily>)
+                                        -> Result<()> {
     push(job, grouping, url, mfs, "POST")
 }
 
 const LABEL_NAME_JOB: &'static str = "job";
 
-fn push(job: &str,
-        grouping: HashMap<String, String>,
-        url: &str,
-        mfs: Vec<proto::MetricFamily>,
-        method: &str)
-        -> Result<()> {
+fn push<S: BuildHasher>(job: &str,
+                        grouping: HashMap<String, String, S>,
+                        url: &str,
+                        mfs: Vec<proto::MetricFamily>,
+                        method: &str)
+                        -> Result<()> {
 
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -150,12 +151,12 @@ fn push(job: &str,
     }
 }
 
-fn push_from_collector(job: &str,
-                       grouping: HashMap<String, String>,
-                       url: &str,
-                       collectors: Vec<Box<Collector>>,
-                       method: &str)
-                       -> Result<()> {
+fn push_from_collector<S: BuildHasher>(job: &str,
+                                       grouping: HashMap<String, String, S>,
+                                       url: &str,
+                                       collectors: Vec<Box<Collector>>,
+                                       method: &str)
+                                       -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
         try!(registry.register(bc));
@@ -167,21 +168,21 @@ fn push_from_collector(job: &str,
 
 /// `push_collector` push metrics collected from the provided collectors. It is
 /// a convenient way to push only a few metrics.
-pub fn push_collector(job: &str,
-                      grouping: HashMap<String, String>,
-                      url: &str,
-                      collectors: Vec<Box<Collector>>)
-                      -> Result<()> {
+pub fn push_collector<S: BuildHasher>(job: &str,
+                                      grouping: HashMap<String, String, S>,
+                                      url: &str,
+                                      collectors: Vec<Box<Collector>>)
+                                      -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "PUT")
 }
 
 /// `push_add_collector` works like `push_add_metrics`, it collects from the
 /// provided collectors. It is a convenient way to push only a few metrics.
-pub fn push_add_collector(job: &str,
-                          grouping: HashMap<String, String>,
-                          url: &str,
-                          collectors: Vec<Box<Collector>>)
-                          -> Result<()> {
+pub fn push_add_collector<S: BuildHasher>(job: &str,
+                                          grouping: HashMap<String, String, S>,
+                                          url: &str,
+                                          collectors: Vec<Box<Collector>>)
+                                          -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "POST")
 }
 
