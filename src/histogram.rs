@@ -12,27 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::convert::From;
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::time::{Instant as StdInstant, Duration};
-use std::cell::RefCell;
+use atomic64::{AtomicF64, AtomicU64};
+use desc::{Desc, Describer};
+use errors::{Error, Result};
+use metrics::{Collector, Metric, Opts};
 
 use proto;
 use protobuf::RepeatedField;
-use desc::{Desc, Describer};
-use errors::{Result, Error};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::convert::From;
+use std::sync::Arc;
+use std::time::{Duration, Instant as StdInstant};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
-use metrics::{Collector, Metric, Opts};
-use atomic64::{AtomicU64, AtomicF64};
 
 /// `DEFAULT_BUCKETS` are the default Histogram buckets. The default buckets are
 /// tailored to broadly measure the response time (in seconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
-pub const DEFAULT_BUCKETS: &'static [f64; 11] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
-                                                  2.5, 5.0, 10.0];
+pub const DEFAULT_BUCKETS: &'static [f64; 11] = &[
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
+];
 
 /// `BUCKET_LABEL` is used for the label that defines the upper bound of a
 /// bucket of a histogram ("le" -> "less or equal").
@@ -41,7 +52,9 @@ pub const BUCKET_LABEL: &'static str = "le";
 #[inline]
 fn check_bucket_lable(label: &str) -> Result<()> {
     if label == BUCKET_LABEL {
-        return Err(Error::Msg("`le` is not allowed as label name in histograms".to_owned()));
+        return Err(Error::Msg(
+            "`le` is not allowed as label name in histograms".to_owned(),
+        ));
     }
 
     Ok(())
@@ -54,10 +67,12 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
 
     for (i, upper_bound) in buckets.iter().enumerate() {
         if i < (buckets.len() - 1) && *upper_bound >= buckets[i + 1] {
-            return Err(Error::Msg(format!("histogram buckets must be in increasing \
-                                            order: {} >= {}",
-                                          upper_bound,
-                                          buckets[i + 1])));
+            return Err(Error::Msg(format!(
+                "histogram buckets must be in increasing \
+                 order: {} >= {}",
+                upper_bound,
+                buckets[i + 1]
+            )));
         }
     }
 
@@ -170,17 +185,17 @@ pub struct HistogramCore {
 
 impl HistogramCore {
     pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore> {
-        let desc = try!(opts.describe());
+        let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
-            try!(check_bucket_lable(name));
+            check_bucket_lable(name)?;
         }
         for pair in &desc.const_label_pairs {
-            try!(check_bucket_lable(pair.get_name()));
+            check_bucket_lable(pair.get_name())?;
         }
         let pairs = make_label_pairs(&desc, label_values);
 
-        let buckets = try!(check_and_adjust_buckets(opts.buckets.clone()));
+        let buckets = check_and_adjust_buckets(opts.buckets.clone())?;
 
         let mut counts = Vec::new();
         for _ in 0..buckets.len() {
@@ -199,7 +214,10 @@ impl HistogramCore {
 
     pub fn observe(&self, v: f64) {
         // Try find the bucket.
-        let mut iter = self.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
+        let mut iter = self.upper_bounds
+            .iter()
+            .enumerate()
+            .filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
             self.counts[i].inc_by(1);
         }
@@ -230,7 +248,7 @@ impl HistogramCore {
 
 enum Instant {
     Monotonic(StdInstant),
-    #[cfg(all(feature="nightly", target_os="linux"))]
+    #[cfg(all(feature = "nightly", target_os = "linux"))]
     MonotonicCoarse(timespec),
 }
 
@@ -239,12 +257,12 @@ impl Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
-    #[cfg(all(feature="nightly", target_os="linux"))]
+    #[cfg(all(feature = "nightly", target_os = "linux"))]
     fn now_coarse() -> Instant {
         Instant::MonotonicCoarse(get_time_coarse())
     }
 
-    #[cfg(all(feature="nightly", not(target_os="linux")))]
+    #[cfg(all(feature = "nightly", not(target_os = "linux")))]
     fn now_coarse() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
@@ -258,7 +276,7 @@ impl Instant {
             // and therefore the timer registers are typically running at an offset.
             // Use millisecond resolution for ignoring the error.
             // See more: https://linux.die.net/man/2/clock_gettime
-            #[cfg(all(feature="nightly", target_os="linux"))]
+            #[cfg(all(feature = "nightly", target_os = "linux"))]
             Instant::MonotonicCoarse(t) => {
                 let now = get_time_coarse();
                 let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
@@ -274,10 +292,10 @@ impl Instant {
     }
 }
 
-#[cfg(all(feature="nightly", target_os="linux"))]
+#[cfg(all(feature = "nightly", target_os = "linux"))]
 use self::coarse::*;
 
-#[cfg(all(feature="nightly", target_os="linux"))]
+#[cfg(all(feature = "nightly", target_os = "linux"))]
 mod coarse {
     use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
 
@@ -314,7 +332,7 @@ impl HistogramTimer {
         }
     }
 
-    #[cfg(feature="nightly")]
+    #[cfg(feature = "nightly")]
     fn new_coarse(histogram: Histogram) -> HistogramTimer {
         HistogramTimer {
             histogram: histogram,
@@ -364,12 +382,15 @@ impl Histogram {
         Histogram::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &HistogramOpts,
-                                  label_values: &[&str])
-                                  -> Result<Histogram> {
-        let core = try!(HistogramCore::new(opts, label_values));
+    fn with_opts_and_label_values(
+        opts: &HistogramOpts,
+        label_values: &[&str],
+    ) -> Result<Histogram> {
+        let core = HistogramCore::new(opts, label_values)?;
 
-        Ok(Histogram { core: Arc::new(core) })
+        Ok(Histogram {
+            core: Arc::new(core),
+        })
     }
 }
 
@@ -386,7 +407,7 @@ impl Histogram {
 
     /// `start_coarse_timer` returns a `HistogramTimer` to track a duration,
     /// it is faster but less precise.
-    #[cfg(feature="nightly")]
+    #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> HistogramTimer {
         HistogramTimer::new_coarse(self.clone())
     }
@@ -452,7 +473,7 @@ impl HistogramVec {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec =
-            try!(MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts));
+            MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
 
         Ok(metric_vec as HistogramVec)
     }
@@ -467,11 +488,16 @@ impl HistogramVec {
 /// negative.
 pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> {
     if count < 1 {
-        return Err(Error::Msg(format!("LinearBuckets needs a positive count, count: {}", count)));
+        return Err(Error::Msg(format!(
+            "LinearBuckets needs a positive count, count: {}",
+            count
+        )));
     }
     if width <= 0.0 {
-        return Err(Error::Msg(format!("LinearBuckets needs a width greater then 0, width: {}",
-                                      width)));
+        return Err(Error::Msg(format!(
+            "LinearBuckets needs a width greater then 0, width: {}",
+            width
+        )));
     }
 
     let mut next = start;
@@ -494,18 +520,24 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
 /// negative, or if `factor` is less than or equal 1.
 pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<f64>> {
     if count < 1 {
-        return Err(Error::Msg(format!("exponential_buckets needs a positive count, count: {}",
-                                      count)));
+        return Err(Error::Msg(format!(
+            "exponential_buckets needs a positive count, count: {}",
+            count
+        )));
     }
     if start <= 0.0 {
-        return Err(Error::Msg(format!("exponential_buckets needs a positive start value, \
-                                       start: {}",
-                                      start)));
+        return Err(Error::Msg(format!(
+            "exponential_buckets needs a positive start value, \
+             start: {}",
+            start
+        )));
     }
     if factor <= 1.0 {
-        return Err(Error::Msg(format!("exponential_buckets needs a factor greater than 1, \
-                                       factor: {}",
-                                      factor)));
+        return Err(Error::Msg(format!(
+            "exponential_buckets needs a factor greater than 1, \
+             factor: {}",
+            factor
+        )));
     }
 
     let mut next = start;
@@ -572,7 +604,7 @@ impl Drop for LocalHistogramTimer {
 
 impl LocalHistogramCore {
     fn new(histogram: Histogram) -> LocalHistogramCore {
-        let counts = vec![0;histogram.core.counts.len()];
+        let counts = vec![0; histogram.core.counts.len()];
 
         LocalHistogramCore {
             histogram: histogram,
@@ -584,8 +616,12 @@ impl LocalHistogramCore {
 
     pub fn observe(&mut self, v: f64) {
         // Try find the bucket.
-        let mut iter =
-            self.histogram.core.upper_bounds.iter().enumerate().filter(|&(_, f)| v <= *f);
+        let mut iter = self.histogram
+            .core
+            .upper_bounds
+            .iter()
+            .enumerate()
+            .filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
             self.counts[i] += 1;
         }
@@ -629,7 +665,9 @@ impl LocalHistogramCore {
 impl LocalHistogram {
     fn new(histogram: Histogram) -> LocalHistogram {
         let core = LocalHistogramCore::new(histogram);
-        LocalHistogram { core: RefCell::new(core) }
+        LocalHistogram {
+            core: RefCell::new(core),
+        }
     }
 
     /// `observe` adds a single observation to the `Histogram`.
@@ -647,7 +685,7 @@ impl LocalHistogram {
 
     /// `start_coarse_timer` returns a `LocalHistogramTimer` to track a duration.
     /// it is faster but less precise.
-    #[cfg(feature="nightly")]
+    #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
         LocalHistogramTimer {
             local: self.clone(),
@@ -674,14 +712,14 @@ impl Drop for LocalHistogram {
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
-    use std::f64::{EPSILON, INFINITY};
-    use std::time::Duration;
+
+    use super::*;
 
     use metrics::Collector;
     use metrics::Metric;
-
-    use super::*;
+    use std::f64::{EPSILON, INFINITY};
+    use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn test_histogram() {
@@ -729,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature="nightly")]
+    #[cfg(feature = "nightly")]
     fn test_histogram_coarse_timer() {
         let opts = HistogramOpts::new("test1", "test help");
         let histogram = Histogram::with_opts(opts).unwrap();
@@ -756,7 +794,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature="nightly")]
+    #[cfg(feature = "nightly")]
     fn test_instant_on_smp() {
         let zero = Duration::from_millis(0);
         for i in 0..100_000 {
@@ -791,7 +829,13 @@ mod tests {
     #[test]
     fn test_buckets_functions() {
         let linear_table = vec![
-            (-15.0, 5.0, 6, true, vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0]),
+            (
+                -15.0,
+                5.0,
+                6,
+                true,
+                vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0],
+            ),
             (-15.0, 0.0, 6, false, vec![]),
             (-15.0, 5.0, 0, false, vec![]),
         ];
@@ -831,10 +875,10 @@ mod tests {
 
     #[test]
     fn test_histogram_vec_with_label_values() {
-        let vec = HistogramVec::new(HistogramOpts::new("test_histogram_vec",
-                                                       "test histogram vec help"),
-                                    &["l1", "l2"])
-            .unwrap();
+        let vec = HistogramVec::new(
+            HistogramOpts::new("test_histogram_vec", "test histogram vec help"),
+            &["l1", "l2"],
+        ).unwrap();
 
         assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).observe(1.0);
@@ -848,11 +892,11 @@ mod tests {
     fn test_histogram_vec_with_opts_buckets() {
         let labels = ["l1", "l2"];
         let buckets = vec![1.0, 2.0, 3.0];
-        let vec = HistogramVec::new(HistogramOpts::new("test_histogram_vec",
-                                                       "test histogram vec help")
-                                        .buckets(buckets.clone()),
-                                    &labels)
-            .unwrap();
+        let vec = HistogramVec::new(
+            HistogramOpts::new("test_histogram_vec", "test histogram vec help")
+                .buckets(buckets.clone()),
+            &labels,
+        ).unwrap();
 
         let histogram = vec.with_label_values(&["v1", "v2"]);
         histogram.observe(1.0);

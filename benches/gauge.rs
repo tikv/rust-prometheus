@@ -11,15 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use test::Bencher;
 
-use prometheus::{Opts, Gauge, GaugeVec};
+use prometheus::{Gauge, GaugeVec, Opts};
+use test::Bencher;
 
 #[bench]
 fn bench_gauge_with_label_values(b: &mut Bencher) {
-    let gauge = GaugeVec::new(Opts::new("benchmark_gauge", "A gauge to benchmark it."),
-                              &["one", "two", "three"])
-        .unwrap();
+    let gauge = GaugeVec::new(
+        Opts::new("benchmark_gauge", "A gauge to benchmark it."),
+        &["one", "two", "three"],
+    ).unwrap();
     b.iter(|| gauge.with_label_values(&["eins", "zwei", "drei"]).inc())
 }
 

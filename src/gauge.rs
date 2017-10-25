@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-
-use proto;
 use desc::Desc;
 use errors::Result;
+use metrics::{Collector, Metric, Opts};
+
+use proto;
+use std::sync::Arc;
 use value::{Value, ValueType};
-use metrics::{Opts, Collector, Metric};
 use vec::{MetricVec, MetricVecBuilder};
 
 /// `Gauge` is a Metric that represents a single numerical value that can
@@ -41,7 +41,7 @@ impl Gauge {
     }
 
     fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Gauge> {
-        let v = try!(Value::new(opts, ValueType::Gauge, 0.0, label_values));
+        let v = Value::new(opts, ValueType::Gauge, 0.0, label_values)?;
         Ok(Gauge { v: Arc::new(v) })
     }
 }
@@ -127,8 +127,7 @@ impl GaugeVec {
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec =
-            try!(MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder {}, opts));
+        let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder {}, opts)?;
 
         Ok(metric_vec as GaugeVec)
     }
@@ -136,15 +135,17 @@ impl GaugeVec {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use metrics::{Opts, Collector};
 
     use super::*;
 
+    use metrics::{Collector, Opts};
+    use std::collections::HashMap;
+
     #[test]
     fn test_gauge() {
-        let opts = Opts::new("test", "test help").const_label("a", "1").const_label("b", "2");
+        let opts = Opts::new("test", "test help")
+            .const_label("a", "1")
+            .const_label("b", "2");
         let gauge = Gauge::with_opts(opts).unwrap();
         gauge.inc();
         assert_eq!(gauge.get() as u64, 1);
@@ -168,9 +169,10 @@ mod tests {
 
     #[test]
     fn test_gauge_vec_with_labels() {
-        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
-                                &["l1", "l2"])
-            .unwrap();
+        let vec = GaugeVec::new(
+            Opts::new("test_gauge_vec", "test gauge vec help"),
+            &["l1", "l2"],
+        ).unwrap();
 
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
@@ -189,9 +191,10 @@ mod tests {
 
     #[test]
     fn test_gauge_vec_with_label_values() {
-        let vec = GaugeVec::new(Opts::new("test_gauge_vec", "test gauge vec help"),
-                                &["l1", "l2"])
-            .unwrap();
+        let vec = GaugeVec::new(
+            Opts::new("test_gauge_vec", "test gauge vec help"),
+            &["l1", "l2"],
+        ).unwrap();
 
         assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).inc();

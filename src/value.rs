@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use protobuf::RepeatedField;
-
-use proto::{LabelPair, Metric, Counter, Gauge, MetricFamily, MetricType};
-use desc::{Describer, Desc};
-use errors::{Result, Error};
 use atomic64::AtomicF64;
+use desc::{Desc, Describer};
+use errors::{Error, Result};
+
+use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
+use protobuf::RepeatedField;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for `Counter` and `Gauge`.
@@ -48,15 +48,18 @@ pub struct Value {
 }
 
 impl Value {
-    pub fn new<D: Describer>(describer: &D,
-                             value_type: ValueType,
-                             val: f64,
-                             label_values: &[&str])
-                             -> Result<Value> {
-        let desc = try!(describer.describe());
+    pub fn new<D: Describer>(
+        describer: &D,
+        value_type: ValueType,
+        val: f64,
+        label_values: &[&str],
+    ) -> Result<Value> {
+        let desc = describer.describe()?;
         if desc.variable_labels.len() != label_values.len() {
-            return Err(Error::InconsistentCardinality(desc.variable_labels.len(),
-                                                      label_values.len()));
+            return Err(Error::InconsistentCardinality(
+                desc.variable_labels.len(),
+                label_values.len(),
+            ));
         }
 
         let label_pairs = make_label_pairs(&desc, label_values);

@@ -15,22 +15,22 @@
 //!
 //! This module only supports **Linux** platform.
 
-use std::fs;
-use std::io::Read;
-use std::sync::Mutex;
+use counter::Counter;
+use desc::Desc;
+use errors::{Error, Result};
+use gauge::Gauge;
 
 use libc;
-use procinfo::pid as pid_info;
-
-use proto;
-use desc::Desc;
-use metrics::{Opts, Collector};
-use counter::Counter;
-use gauge::Gauge;
-use errors::{Error, Result};
 
 /// The `pid_t` data type represents process IDs.
 pub use libc::pid_t;
+use metrics::{Collector, Opts};
+use procinfo::pid as pid_info;
+
+use proto;
+use std::fs;
+use std::io::Read;
+use std::sync::Mutex;
 
 // Six metrics per ProcessCollector.
 const MERTICS_NUMBER: usize = 6;
@@ -55,42 +55,52 @@ impl ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
 
-        let cpu_total = Counter::with_opts(Opts::new("process_cpu_seconds_total",
-                                                     "Total user and system CPU time spent in \
-                                                      seconds.")
-                .namespace(namespace.clone()))
-            .unwrap();
+        let cpu_total = Counter::with_opts(
+            Opts::new(
+                "process_cpu_seconds_total",
+                "Total user and system CPU time spent in \
+                 seconds.",
+            ).namespace(namespace.clone()),
+        ).unwrap();
         descs.extend(cpu_total.desc().into_iter().cloned());
 
-        let open_fds = Gauge::with_opts(Opts::new("process_open_fds",
-                                                  "Number of open file descriptors.")
-                .namespace(namespace.clone()))
-            .unwrap();
+        let open_fds = Gauge::with_opts(
+            Opts::new("process_open_fds", "Number of open file descriptors.")
+                .namespace(namespace.clone()),
+        ).unwrap();
         descs.extend(open_fds.desc().into_iter().cloned());
 
-        let max_fds = Gauge::with_opts(Opts::new("process_max_fds",
-                                                 "Maximum number of open file descriptors.")
-                .namespace(namespace.clone()))
-            .unwrap();
+        let max_fds = Gauge::with_opts(
+            Opts::new(
+                "process_max_fds",
+                "Maximum number of open file descriptors.",
+            ).namespace(namespace.clone()),
+        ).unwrap();
         descs.extend(max_fds.desc().into_iter().cloned());
 
-        let vsize = Gauge::with_opts(Opts::new("process_virtual_memory_bytes",
-                                               "Virtual memory size in bytes.")
-                .namespace(namespace.clone()))
-            .unwrap();
+        let vsize = Gauge::with_opts(
+            Opts::new(
+                "process_virtual_memory_bytes",
+                "Virtual memory size in bytes.",
+            ).namespace(namespace.clone()),
+        ).unwrap();
         descs.extend(vsize.desc().into_iter().cloned());
 
-        let rss = Gauge::with_opts(Opts::new("process_resident_memory_bytes",
-                                             "Resident memory size in bytes.")
-                .namespace(namespace.clone()))
-            .unwrap();
+        let rss = Gauge::with_opts(
+            Opts::new(
+                "process_resident_memory_bytes",
+                "Resident memory size in bytes.",
+            ).namespace(namespace.clone()),
+        ).unwrap();
         descs.extend(rss.desc().into_iter().cloned());
 
-        let start_time = Gauge::with_opts(Opts::new("process_start_time_seconds",
-                                                    "Start time of the process since unix epoch \
-                                                     in seconds.")
-                .namespace(namespace.clone()))
-            .unwrap();
+        let start_time = Gauge::with_opts(
+            Opts::new(
+                "process_start_time_seconds",
+                "Start time of the process since unix epoch \
+                 in seconds.",
+            ).namespace(namespace.clone()),
+        ).unwrap();
         descs.extend(start_time.desc().into_iter().cloned());
 
         ProcessCollector {
@@ -136,7 +146,8 @@ impl Collector for ProcessCollector {
 
         // proc_start_time
         if let (&Ok(ref stat), Some(boot_time)) = (&pid_stat, *BOOT_TIME) {
-            self.start_time.set(stat.start_time as f64 / *CLK_TCK + boot_time);
+            self.start_time
+                .set(stat.start_time as f64 / *CLK_TCK + boot_time);
         }
 
         // cpu
@@ -168,9 +179,9 @@ impl Collector for ProcessCollector {
 
 fn open_fds(pid: pid_t) -> Result<usize> {
     let path = format!("/proc/{}/fd", pid);
-    try!(fs::read_dir(path)).fold(Ok(0), |acc, i| {
-        let mut acc = try!(acc);
-        let ty = try!(try!(i).file_type());
+    fs::read_dir(path)?.fold(Ok(0), |acc, i| {
+        let mut acc = acc?;
+        let ty = i?.file_type()?;
         if !ty.is_dir() {
             acc += 1;
         }
@@ -198,8 +209,9 @@ fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     if let Some(idx) = all.find(pat) {
         let mut iter = (all[idx + pat.len()..]).split_whitespace();
         if let Some(v) = iter.next() {
-            return v.parse()
-                .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
+            return v.parse().map_err(|e| {
+                Error::Msg(format!("read statistic {} failed: {}", pat, e))
+            });
         }
     }
 
@@ -210,8 +222,8 @@ const MAXFD_PATTERN: &'static str = "Max open files";
 
 fn max_fds(pid: pid_t) -> Result<f64> {
     let mut buffer = String::new();
-    try!(fs::File::open(&format!("/proc/{}/limits", pid))
-        .and_then(|mut f| f.read_to_string(&mut buffer)));
+    fs::File::open(&format!("/proc/{}/limits", pid))
+        .and_then(|mut f| f.read_to_string(&mut buffer))?;
 
     find_statistic(&buffer, MAXFD_PATTERN)
 }
@@ -247,12 +259,12 @@ lazy_static! {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::EPSILON;
-
-    use registry;
-    use metrics::Collector;
 
     use super::*;
+    use metrics::Collector;
+
+    use registry;
+    use std::f64::EPSILON;
 
     #[test]
     fn test_process_collector() {

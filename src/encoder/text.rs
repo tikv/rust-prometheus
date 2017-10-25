@@ -11,14 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Write;
-
-use errors::{Result, Error};
-use proto::MetricFamily;
-use proto::{self, MetricType};
-use histogram::BUCKET_LABEL;
 
 use super::Encoder;
+
+use errors::{Error, Result};
+use histogram::BUCKET_LABEL;
+use proto::{self, MetricType};
+use proto::MetricFamily;
+use std::io::Write;
 
 /// The text format of metric family.
 pub const TEXT_FORMAT: &'static str = "text/plain; version=0.0.4";
@@ -46,20 +46,20 @@ impl Encoder for TextEncoder {
 
             let help = mf.get_help();
             if !help.is_empty() {
-                try!(write!(writer, "# HELP {} {}\n", name, escape_string(help, false)));
+                write!(writer, "# HELP {} {}\n", name, escape_string(help, false))?;
             }
 
             let metric_type = mf.get_field_type();
             let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-            try!(write!(writer, "# TYPE {} {}\n", name, lowercase_type));
+            write!(writer, "# TYPE {} {}\n", name, lowercase_type)?;
 
             for m in mf.get_metric() {
                 match metric_type {
                     MetricType::COUNTER => {
-                        try!(write_sample(name, m, "", "", m.get_counter().get_value(), writer));
+                        write_sample(name, m, "", "", m.get_counter().get_value(), writer)?;
                     }
                     MetricType::GAUGE => {
-                        try!(write_sample(name, m, "", "", m.get_gauge().get_value(), writer));
+                        write_sample(name, m, "", "", m.get_gauge().get_value(), writer)?;
                     }
                     MetricType::HISTOGRAM => {
                         let h = m.get_histogram();
@@ -67,38 +67,46 @@ impl Encoder for TextEncoder {
                         let mut inf_seen = false;
                         for b in h.get_bucket() {
                             let upper_bound = b.get_upper_bound();
-                            try!(write_sample(&format!("{}_bucket", name),
-                                              m,
-                                              BUCKET_LABEL,
-                                              &format!("{}", upper_bound),
-                                              b.get_cumulative_count() as f64,
-                                              writer));
+                            write_sample(
+                                &format!("{}_bucket", name),
+                                m,
+                                BUCKET_LABEL,
+                                &format!("{}", upper_bound),
+                                b.get_cumulative_count() as f64,
+                                writer,
+                            )?;
                             if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
                                 inf_seen = true;
                             }
                         }
                         if !inf_seen {
-                            try!(write_sample(&format!("{}_bucket", name),
-                                              m,
-                                              BUCKET_LABEL,
-                                              POSITIVE_INF,
-                                              h.get_sample_count() as f64,
-                                              writer));
+                            write_sample(
+                                &format!("{}_bucket", name),
+                                m,
+                                BUCKET_LABEL,
+                                POSITIVE_INF,
+                                h.get_sample_count() as f64,
+                                writer,
+                            )?;
                         }
 
-                        try!(write_sample(&format!("{}_sum", name),
-                                          m,
-                                          "",
-                                          "",
-                                          h.get_sample_sum(),
-                                          writer));
+                        write_sample(
+                            &format!("{}_sum", name),
+                            m,
+                            "",
+                            "",
+                            h.get_sample_sum(),
+                            writer,
+                        )?;
 
-                        try!(write_sample(&format!("{}_count", name),
-                                          m,
-                                          "",
-                                          "",
-                                          h.get_sample_count() as f64,
-                                          writer));
+                        write_sample(
+                            &format!("{}_count", name),
+                            m,
+                            "",
+                            "",
+                            h.get_sample_count() as f64,
+                            writer,
+                        )?;
                     }
                     MetricType::SUMMARY | MetricType::UNTYPED => {
                         unimplemented!();
@@ -119,28 +127,31 @@ impl Encoder for TextEncoder {
 /// metric name, the metric proto message itself, optionally an additional label
 /// name and value (use empty strings if not required), and the value.
 /// The function returns the number of bytes written and any error encountered.
-fn write_sample(name: &str,
-                mc: &proto::Metric,
-                additional_label_name: &str,
-                additional_label_value: &str,
-                value: f64,
-                writer: &mut Write)
-                -> Result<()> {
-    try!(writer.write_all(name.as_bytes()));
+fn write_sample(
+    name: &str,
+    mc: &proto::Metric,
+    additional_label_name: &str,
+    additional_label_value: &str,
+    value: f64,
+    writer: &mut Write,
+) -> Result<()> {
+    writer.write_all(name.as_bytes())?;
 
-    try!(label_pairs_to_text(mc.get_label(),
-                             additional_label_name,
-                             additional_label_value,
-                             writer));
+    label_pairs_to_text(
+        mc.get_label(),
+        additional_label_name,
+        additional_label_value,
+        writer,
+    )?;
 
-    try!(write!(writer, " {}", value));
+    write!(writer, " {}", value)?;
 
     let timestamp = mc.get_timestamp_ms();
     if timestamp != 0 {
-        try!(write!(writer, " {}", timestamp));
+        write!(writer, " {}", timestamp)?;
     }
 
-    try!(writer.write_all(b"\n"));
+    writer.write_all(b"\n")?;
 
     Ok(())
 }
@@ -152,35 +163,40 @@ fn write_sample(name: &str,
 /// written. Otherwise, the label pairs are written, escaped as required by the
 /// text format, and enclosed in '{...}'. The function returns the number of
 /// bytes written and any error encountered.
-fn label_pairs_to_text(pairs: &[proto::LabelPair],
-                       additional_label_name: &str,
-                       additional_label_value: &str,
-                       writer: &mut Write)
-                       -> Result<()> {
+fn label_pairs_to_text(
+    pairs: &[proto::LabelPair],
+    additional_label_name: &str,
+    additional_label_value: &str,
+    writer: &mut Write,
+) -> Result<()> {
     if pairs.is_empty() && additional_label_name.is_empty() {
         return Ok(());
     }
 
     let mut separator = "{";
     for lp in pairs {
-        try!(write!(writer,
-                    "{}{}=\"{}\"",
-                    separator,
-                    lp.get_name(),
-                    escape_string(lp.get_value(), true)));
+        write!(
+            writer,
+            "{}{}=\"{}\"",
+            separator,
+            lp.get_name(),
+            escape_string(lp.get_value(), true)
+        )?;
 
         separator = ",";
     }
 
     if !additional_label_name.is_empty() {
-        try!(write!(writer,
-                    "{}{}=\"{}\"",
-                    separator,
-                    additional_label_name,
-                    escape_string(additional_label_value, true)));
+        write!(
+            writer,
+            "{}{}=\"{}\"",
+            separator,
+            additional_label_name,
+            escape_string(additional_label_value, true)
+        )?;
     }
 
-    try!(writer.write_all(b"}"));
+    writer.write_all(b"}")?;
 
     Ok(())
 }
@@ -211,12 +227,12 @@ fn escape_string(v: &str, include_double_quote: bool) -> String {
 
 #[cfg(test)]
 mod tests {
-    use counter::Counter;
-    use gauge::Gauge;
-    use metrics::{Opts, Collector};
-    use histogram::{Histogram, HistogramOpts};
 
     use super::*;
+    use counter::Counter;
+    use gauge::Gauge;
+    use histogram::{Histogram, HistogramOpts};
+    use metrics::{Collector, Opts};
 
     #[test]
     fn test_ecape_string() {
@@ -234,8 +250,9 @@ mod tests {
 
     #[test]
     fn test_text_encoder() {
-        let counter_opts =
-            Opts::new("test_counter", "test help").const_label("a", "1").const_label("b", "2");
+        let counter_opts = Opts::new("test_counter", "test help")
+            .const_label("a", "1")
+            .const_label("b", "2");
         let counter = Counter::with_opts(counter_opts).unwrap();
         counter.inc();
 
@@ -251,8 +268,9 @@ test_counter{a="1",b="2"} 1
 "##;
         assert_eq!(counter_ans.as_bytes(), writer.as_slice());
 
-        let gauge_opts =
-            Opts::new("test_gauge", "test help").const_label("a", "1").const_label("b", "2");
+        let gauge_opts = Opts::new("test_gauge", "test help")
+            .const_label("a", "1")
+            .const_label("b", "2");
         let gauge = Gauge::with_opts(gauge_opts).unwrap();
         gauge.inc();
         gauge.set(42.0);

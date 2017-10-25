@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::result;
-use std::io::Error as IoError;
 
 use protobuf::error::ProtobufError;
+use std::io::Error as IoError;
+use std::result;
 
 quick_error!{
     /// The error types for prometheus.

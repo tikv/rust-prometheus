@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::str::{self, FromStr};
-use std::collections::HashMap;
-use std::hash::BuildHasher;
+use encoder::{Encoder, ProtobufEncoder};
+use errors::{Error, Result};
 
 use hyper::client::Client;
 use hyper::client::pool::Config;
+use hyper::header::ContentType;
 use hyper::method::Method;
 use hyper::status::StatusCode;
-use hyper::header::ContentType;
+use metrics::Collector;
 
 use proto;
 use registry::Registry;
-use metrics::Collector;
-use errors::{Result, Error};
-use encoder::{Encoder, ProtobufEncoder};
+use std::collections::HashMap;
+use std::hash::BuildHasher;
+use std::str::{self, FromStr};
 
 const HYPER_MAX_IDLE: usize = 1;
 
@@ -52,33 +52,36 @@ lazy_static!{
 /// Note that all previously pushed metrics with the same job and other grouping
 /// labels will be replaced with the metrics pushed by this call. (It uses HTTP
 /// method 'PUT' to push to the Pushgateway.)
-pub fn push_metrics<S: BuildHasher>(job: &str,
-                                    grouping: HashMap<String, String, S>,
-                                    url: &str,
-                                    mfs: Vec<proto::MetricFamily>)
-                                    -> Result<()> {
+pub fn push_metrics<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+) -> Result<()> {
     push(job, grouping, url, mfs, "PUT")
 }
 
 /// `push_add_metrics` works like `push_metrics`, but only previously pushed
 /// metrics with the same name (and the same job and other grouping labels) will
 /// be replaced. (It uses HTTP method 'POST' to push to the Pushgateway.)
-pub fn push_add_metrics<S: BuildHasher>(job: &str,
-                                        grouping: HashMap<String, String, S>,
-                                        url: &str,
-                                        mfs: Vec<proto::MetricFamily>)
-                                        -> Result<()> {
+pub fn push_add_metrics<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+) -> Result<()> {
     push(job, grouping, url, mfs, "POST")
 }
 
 const LABEL_NAME_JOB: &'static str = "job";
 
-fn push<S: BuildHasher>(job: &str,
-                        grouping: HashMap<String, String, S>,
-                        url: &str,
-                        mfs: Vec<proto::MetricFamily>,
-                        method: &str)
-                        -> Result<()> {
+fn push<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+    method: &str,
+) -> Result<()> {
 
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -105,7 +108,11 @@ fn push<S: BuildHasher>(job: &str,
     for (ln, lv) in &grouping {
         // TODO: check label name
         if lv.contains('/') {
-            return Err(Error::Msg(format!("value of grouping label {} contains '/': {}", ln, lv)));
+            return Err(Error::Msg(format!(
+                "value of grouping label {} contains '/': {}",
+                ln,
+                lv
+            )));
         }
         url_components.push(ln.to_owned());
         url_components.push(lv.to_owned());
@@ -118,15 +125,19 @@ fn push<S: BuildHasher>(job: &str,
         for m in mf.get_metric() {
             for lp in m.get_label() {
                 if lp.get_name() == LABEL_NAME_JOB {
-                    return Err(Error::Msg(format!("pushed metric {} already contains a \
-                                                   job label",
-                                                  mf.get_name())));
+                    return Err(Error::Msg(format!(
+                        "pushed metric {} already contains a \
+                         job label",
+                        mf.get_name()
+                    )));
                 }
                 if grouping.contains_key(lp.get_name()) {
-                    return Err(Error::Msg(format!("pushed metric {} already contains \
-                                                   grouping label {}",
-                                                  mf.get_name(),
-                                                  lp.get_name())));
+                    return Err(Error::Msg(format!(
+                        "pushed metric {} already contains \
+                         grouping label {}",
+                        mf.get_name(),
+                        lp.get_name()
+                    )));
                 }
             }
         }
@@ -134,32 +145,34 @@ fn push<S: BuildHasher>(job: &str,
 
     let encoder = ProtobufEncoder::new();
     let mut buf = Vec::new();
-    try!(encoder.encode(&mfs, &mut buf));
+    encoder.encode(&mfs, &mut buf)?;
 
-    let request = HTTP_CLIENT.request(Method::from_str(method).unwrap(), &push_url)
+    let request = HTTP_CLIENT
+        .request(Method::from_str(method).unwrap(), &push_url)
         .header(ContentType(encoder.format_type().parse().unwrap()))
         .body(buf.as_slice());
 
-    let response = try!(request.send().map_err(|e| Error::Msg(format!("{}", e))));
+    let response = request.send().map_err(|e| Error::Msg(format!("{}", e)))?;
     match response.status {
         StatusCode::Accepted => Ok(()),
-        _ => {
-            Err(Error::Msg(format!("unexpected status code {} while pushing to {}",
-                                   response.status,
-                                   push_url)))
-        }
+        _ => Err(Error::Msg(format!(
+            "unexpected status code {} while pushing to {}",
+            response.status,
+            push_url
+        ))),
     }
 }
 
-fn push_from_collector<S: BuildHasher>(job: &str,
-                                       grouping: HashMap<String, String, S>,
-                                       url: &str,
-                                       collectors: Vec<Box<Collector>>,
-                                       method: &str)
-                                       -> Result<()> {
+fn push_from_collector<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    collectors: Vec<Box<Collector>>,
+    method: &str,
+) -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
-        try!(registry.register(bc));
+        registry.register(bc)?;
     }
 
     let mfs = registry.gather();
@@ -168,21 +181,23 @@ fn push_from_collector<S: BuildHasher>(job: &str,
 
 /// `push_collector` push metrics collected from the provided collectors. It is
 /// a convenient way to push only a few metrics.
-pub fn push_collector<S: BuildHasher>(job: &str,
-                                      grouping: HashMap<String, String, S>,
-                                      url: &str,
-                                      collectors: Vec<Box<Collector>>)
-                                      -> Result<()> {
+pub fn push_collector<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    collectors: Vec<Box<Collector>>,
+) -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "PUT")
 }
 
 /// `push_add_collector` works like `push_add_metrics`, it collects from the
 /// provided collectors. It is a convenient way to push only a few metrics.
-pub fn push_add_collector<S: BuildHasher>(job: &str,
-                                          grouping: HashMap<String, String, S>,
-                                          url: &str,
-                                          collectors: Vec<Box<Collector>>)
-                                          -> Result<()> {
+pub fn push_add_collector<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    collectors: Vec<Box<Collector>>,
+) -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "POST")
 }
 
@@ -204,8 +219,10 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
     let max_len = 256;
     let mut name = vec![0u8; max_len];
     match unsafe {
-        libc::gethostname(name.as_mut_ptr() as *mut libc::c_char,
-                          max_len as libc::size_t)
+        libc::gethostname(
+            name.as_mut_ptr() as *mut libc::c_char,
+            max_len as libc::size_t,
+        )
     } {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
@@ -227,12 +244,12 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
-
-    use protobuf::RepeatedField;
-    use proto;
 
     use super::*;
+    use proto;
+
+    use protobuf::RepeatedField;
+    use std::error::Error;
 
     #[test]
     fn test_hostname_grouping_key() {
@@ -242,10 +259,12 @@ mod tests {
 
     #[test]
     fn test_push_bad_label_name() {
-        let table = vec![// Error message: "pushed metric {} already contains a job label"
-                         (LABEL_NAME_JOB, "job label"),
-                         // Error message: "pushed metric {} already contains grouping label {}"
-                         (DEFAULT_GROUP_LABEL_PAIR.0, "grouping label")];
+        let table = vec![
+            // Error message: "pushed metric {} already contains a job label"
+            (LABEL_NAME_JOB, "job label"),
+            // Error message: "pushed metric {} already contains grouping label {}"
+            (DEFAULT_GROUP_LABEL_PAIR.0, "grouping label"),
+        ];
 
         for case in table {
             let mut l = proto::LabelPair::new();
