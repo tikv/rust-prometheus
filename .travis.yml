@@ -20,34 +20,22 @@ env:
   global:
     - RUSTFLAGS=--deny=warnings
     - FEATURES="push process"
-  matrix:
-    - ARCH=x86_64
     - ARCH=i686
 
-os:
-  - linux
-  - osx
-
 script:
-  # Script to test 32-bit versions.
-  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash
-  # Tests again with features enabled.
-  # TODO: This is a workaround for testing multiple features.
-  #       Bash incorrectly escapes `--features=\"$FEATURES\"` to `'--features="push' 'process"'`
-  #       See more: https://travis-ci.org/pingcap/rust-prometheus/jobs/175653505#L413
-  - curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/df450e9556b1d732399b8a56f396eec14d9d88bd/test | sed 's/\$CARGOOPTS/--features\ \"\$FEATURES\"/' | bash
-
-matrix:
-  # TODO: Figure out weridness with `ARCH` being set twice.
-  include:
-  - rust: nightly
-    script:
-      - export FEATURES="$FEATURES nightly dev"
-      # Use latest clippy
-      - cargo update -p clippy
-      - cargo test --features="$FEATURES"
-  - rust: nightly
-    script:
-      - export FEATURES="$FEATURES dev"
-      - cargo update -p clippy
-      - cargo test --features="$FEATURES"
+  # Test common features.
+  - cargo test --features="$FEATURES"
+  - |
+    if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
+        # Enable dev for clippy linting.
+        cargo test --features="$FEATURES dev";
+        # Lint nightly feature.
+        cargo test --features="$FEATURES nightly dev";
+    fi
+  - |
+    if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
+        # Clean up.
+        cargo clean;
+        # Test 32-bit versions. rust-prometheus only supports stable rust on 32-bit platforms.
+        curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash;
+    fi
