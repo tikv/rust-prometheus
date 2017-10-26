@@ -11,16 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Write;
 
 use errors::Result;
 use proto::MetricFamily;
+use std::io::Write;
 
 mod text;
 mod pb;
 
-pub use self::text::{TEXT_FORMAT, TextEncoder};
-pub use self::pb::{PROTOBUF_FORMAT, ProtobufEncoder};
+pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
+pub use self::text::{TextEncoder, TEXT_FORMAT};
 
 /// `Encoder` types encode metric families into an underlying wire protocol.
 pub trait Encoder {

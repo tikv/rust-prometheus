@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
-use std::cmp::{Ord, Ordering, Eq, PartialOrd};
 
 use desc::{Desc, Describer};
 use errors::Result;
 use proto::{self, LabelPair};
+use std::cmp::{Eq, Ord, Ordering, PartialOrd};
+use std::collections::HashMap;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -142,10 +142,12 @@ impl Opts {
 
 impl Describer for Opts {
     fn describe(&self) -> Result<Desc> {
-        Desc::new(self.fq_name(),
-                  self.help.clone(),
-                  self.variable_labels.clone(),
-                  self.const_labels.clone())
+        Desc::new(
+            self.fq_name(),
+            self.help.clone(),
+            self.variable_labels.clone(),
+            self.const_labels.clone(),
+        )
     }
 }
 
@@ -188,9 +190,9 @@ fn build_fq_name(namespace: &str, subsystem: &str, name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::{Ord, Ordering};
     use super::*;
     use proto::LabelPair;
+    use std::cmp::{Ord, Ordering};
 
     fn new_label_pair(name: &str, value: &str) -> LabelPair {
         let mut l = LabelPair::new();
@@ -217,14 +219,14 @@ mod tests {
     #[test]
     fn test_build_fq_name() {
         let tbl = vec![
-        ("a", "b", "c", "a_b_c"),
-        ("", "b", "c", "b_c"),
-        ("a", "", "c", "a_c"),
-        ("", "", "c", "c"),
-        ("a", "b", "", ""),
-        ("a", "", "", ""),
-        ("", "b", "", ""),
-        (" ", "", "", ""),
+            ("a", "b", "c", "a_b_c"),
+            ("", "b", "c", "b_c"),
+            ("a", "", "c", "a_c"),
+            ("", "", "c", "c"),
+            ("a", "b", "", ""),
+            ("a", "", "", ""),
+            ("", "b", "", ""),
+            (" ", "", "", ""),
         ];
 
         for (namespace, subsystem, name, res) in tbl {

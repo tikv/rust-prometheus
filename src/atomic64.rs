@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(not(feature = "nightly"))]
-pub use self::rwlock::{RwlockF64 as AtomicF64, RwlockU64 as AtomicU64};
 
 #[cfg(feature = "nightly")]
 pub use self::atomic::{AtomicF64, AtomicU64};
+#[cfg(not(feature = "nightly"))]
+pub use self::rwlock::{RwlockF64 as AtomicF64, RwlockU64 as AtomicU64};
 
 #[cfg(not(feature = "nightly"))]
 mod rwlock {
@@ -28,7 +28,9 @@ mod rwlock {
 
     impl RwlockF64 {
         pub fn new(val: f64) -> RwlockF64 {
-            RwlockF64 { inner: RwLock::new(val) }
+            RwlockF64 {
+                inner: RwLock::new(val),
+            }
         }
 
         #[inline]
@@ -53,7 +55,9 @@ mod rwlock {
 
     impl RwlockU64 {
         pub fn new(val: u64) -> RwlockU64 {
-            RwlockU64 { inner: RwLock::new(val) }
+            RwlockU64 {
+                inner: RwLock::new(val),
+            }
         }
 
         #[inline]
@@ -70,8 +74,8 @@ mod rwlock {
 
 #[cfg(feature = "nightly")]
 mod atomic {
-    use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
     use std::f64;
+    use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
 
     pub struct AtomicF64 {
         inner: StdAtomicU64,
@@ -79,7 +83,9 @@ mod atomic {
 
     impl AtomicF64 {
         pub fn new(val: f64) -> AtomicF64 {
-            AtomicF64 { inner: StdAtomicU64::new(f64_to_u64(val)) }
+            AtomicF64 {
+                inner: StdAtomicU64::new(f64_to_u64(val)),
+            }
         }
 
         #[inline]
@@ -120,7 +126,9 @@ mod atomic {
 
     impl AtomicU64 {
         pub fn new(val: u64) -> AtomicU64 {
-            AtomicU64 { inner: StdAtomicU64::new(val) }
+            AtomicU64 {
+                inner: StdAtomicU64::new(val),
+            }
         }
 
         #[inline]
@@ -137,10 +145,10 @@ mod atomic {
 
 #[cfg(test)]
 mod test {
-    use std::f64::consts::PI;
-    use std::f64::{self, EPSILON};
 
     use super::*;
+    use std::f64::{self, EPSILON};
+    use std::f64::consts::PI;
 
     #[test]
     fn test_atomicf64() {

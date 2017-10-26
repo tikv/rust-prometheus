@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Write;
 
-use protobuf::Message;
+use super::Encoder;
 
 use errors::Result;
 use proto::MetricFamily;
 
-use super::Encoder;
+use protobuf::Message;
+use std::io::Write;
 
 /// The protocol buffer format of metric family.
-pub const PROTOBUF_FORMAT: &'static str =
-    "application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily; encoding=delimited";
+pub const PROTOBUF_FORMAT: &'static str = "application/vnd.google.protobuf; \
+                                           proto=io.prometheus.client.MetricFamily; \
+                                           encoding=delimited";
 
 /// Implementation of an `Encoder` that converts a `MetricFamily` proto message
 /// into the binary wire format of protobuf.
@@ -38,7 +39,7 @@ impl ProtobufEncoder {
 impl Encoder for ProtobufEncoder {
     fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
         for mf in metric_familys {
-            try!(mf.write_length_delimited_to_writer(writer));
+            mf.write_length_delimited_to_writer(writer)?;
         }
         Ok(())
     }
@@ -56,6 +57,7 @@ mod tests {
     use registry;
 
     // TODO: add more tests.
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn test_protobuf_encoder() {
         let cv = CounterVec::new(Opts::new("test_counter_vec", "help information"),

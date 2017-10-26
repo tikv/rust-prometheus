@@ -19,12 +19,12 @@ extern crate prometheus;
 extern crate lazy_static;
 extern crate getopts;
 
-use std::env;
-use std::time;
-use std::thread;
 
 use getopts::Options;
-use prometheus::{Histogram, Counter};
+use prometheus::{Counter, Histogram};
+use std::env;
+use std::thread;
+use std::time;
 
 lazy_static! {
     static ref PUSH_COUNTER: Counter = register_counter!(
@@ -38,16 +38,18 @@ lazy_static! {
     ).unwrap();
 }
 
-#[cfg(feature="push")]
+#[cfg(feature = "push")]
 fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
     let mut opts = Options::new();
-    opts.optopt("A",
-                "addr",
-                "prometheus pushgateway address",
-                "default is 127.0.0.1:9091");
+    opts.optopt(
+        "A",
+        "addr",
+        "prometheus pushgateway address",
+        "default is 127.0.0.1:9091",
+    );
     opts.optflag("h", "help", "print this help menu");
 
     let matches = opts.parse(&args).unwrap();
@@ -64,18 +66,21 @@ fn main() {
         PUSH_COUNTER.inc();
         let metric_familys = prometheus::gather();
         let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
-        prometheus::push_metrics("example_push",
-                                 labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
-                                 &address,
-                                 metric_familys)
-            .unwrap();
+        prometheus::push_metrics(
+            "example_push",
+            labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
+            &address,
+            metric_familys,
+        ).unwrap();
     }
 
     println!("Okay, please check the Pushgateway.");
 }
 
-#[cfg(not(feature="push"))]
+#[cfg(not(feature = "push"))]
 fn main() {
-    println!(r#"Please enable feature "push", try:
-    cargo run --features="push" --example example_push"#);
+    println!(
+        r#"Please enable feature "push", try:
+    cargo run --features="push" --example example_push"#
+    );
 }

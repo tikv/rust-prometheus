@@ -15,9 +15,7 @@ bench: format
 	cargo bench --features=${ENABLE_FEATURES} -- --nocapture
 
 format:
-	@( cargo fmt -- --write-mode diff > /dev/null || cargo fmt -- --write-mode overwrite ) && \
-	( rustfmt --write-mode diff examples/*.rs > /dev/null || rustfmt --write-mode overwrite examples/*.rs ) && \
-	( rustfmt --write-mode diff benches/*.rs > /dev/null || rustfmt --write-mode overwrite benches/*.rs )
+	@cargo fmt --all -- --write-mode diff >/dev/null || cargo fmt --all
 
 clean:
 	cargo clean
