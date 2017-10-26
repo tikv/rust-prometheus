@@ -27,8 +27,6 @@ script:
   - cargo test --features="$FEATURES"
   - |
     if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
-        # Use latest clippy.
-        cargo update -p clippy;
         # Enable dev for clippy linting.
         cargo test --features="$FEATURES dev";
         # Lint nightly feature.
