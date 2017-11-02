@@ -56,10 +56,8 @@ impl RegistryCore {
                 }
             }
 
-            self.dim_hashes_by_name.insert(
-                desc.fq_name.clone(),
-                desc.dim_hash,
-            );
+            self.dim_hashes_by_name
+                .insert(desc.fq_name.clone(), desc.dim_hash);
 
             // If it is not a duplicate desc in this collector, add it to
             // the collector_id.
@@ -191,7 +189,9 @@ impl Default for Registry {
             desc_ids: HashSet::new(),
         };
 
-        Registry { r: Arc::new(RwLock::new(r)) }
+        Registry {
+            r: Arc::new(RwLock::new(r)),
+        }
     }
 }
 
@@ -311,8 +311,8 @@ mod tests {
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
 
-        let counter_vec = CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"])
-            .unwrap();
+        let counter_vec =
+            CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
 
         r.register(Box::new(counter_vec.clone())).unwrap();
         counter_vec.with_label_values(&["1", "2"]).inc();
