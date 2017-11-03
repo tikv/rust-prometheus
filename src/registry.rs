@@ -12,31 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use chashmap::CHashMap;
 use errors::{Error, Result};
 use metrics::Collector;
 
 use proto;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::collections::btree_map::Entry as BEntry;
-use std::collections::hash_map::Entry as HEntry;
 use std::iter::FromIterator;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 struct RegistryCore {
-    pub colloctors_by_id: HashMap<u64, Box<Collector>>,
-    pub dim_hashes_by_name: HashMap<String, u64>,
-    pub desc_ids: HashSet<u64>,
+    pub colloctors_by_id: CHashMap<u64, Arc<Collector>>,
+    pub dim_hashes_by_name: CHashMap<String, u64>,
+    pub desc_ids: CHashMap<u64, ()>,
 }
 
 impl RegistryCore {
-    fn register(&mut self, c: Box<Collector>) -> Result<()> {
-        let mut desc_id_set = HashSet::new();
+    fn register(&self, c: Arc<Collector>) -> Result<()> {
+        let desc_id_set = CHashMap::new();
         let mut collector_id: u64 = 0;
 
         for desc in c.desc() {
             // Is the desc_id unique?
             // (In other words: Is the fqName + constLabel combination unique?)
-            if self.desc_ids.contains(&desc.id) {
+            if self.desc_ids.contains_key(&desc.id) {
                 return Err(Error::Msg(format!(
                     "descriptor {:?} already exists with the same \
                      fully-qualified name and const label values",
@@ -63,7 +63,7 @@ impl RegistryCore {
 
             // If it is not a duplicate desc in this collector, add it to
             // the collector_id.
-            if desc_id_set.insert(desc.id) {
+            if desc_id_set.insert(desc.id, ()).is_none() {
                 // The set did not have this value present, true is returned.
                 collector_id = collector_id.wrapping_add(desc.id);
             } else {
@@ -78,17 +78,22 @@ impl RegistryCore {
             }
         }
 
-        match self.colloctors_by_id.entry(collector_id) {
-            HEntry::Vacant(vc) => {
-                self.desc_ids.extend(desc_id_set);
-                vc.insert(c);
-                Ok(())
-            }
-            HEntry::Occupied(_) => Err(Error::AlreadyReg),
+        if self.colloctors_by_id.contains_key(&collector_id) {
+            return Err(Error::AlreadyReg);
         }
+        self.colloctors_by_id.alter(collector_id, |var| match var {
+            Option::None => {
+                for (k, v) in desc_id_set.into_iter() {
+                    self.desc_ids.insert(k, v);
+                }
+                Option::Some(c)
+            }
+            Option::Some(x) => Option::Some(x),
+        });
+        Ok(())
     }
 
-    fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
+    fn unregister(&self, c: Arc<Collector>) -> Result<()> {
         let mut id_set = Vec::new();
         let mut collector_id = 0;
         for desc in c.desc() {
@@ -111,8 +116,7 @@ impl RegistryCore {
 
     fn gather(&self) -> Vec<proto::MetricFamily> {
         let mut mf_by_name = BTreeMap::new();
-
-        for c in self.colloctors_by_id.values() {
+        for (_, c) in self.colloctors_by_id.clone().into_iter() {
             let mfs = c.collect();
             for mut mf in mfs {
                 let name = mf.get_name().to_owned();
@@ -180,18 +184,18 @@ impl RegistryCore {
 /// them into `MetricFamilies` for exposition.
 #[derive(Clone)]
 pub struct Registry {
-    r: Arc<RwLock<RegistryCore>>,
+    r: Arc<RegistryCore>,
 }
 
 impl Default for Registry {
     fn default() -> Registry {
         let r = RegistryCore {
-            colloctors_by_id: HashMap::new(),
-            dim_hashes_by_name: HashMap::new(),
-            desc_ids: HashSet::new(),
+            colloctors_by_id: CHashMap::new(),
+            dim_hashes_by_name: CHashMap::new(),
+            desc_ids: CHashMap::new(),
         };
 
-        Registry { r: Arc::new(RwLock::new(r)) }
+        Registry { r: Arc::new(r) }
     }
 }
 
@@ -211,7 +215,7 @@ impl Registry {
     /// (which includes the case of re-registering the same Collector), the
     /// AlreadyReg error returns.
     pub fn register(&self, c: Box<Collector>) -> Result<()> {
-        self.r.write().unwrap().register(c)
+        self.r.as_ref().register(Arc::from(c))
     }
 
     /// `unregister` unregisters the Collector that equals the Collector passed
@@ -219,14 +223,14 @@ impl Registry {
     /// Describe method yields the same set of descriptors.) The function
     /// returns error when the Collector is not registered.
     pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
-        self.r.write().unwrap().unregister(c)
+        self.r.as_ref().unregister(Arc::from(c))
     }
 
     /// `gather` calls the Collect method of the registered Collectors and then
     /// gathers the collected metrics into a lexicographically sorted slice
     /// of MetricFamily protobufs.
     pub fn gather(&self) -> Vec<proto::MetricFamily> {
-        self.r.read().unwrap().gather()
+        self.r.as_ref().gather()
     }
 }
 

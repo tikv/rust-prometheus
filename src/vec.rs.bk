@@ -13,6 +13,7 @@
 // limitations under the License.
 
 
+use chashmap::CHashMap;
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 
@@ -20,11 +21,10 @@ use fnv::FnvHasher;
 use metrics::{Collector, Metric};
 use proto::{MetricFamily, MetricType};
 use protobuf::RepeatedField;
-use chashmap::{CHashMap};
 use std::collections::HashMap;
 use std::hash::Hasher;
-use std::sync::Arc;
 use std::ops::Deref;
+use std::sync::Arc;
 
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -36,7 +36,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
 }
 
 struct MetricVecCore<T: MetricVecBuilder> {
-    pub children: CHashMap<u64,T::M>,
+    pub children: CHashMap<u64, T::M>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
