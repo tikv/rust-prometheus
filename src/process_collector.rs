@@ -146,8 +146,9 @@ impl Collector for ProcessCollector {
 
         // proc_start_time
         if let (&Ok(ref stat), Some(boot_time)) = (&pid_stat, *BOOT_TIME) {
-            self.start_time
-                .set(stat.start_time as f64 / *CLK_TCK + boot_time);
+            self.start_time.set(
+                stat.start_time as f64 / *CLK_TCK + boot_time,
+            );
         }
 
         // cpu
@@ -222,8 +223,11 @@ const MAXFD_PATTERN: &'static str = "Max open files";
 
 fn max_fds(pid: pid_t) -> Result<f64> {
     let mut buffer = String::new();
-    fs::File::open(&format!("/proc/{}/limits", pid))
-        .and_then(|mut f| f.read_to_string(&mut buffer))?;
+    fs::File::open(&format!("/proc/{}/limits", pid)).and_then(
+        |mut f| {
+            f.read_to_string(&mut buffer)
+        },
+    )?;
 
     find_statistic(&buffer, MAXFD_PATTERN)
 }
@@ -337,7 +341,8 @@ nonvoluntary_ctxt_switches:	68606
     const VM_RSS: f64 = 112884.0;
     const VM_SIZE: f64 = 1362696.0;
 
-    const LIMITS_LITERAL: &'static str = r#"
+    const LIMITS_LITERAL: &'static str =
+        r#"
 Limit                     Soft Limit           Hard Limit           Units
 Max cpu time              unlimited            unlimited            seconds
 Max file size             unlimited            unlimited            bytes

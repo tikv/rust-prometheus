@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use chashmap::CHashMap;
 use errors::{Error, Result};
 use metrics::Collector;
 
 use proto;
-use std::collections::BTreeMap;
+use chashmap::CHashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::collections::btree_map::Entry as BEntry;
 use std::iter::FromIterator;
 use std::sync::Arc;
@@ -25,7 +25,7 @@ use std::sync::Arc;
 struct RegistryCore {
     pub colloctors_by_id: CHashMap<u64, Arc<Collector>>,
     pub dim_hashes_by_name: CHashMap<String, u64>,
-    pub desc_ids: CHashMap<u64, ()>,
+    pub desc_ids: CHashMap<u64,()>,
 }
 
 impl RegistryCore {
@@ -63,7 +63,7 @@ impl RegistryCore {
 
             // If it is not a duplicate desc in this collector, add it to
             // the collector_id.
-            if desc_id_set.insert(desc.id, ()).is_none() {
+            if desc_id_set.insert(desc.id,()).is_none() {
                 // The set did not have this value present, true is returned.
                 collector_id = collector_id.wrapping_add(desc.id);
             } else {
@@ -81,14 +81,16 @@ impl RegistryCore {
         if self.colloctors_by_id.contains_key(&collector_id) {
             return Err(Error::AlreadyReg);
         }
-        self.colloctors_by_id.alter(collector_id, |var| match var {
-            Option::None => {
-                for (k, v) in desc_id_set.into_iter() {
-                    self.desc_ids.insert(k, v);
+        self.colloctors_by_id.alter(collector_id, |var| {
+            match var {
+                Option::None => {
+                    for (k,v) in desc_id_set.into_iter() {
+                        self.desc_ids.insert(k,v);
+                    }
+                    Option::Some(c)
                 }
-                Option::Some(c)
+                Option::Some(x) => Option::Some(x)
             }
-            Option::Some(x) => Option::Some(x),
         });
         Ok(())
     }
@@ -116,7 +118,7 @@ impl RegistryCore {
 
     fn gather(&self) -> Vec<proto::MetricFamily> {
         let mut mf_by_name = BTreeMap::new();
-        for (_, c) in self.colloctors_by_id.clone().into_iter() {
+        for (_,c) in self.colloctors_by_id.clone().into_iter() {
             let mfs = c.collect();
             for mut mf in mfs {
                 let name = mf.get_name().to_owned();

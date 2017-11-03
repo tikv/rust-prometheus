@@ -60,8 +60,12 @@ fn main() {
             let metric_familys = prometheus::gather();
             let mut buffer = vec![];
             encoder.encode(&metric_familys, &mut buffer).unwrap();
-            res.headers_mut()
-                .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
+            res.headers_mut().set(ContentType(
+                encoder
+                    .format_type()
+                    .parse::<Mime>()
+                    .unwrap(),
+            ));
             res.send(&buffer).unwrap();
 
             timer.observe_duration();

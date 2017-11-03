@@ -214,10 +214,9 @@ impl HistogramCore {
 
     pub fn observe(&self, v: f64) {
         // Try find the bucket.
-        let mut iter = self.upper_bounds
-            .iter()
-            .enumerate()
-            .filter(|&(_, f)| v <= *f);
+        let mut iter = self.upper_bounds.iter().enumerate().filter(
+            |&(_, f)| v <= *f,
+        );
         if let Some((i, _)) = iter.next() {
             self.counts[i].inc_by(1);
         }
@@ -388,9 +387,7 @@ impl Histogram {
     ) -> Result<Histogram> {
         let core = HistogramCore::new(opts, label_values)?;
 
-        Ok(Histogram {
-            core: Arc::new(core),
-        })
+        Ok(Histogram { core: Arc::new(core) })
     }
 }
 
@@ -616,12 +613,12 @@ impl LocalHistogramCore {
 
     pub fn observe(&mut self, v: f64) {
         // Try find the bucket.
-        let mut iter = self.histogram
-            .core
-            .upper_bounds
-            .iter()
-            .enumerate()
-            .filter(|&(_, f)| v <= *f);
+        let mut iter = self.histogram.core.upper_bounds.iter().enumerate().filter(
+            |&(_,
+               f)| {
+                v <= *f
+            },
+        );
         if let Some((i, _)) = iter.next() {
             self.counts[i] += 1;
         }
@@ -665,9 +662,7 @@ impl LocalHistogramCore {
 impl LocalHistogram {
     fn new(histogram: Histogram) -> LocalHistogram {
         let core = LocalHistogramCore::new(histogram);
-        LocalHistogram {
-            core: RefCell::new(core),
-        }
+        LocalHistogram { core: RefCell::new(core) }
     }
 
     /// `observe` adds a single observation to the `Histogram`.
@@ -834,7 +829,7 @@ mod tests {
                 5.0,
                 6,
                 true,
-                vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0],
+                vec![-15.0, -10.0, -5.0, 0.0, 5.0, 10.0]
             ),
             (-15.0, 0.0, 6, false, vec![]),
             (-15.0, 5.0, 0, false, vec![]),

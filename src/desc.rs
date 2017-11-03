@@ -27,17 +27,19 @@ use std::hash::Hasher;
 fn is_valid_metric_name(name: &str) -> bool {
     // Valid metric names must match regex [a-zA-Z_:][a-zA-Z0-9_:]*.
     fn valid_start(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'_' | b':' => true,
-            _ => false,
-        }
+        c.is_ascii() &&
+            match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'_' | b':' => true,
+                _ => false,
+            }
     }
 
     fn valid_char(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' | b':' => true,
-            _ => false,
-        }
+        c.is_ascii() &&
+            match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' | b':' => true,
+                _ => false,
+            }
     }
 
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
@@ -46,17 +48,19 @@ fn is_valid_metric_name(name: &str) -> bool {
 fn is_valid_label_name(name: &str) -> bool {
     // Valid label names must match regex [a-zA-Z_][a-zA-Z0-9_]*.
     fn valid_start(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'_' => true,
-            _ => false,
-        }
+        c.is_ascii() &&
+            match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'_' => true,
+                _ => false,
+            }
     }
 
     fn valid_char(c: char) -> bool {
-        c.is_ascii() && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' => true,
-            _ => false,
-        }
+        c.is_ascii() &&
+            match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' => true,
+                _ => false,
+            }
     }
 
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
@@ -195,6 +199,10 @@ impl Desc {
         desc.const_label_pairs.sort();
 
         Ok(desc)
+    }
+
+    pub fn var_labels<'a>(&'a self) -> &'a [String] {
+        self.variable_labels.as_slice()
     }
 }
 

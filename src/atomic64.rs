@@ -28,9 +28,7 @@ mod rwlock {
 
     impl RwlockF64 {
         pub fn new(val: f64) -> RwlockF64 {
-            RwlockF64 {
-                inner: RwLock::new(val),
-            }
+            RwlockF64 { inner: RwLock::new(val) }
         }
 
         #[inline]
@@ -55,9 +53,7 @@ mod rwlock {
 
     impl RwlockU64 {
         pub fn new(val: u64) -> RwlockU64 {
-            RwlockU64 {
-                inner: RwLock::new(val),
-            }
+            RwlockU64 { inner: RwLock::new(val) }
         }
 
         #[inline]
@@ -83,9 +79,7 @@ mod atomic {
 
     impl AtomicF64 {
         pub fn new(val: f64) -> AtomicF64 {
-            AtomicF64 {
-                inner: StdAtomicU64::new(f64_to_u64(val)),
-            }
+            AtomicF64 { inner: StdAtomicU64::new(f64_to_u64(val)) }
         }
 
         #[inline]
@@ -103,8 +97,11 @@ mod atomic {
             loop {
                 let current = self.inner.load(Ordering::Acquire);
                 let new = u64_to_f64(current) + delta;
-                let swapped = self.inner
-                    .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
+                let swapped = self.inner.compare_and_swap(
+                    current,
+                    f64_to_u64(new),
+                    Ordering::Release,
+                );
                 if swapped == current {
                     return;
                 }
@@ -126,9 +123,7 @@ mod atomic {
 
     impl AtomicU64 {
         pub fn new(val: u64) -> AtomicU64 {
-            AtomicU64 {
-                inner: StdAtomicU64::new(val),
-            }
+            AtomicU64 { inner: StdAtomicU64::new(val) }
         }
 
         #[inline]

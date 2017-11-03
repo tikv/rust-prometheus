@@ -52,7 +52,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
         let children = self.children.clone();
         let mut metrics = Vec::with_capacity(children.len());
-        for (_, child) in children.into_iter() {
+        for (_,child) in children.into_iter() {
             metrics.push(child.metric());
         }
         m.set_metric(RepeatedField::from_vec(metrics));
