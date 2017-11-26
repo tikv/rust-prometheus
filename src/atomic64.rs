@@ -20,7 +20,7 @@ pub use self::rwlock::{RwlockF64 as AtomicF64, RwlockU64 as AtomicU64};
 
 #[cfg(not(feature = "nightly"))]
 mod rwlock {
-    use std::sync::RwLock;
+    use spin::RwLock;
 
     pub struct RwlockF64 {
         inner: RwLock<f64>,
@@ -35,17 +35,17 @@ mod rwlock {
 
         #[inline]
         pub fn set(&self, val: f64) {
-            *self.inner.write().unwrap() = val;
+            *self.inner.write() = val;
         }
 
         #[inline]
         pub fn get(&self) -> f64 {
-            *self.inner.read().unwrap()
+            *self.inner.read()
         }
 
         #[inline]
         pub fn inc_by(&self, delta: f64) {
-            *self.inner.write().unwrap() += delta;
+            *self.inner.write() += delta;
         }
     }
 
@@ -62,12 +62,12 @@ mod rwlock {
 
         #[inline]
         pub fn get(&self) -> u64 {
-            *self.inner.read().unwrap()
+            *self.inner.read()
         }
 
         #[inline]
         pub fn inc_by(&self, delta: u64) {
-            *self.inner.write().unwrap() += delta;
+            *self.inner.write() += delta;
         }
     }
 }
