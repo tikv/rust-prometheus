@@ -2711,7 +2711,7 @@ impl ::protobuf::ProtobufEnum for MetricType {
     }
 
     fn values() -> &'static [Self] {
-        static values: &'static [MetricType] = &[
+        static values: &[MetricType] = &[
             MetricType::COUNTER,
             MetricType::GAUGE,
             MetricType::SUMMARY,
@@ -2743,7 +2743,7 @@ impl ::protobuf::reflect::ProtobufValue for MetricType {
     }
 }
 
-static file_descriptor_proto_data: &'static [u8] = b"\
+static file_descriptor_proto_data: &[u8] = b"\
     \n\x13proto/metrics.proto\x12\x14io.prometheus.client\"5\n\tLabelPair\
     \x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12\x14\n\x05value\x18\
     \x02\x20\x01(\tR\x05value\"\x1d\n\x05Gauge\x12\x14\n\x05value\x18\x01\

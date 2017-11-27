@@ -21,9 +21,9 @@ use protobuf::Message;
 use std::io::Write;
 
 /// The protocol buffer format of metric family.
-pub const PROTOBUF_FORMAT: &'static str = "application/vnd.google.protobuf; \
-                                           proto=io.prometheus.client.MetricFamily; \
-                                           encoding=delimited";
+pub const PROTOBUF_FORMAT: &str = "application/vnd.google.protobuf; \
+                                   proto=io.prometheus.client.MetricFamily; \
+                                   encoding=delimited";
 
 /// Implementation of an `Encoder` that converts a `MetricFamily` proto message
 /// into the binary wire format of protobuf.

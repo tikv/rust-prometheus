@@ -13,6 +13,8 @@
 
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
+#![cfg_attr(not(feature = "dev"), allow(unknown_lints))]
+#![cfg_attr(feature = "dev", allow(needless_pass_by_value))]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
 #[macro_use]
@@ -56,15 +58,13 @@ pub mod process_collector;
 pub mod local;
 
 // Traits
-
 pub use self::counter::{Counter, CounterVec};
 pub use self::desc::Desc;
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
 pub use self::encoder::Encoder;
-pub use self::encoder::PROTOBUF_FORMAT;
 
 // Constants
-pub use self::encoder::TEXT_FORMAT;
+pub use self::encoder::{TEXT_FORMAT, PROTOBUF_FORMAT};
 
 // Structs
 pub use self::errors::{Error, Result};

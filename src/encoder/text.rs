@@ -21,9 +21,9 @@ use proto::MetricFamily;
 use std::io::Write;
 
 /// The text format of metric family.
-pub const TEXT_FORMAT: &'static str = "text/plain; version=0.0.4";
+pub const TEXT_FORMAT: &str = "text/plain; version=0.0.4";
 
-const POSITIVE_INF: &'static str = "+Inf";
+const POSITIVE_INF: &str = "+Inf";
 
 /// Implementation of an `Encoder` that converts a `MetricFamily` proto message
 /// into text format.
