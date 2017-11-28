@@ -13,6 +13,8 @@
 
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
+#![cfg_attr(not(feature = "dev"), allow(unknown_lints))]
+#![cfg_attr(feature = "dev", allow(needless_pass_by_value))]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
 #[macro_use]
@@ -46,8 +48,6 @@ mod histogram;
 mod push;
 mod atomic64;
 
-// Mods
-
 /// Protocol buffers format of metrics.
 #[path="../proto/metrics.rs"]
 pub mod proto;
@@ -55,18 +55,11 @@ pub mod proto;
 pub mod process_collector;
 pub mod local;
 
-// Traits
-
 pub use self::counter::{Counter, CounterVec};
 pub use self::desc::Desc;
+pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
 pub use self::encoder::Encoder;
-pub use self::encoder::PROTOBUF_FORMAT;
-
-// Constants
-pub use self::encoder::TEXT_FORMAT;
-
-// Structs
 pub use self::errors::{Error, Result};
 pub use self::gauge::{Gauge, GaugeVec};
 pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
@@ -77,8 +70,6 @@ pub use self::metrics::Opts;
 #[cfg(feature = "push")]
 pub use self::push::{hostname_grouping_key, push_add_collector, push_add_metrics, push_collector,
                      push_metrics};
-
-// Functions
 pub use self::registry::{gather, register, unregister};
 pub use self::registry::Registry;
 pub use self::vec::MetricVec;

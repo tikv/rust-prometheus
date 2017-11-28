@@ -31,7 +31,7 @@ use vec::{MetricVec, MetricVecBuilder};
 /// tailored to broadly measure the response time (in seconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
-pub const DEFAULT_BUCKETS: &'static [f64; 11] = &[
+pub const DEFAULT_BUCKETS: &[f64; 11] = &[
     0.005,
     0.01,
     0.025,
@@ -47,7 +47,7 @@ pub const DEFAULT_BUCKETS: &'static [f64; 11] = &[
 
 /// `BUCKET_LABEL` is used for the label that defines the upper bound of a
 /// bucket of a histogram ("le" -> "less or equal").
-pub const BUCKET_LABEL: &'static str = "le";
+pub const BUCKET_LABEL: &str = "le";
 
 #[inline]
 fn check_bucket_lable(label: &str) -> Result<()> {
@@ -744,7 +744,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().as_ref().get(0).unwrap();
+        let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
@@ -758,7 +758,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().as_ref().get(0).unwrap();
+        let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 0);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 0);
@@ -787,7 +787,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().as_ref().get(0).unwrap();
+        let m = mf.get_metric().get(0).unwrap();
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
         assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);

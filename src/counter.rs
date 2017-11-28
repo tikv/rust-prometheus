@@ -139,7 +139,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().as_ref().get(0).unwrap();
+        let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
     }

@@ -218,7 +218,7 @@ fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     Err(Error::Msg(format!("read statistic {} failed", pat)))
 }
 
-const MAXFD_PATTERN: &'static str = "Max open files";
+const MAXFD_PATTERN: &str = "Max open files";
 
 fn max_fds(pid: pid_t) -> Result<f64> {
     let mut buffer = String::new();
@@ -245,7 +245,7 @@ lazy_static! {
 }
 
 // See more `man 5 proc`, `/proc/stat`
-const BOOT_TIME_PATTERN: &'static str = "btime";
+const BOOT_TIME_PATTERN: &str = "btime";
 
 lazy_static! {
     static ref BOOT_TIME: Option<f64> = {
@@ -282,7 +282,7 @@ mod tests {
         assert!(res.is_ok());
     }
 
-    const STATUS_LITERAL: &'static str = r#"Name:	compiz
+    const STATUS_LITERAL: &str = r#"Name:	compiz
 State:	S (sleeping)
 Tgid:	3124
 Ngid:	0
@@ -332,12 +332,12 @@ voluntary_ctxt_switches:	1713183
 nonvoluntary_ctxt_switches:	68606
 "#;
 
-    const VM_SIZE_PATTERN: &'static str = "VmSize:";
-    const VM_RSS_PATTERN: &'static str = "VmRSS:";
+    const VM_SIZE_PATTERN: &str = "VmSize:";
+    const VM_RSS_PATTERN: &str = "VmRSS:";
     const VM_RSS: f64 = 112884.0;
     const VM_SIZE: f64 = 1362696.0;
 
-    const LIMITS_LITERAL: &'static str = r#"
+    const LIMITS_LITERAL: &str = r#"
 Limit                     Soft Limit           Hard Limit           Units
 Max cpu time              unlimited            unlimited            seconds
 Max file size             unlimited            unlimited            bytes
