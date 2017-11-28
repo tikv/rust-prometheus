@@ -73,7 +73,7 @@ pub fn push_add_metrics<S: BuildHasher>(
     push(job, grouping, url, mfs, "POST")
 }
 
-const LABEL_NAME_JOB: &'static str = "job";
+const LABEL_NAME_JOB: &str = "job";
 
 fn push<S: BuildHasher>(
     job: &str,
@@ -201,7 +201,7 @@ pub fn push_add_collector<S: BuildHasher>(
     push_from_collector(job, grouping, url, collectors, "POST")
 }
 
-const DEFAULT_GROUP_LABEL_PAIR: (&'static str, &'static str) = ("instance", "unknown");
+const DEFAULT_GROUP_LABEL_PAIR: (&str, &str) = ("instance", "unknown");
 
 /// `hostname_grouping_key` returns a label map with the only entry
 /// {instance="<hostname>"}. This can be conveniently used as the grouping
