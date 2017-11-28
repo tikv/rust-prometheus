@@ -16,11 +16,12 @@ use errors::{Error, Result};
 use metrics::Collector;
 
 use proto;
+use spin::RwLock;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::collections::btree_map::Entry as BEntry;
 use std::collections::hash_map::Entry as HEntry;
 use std::iter::FromIterator;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
@@ -211,7 +212,7 @@ impl Registry {
     /// (which includes the case of re-registering the same Collector), the
     /// AlreadyReg error returns.
     pub fn register(&self, c: Box<Collector>) -> Result<()> {
-        self.r.write().unwrap().register(c)
+        self.r.write().register(c)
     }
 
     /// `unregister` unregisters the Collector that equals the Collector passed
@@ -219,14 +220,14 @@ impl Registry {
     /// Describe method yields the same set of descriptors.) The function
     /// returns error when the Collector is not registered.
     pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
-        self.r.write().unwrap().unregister(c)
+        self.r.write().unregister(c)
     }
 
     /// `gather` calls the Collect method of the registered Collectors and then
     /// gathers the collected metrics into a lexicographically sorted slice
     /// of MetricFamily protobufs.
     pub fn gather(&self) -> Vec<proto::MetricFamily> {
-        self.r.read().unwrap().gather()
+        self.r.read().gather()
     }
 }
 
