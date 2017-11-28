@@ -31,6 +31,7 @@ extern crate libc;
 extern crate procinfo;
 #[macro_use]
 extern crate cfg_if;
+extern crate spin;
 
 mod errors;
 mod encoder;

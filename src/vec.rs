@@ -20,9 +20,10 @@ use fnv::FnvHasher;
 use metrics::{Collector, Metric};
 use proto::{MetricFamily, MetricType};
 use protobuf::RepeatedField;
+use spin::RwLock;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 /// `MetricVecBuilder` is the trait to build a metric.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -48,7 +49,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.metric_type);
 
-        let children = self.children.read().unwrap();
+        let children = self.children.read();
         let mut metrics = Vec::with_capacity(children.len());
         for child in children.values() {
             metrics.push(child.metric());
@@ -60,7 +61,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
         let h = self.hash_label_values(vals)?;
 
-        if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
+        if let Some(metric) = self.children.read().get(&h).cloned() {
             return Ok(metric);
         }
 
@@ -70,7 +71,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
         let h = self.hash_labels(labels)?;
 
-        if let Some(metric) = self.children.read().unwrap().get(&h).cloned() {
+        if let Some(metric) = self.children.read().get(&h).cloned() {
             return Ok(metric);
         }
 
@@ -81,7 +82,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
         let h = self.hash_label_values(vals)?;
 
-        let mut children = self.children.write().unwrap();
+        let mut children = self.children.write();
         if children.remove(&h).is_none() {
             return Err(Error::Msg(format!("missing label values {:?}", vals)));
         }
@@ -92,7 +93,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn delete(&self, labels: &HashMap<&str, &str>) -> Result<()> {
         let h = self.hash_labels(labels)?;
 
-        let mut children = self.children.write().unwrap();
+        let mut children = self.children.write();
         if children.remove(&h).is_none() {
             return Err(Error::Msg(format!("missing labels {:?}", labels)));
         }
@@ -102,7 +103,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
     /// `reset` deletes all metrics in this vector.
     pub fn reset(&self) {
-        self.children.write().unwrap().clear();
+        self.children.write().clear();
     }
 
     fn hash_label_values(&self, vals: &[&str]) -> Result<u64> {
@@ -160,7 +161,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 
     fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
-        let mut children = self.children.write().unwrap();
+        let mut children = self.children.write();
         // Check exist first.
         if let Some(metric) = children.get(&hash).cloned() {
             return Ok(metric);
