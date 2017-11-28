@@ -22,8 +22,10 @@ use std::collections::{BTreeSet, HashMap};
 use std::hash::Hasher;
 
 // TODO: use `char::is_ascii` instead once it landed in the stable rust.
+// Refer to https://github.com/rust-lang/rust/blob/
+//          3e9a7f7fbbf2898b9f1d60886f92e76370040d83/src/libstd_unicode/char.rs#L943
 fn is_ascii(c: char) -> bool {
-    c as u8 & 128 == 0
+    c as u32 <= 0x7F
 }
 
 // Details of required format are at
