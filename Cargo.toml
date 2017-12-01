@@ -1,6 +1,6 @@
 [package]
 name = "prometheus"
-version = "0.3.3"
+version = "0.3.4"
 license = "Apache-2.0"
 keywords = ["prometheus", "metrics"]
 authors = ["overvenus@gmail.com", "siddontang@gmail.com"]
