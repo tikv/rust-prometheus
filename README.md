@@ -19,7 +19,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 + Add this to your crate in `lib.rs`:
 
     ```rust
-    extern crate prometheus
+    extern crate prometheus;
     ```
 
 + Or enable nightly feature for better performance.
