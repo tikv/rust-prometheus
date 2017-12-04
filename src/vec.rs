@@ -34,7 +34,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
-struct MetricVecCore<T: MetricVecBuilder> {
+pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
     pub children: RwLock<HashMap<u64, T::M>>,
     pub desc: Desc,
     pub metric_type: MetricType,
@@ -106,7 +106,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.children.write().clear();
     }
 
-    fn hash_label_values(&self, vals: &[&str]) -> Result<u64> {
+    pub(crate) fn hash_label_values(&self, vals: &[&str]) -> Result<u64> {
         if vals.len() != self.desc.variable_labels.len() {
             return Err(Error::InconsistentCardinality(
                 self.desc.variable_labels.len(),
@@ -180,7 +180,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 /// provided in this package.
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
-    v: Arc<MetricVecCore<T>>,
+    pub(crate) v: Arc<MetricVecCore<T>>,
 }
 
 impl<T: MetricVecBuilder> MetricVec<T> {
