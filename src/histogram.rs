@@ -725,7 +725,7 @@ impl Drop for LocalHistogram {
     }
 }
 
-/// `LocalHistogramVec` can only be access by a single thread, like `LocalHistogramVec`.
+/// `LocalHistogramVec` can only be access by a single thread, like `LocalHistogram`.
 /// You can use the `LocalHistogramVec`, if you very care the performance.
 pub struct LocalHistogramVec {
     vec: HistogramVec,
@@ -753,6 +753,7 @@ impl LocalHistogramVec {
         self.vec.v.delete_label_values(vals)
     }
 
+    /// `flush` flushes the local metrics to the HistogramVec metric.
     pub fn flush(&mut self) {
         for h in self.local.values() {
             h.flush();
