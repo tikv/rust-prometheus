@@ -12,5 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO: define a trait and implement the trait for metrics.
 
-pub use super::histogram::{LocalHistogram, LocalHistogramTimer};
+pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};

@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 use atomic64::{AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
-
 use proto;
+
 use protobuf::RepeatedField;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -477,6 +478,12 @@ impl HistogramVec {
 
         Ok(metric_vec as HistogramVec)
     }
+
+    pub fn local(&self) -> LocalHistogramVec {
+        let vec = self.clone();
+        let local = HashMap::with_capacity(vec.v.children.read().len());
+        LocalHistogramVec { vec, local }
+    }
 }
 
 /// `linear_buckets` creates `count` buckets, each `width` wide, where the lowest
@@ -568,9 +575,17 @@ pub struct LocalHistogramCore {
 /// `LocalHistogram` is used for performance and in single-thread.
 /// Sometimes, if you very care the performance, you can use the `LocalHistogram`
 /// and then flush the metric interval.
-#[derive(Clone)]
 pub struct LocalHistogram {
     core: RefCell<LocalHistogramCore>,
+}
+
+impl Clone for LocalHistogram {
+    fn clone(&self) -> LocalHistogram {
+        let core = self.core.clone();
+        let lg = LocalHistogram { core };
+        lg.clear();
+        lg
+    }
 }
 
 pub struct LocalHistogramTimer {
@@ -707,6 +722,42 @@ impl LocalHistogram {
 impl Drop for LocalHistogram {
     fn drop(&mut self) {
         self.flush()
+    }
+}
+
+/// `LocalHistogramVec` can only be access by a single thread, like `LocalHistogram`.
+/// You can use the `LocalHistogramVec`, if you very care the performance.
+pub struct LocalHistogramVec {
+    vec: HistogramVec,
+    local: HashMap<u64, LocalHistogram>,
+}
+
+impl LocalHistogramVec {
+    /// Get a `LocalHistogram` by label values.
+    /// See more [MetricVec::with_label_values]
+    /// (/prometheus/struct.MetricVec.html#method.with_label_values)
+    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
+        let hash = self.vec.v.hash_label_values(vals).unwrap();
+        let vec = &self.vec;
+        self.local
+            .entry(hash)
+            .or_insert_with(|| vec.with_label_values(vals).local())
+    }
+
+    /// Remove a `LocalHistogram` by label values.
+    /// See more [MetricVec::remove_label_values]
+    /// (/prometheus/struct.MetricVec.html#method.remove_label_values)
+    pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
+        let hash = self.vec.v.hash_label_values(vals)?;
+        self.local.remove(&hash);
+        self.vec.v.delete_label_values(vals)
+    }
+
+    /// `flush` flushes the local metrics to the HistogramVec metric.
+    pub fn flush(&mut self) {
+        for h in self.local.values() {
+            h.flush();
+        }
     }
 }
 
@@ -939,5 +990,48 @@ mod tests {
         local.observe(2.0);
         drop(local);
         check(3, 7.0);
+    }
+
+    #[test]
+    fn test_histogram_vec_local() {
+        let vec = HistogramVec::new(
+            HistogramOpts::new("test_histogram_vec_local", "test histogram vec help"),
+            &["l1", "l2"],
+        ).unwrap();
+        let mut local_vec = vec.local();
+
+        vec.remove_label_values(&["v1", "v2"]).unwrap_err();
+        local_vec.remove_label_values(&["v1", "v2"]).unwrap_err();
+
+        let check = |count, sum| {
+            let ms = vec.collect()[0].take_metric();
+            let proto_histogram = ms[0].get_histogram();
+            assert_eq!(proto_histogram.get_sample_count(), count);
+            assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
+        };
+
+        {
+            // Flush LocalHistogram
+            let h = local_vec.with_label_values(&["v1", "v2"]);
+            h.observe(1.0);
+            h.flush();
+            check(1, 1.0);
+        }
+
+        {
+            // Flush LocalHistogramVec
+            local_vec.with_label_values(&["v1", "v2"]).observe(4.0);
+            local_vec.flush();
+            check(2, 5.0);
+        }
+        {
+            // Reset ["v1", "v2"]
+            local_vec.remove_label_values(&["v1", "v2"]).unwrap();
+
+            // Flush on drop
+            local_vec.with_label_values(&["v1", "v2"]).observe(2.0);
+            drop(local_vec);
+            check(1, 2.0);
+        }
     }
 }
