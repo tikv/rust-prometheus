@@ -481,8 +481,7 @@ impl HistogramVec {
 
     pub fn local(&self) -> LocalHistogramVec {
         let vec = self.clone();
-        let local = HashMap::with_capacity(vec.v.children.read().len());
-        LocalHistogramVec { vec, local }
+        LocalHistogramVec::new( vec)
     }
 }
 
@@ -582,9 +581,9 @@ pub struct LocalHistogram {
 impl Clone for LocalHistogram {
     fn clone(&self) -> LocalHistogram {
         let core = self.core.clone();
-        let lg = LocalHistogram { core };
-        lg.clear();
-        lg
+        let lh = LocalHistogram { core };
+        lh.clear();
+        lh
     }
 }
 
@@ -733,6 +732,11 @@ pub struct LocalHistogramVec {
 }
 
 impl LocalHistogramVec {
+    fn new(vec: HistogramVec) -> LocalHistogramVec {
+        let local = HashMap::with_capacity(vec.v.children.read().len());
+        LocalHistogramVec { vec, local }
+    }
+
     /// Get a `LocalHistogram` by label values.
     /// See more [MetricVec::with_label_values]
     /// (/prometheus/struct.MetricVec.html#method.with_label_values)
@@ -758,6 +762,12 @@ impl LocalHistogramVec {
         for h in self.local.values() {
             h.flush();
         }
+    }
+}
+
+impl Clone for LocalHistogramVec {
+    fn clone(&self) -> LocalHistogramVec {
+        LocalHistogramVec::new(self.vec.clone())
     }
 }
 
