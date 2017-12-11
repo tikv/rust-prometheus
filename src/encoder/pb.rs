@@ -40,7 +40,7 @@ impl Encoder for ProtobufEncoder {
     fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
         for mf in metric_familys {
             // Fail-fast checks.
-            check_metric_family(&mf)?;
+            check_metric_family(mf)?;
             mf.write_length_delimited_to_writer(writer)?;
         }
         Ok(())
