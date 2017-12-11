@@ -12,9 +12,9 @@
 // limitations under the License.
 
 
-use super::Encoder;
+use super::{check_metric_family, Encoder};
 
-use errors::{Error, Result};
+use errors::Result;
 use histogram::BUCKET_LABEL;
 use proto::{self, MetricType};
 use proto::MetricFamily;
@@ -40,15 +40,9 @@ impl Encoder for TextEncoder {
     fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
         for mf in metric_familys {
             // Fail-fast checks.
-            if mf.get_metric().is_empty() {
-                return Err(Error::Msg(format!("MetricFamily has no metrics: {:?}", mf)));
-            }
+            check_metric_family(&mf)?;
 
             let name = mf.get_name();
-            if name.is_empty() {
-                return Err(Error::Msg(format!("MetricFamily has no name: {:?}", mf)));
-            }
-
             let help = mf.get_help();
             if !help.is_empty() {
                 write!(writer, "# HELP {} {}\n", name, escape_string(help, false))?;

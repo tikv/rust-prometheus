@@ -12,9 +12,9 @@
 // limitations under the License.
 
 
-use super::Encoder;
+use super::{check_metric_family, Encoder};
 
-use errors::{Error, Result};
+use errors::Result;
 use proto::MetricFamily;
 
 use protobuf::Message;
@@ -40,13 +40,7 @@ impl Encoder for ProtobufEncoder {
     fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
         for mf in metric_familys {
             // Fail-fast checks.
-            if mf.get_metric().is_empty() {
-                return Err(Error::Msg(format!("MetricFamily has no metrics: {:?}", mf)));
-            }
-            if mf.get_name().is_empty() {
-                return Err(Error::Msg(format!("MetricFamily has no name: {:?}", mf)));
-            }
-
+            check_metric_family(&mf)?;
             mf.write_length_delimited_to_writer(writer)?;
         }
         Ok(())

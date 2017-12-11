@@ -12,7 +12,7 @@
 // limitations under the License.
 
 
-use errors::Result;
+use errors::{Error, Result};
 use proto::MetricFamily;
 use std::io::Write;
 
@@ -36,6 +36,16 @@ pub trait Encoder {
     fn format_type(&self) -> &str;
 }
 
+fn check_metric_family(mf: &MetricFamily) -> Result<()> {
+    if mf.get_metric().is_empty() {
+        return Err(Error::Msg(format!("MetricFamily has no metrics: {:?}", mf)));
+    }
+    if mf.get_name().is_empty() {
+        return Err(Error::Msg(format!("MetricFamily has no name: {:?}", mf)));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,8 +66,11 @@ mod tests {
 
         // Empty metrics
         let mfs = cv.collect();
+        check_metric_family(&mfs[0]).unwrap_err();
         pb_encoder.encode(&mfs, &mut writer).unwrap_err();
+        assert_eq!(writer.len(), 0);
         text_encoder.encode(&mfs, &mut writer).unwrap_err();
+        assert_eq!(writer.len(), 0);
 
         // Add a sub metric
         cv.with_label_values(&["foo"]).inc();
@@ -65,7 +78,10 @@ mod tests {
 
         // Empty name
         mfs.get_mut(0).unwrap().clear_name();
+        check_metric_family(&mfs[0]).unwrap_err();
         pb_encoder.encode(&mfs, &mut writer).unwrap_err();
+        assert_eq!(writer.len(), 0);
         text_encoder.encode(&mfs, &mut writer).unwrap_err();
+        assert_eq!(writer.len(), 0);
     }
 }
