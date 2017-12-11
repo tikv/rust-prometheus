@@ -35,3 +35,37 @@ pub trait Encoder {
     /// `format_type` returns target format.
     fn format_type(&self) -> &str;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use counter::CounterVec;
+    use encoder::Encoder;
+    use metrics::Collector;
+    use metrics::Opts;
+
+    #[test]
+    fn test_bad_metrics() {
+        let mut writer = Vec::<u8>::new();
+        let pb_encoder = ProtobufEncoder::new();
+        let text_encoder = TextEncoder::new();
+        let cv = CounterVec::new(
+            Opts::new("test_counter_vec", "help information"),
+            &["labelname"],
+        ).unwrap();
+
+        // Empty metrics
+        let mfs = cv.collect();
+        pb_encoder.encode(&mfs, &mut writer).unwrap_err();
+        text_encoder.encode(&mfs, &mut writer).unwrap_err();
+
+        // Add a sub metric
+        cv.with_label_values(&["foo"]).inc();
+        let mut mfs = cv.collect();
+
+        // Empty name
+        mfs.get_mut(0).unwrap().clear_name();
+        pb_encoder.encode(&mfs, &mut writer).unwrap_err();
+        text_encoder.encode(&mfs, &mut writer).unwrap_err();
+    }
+}
