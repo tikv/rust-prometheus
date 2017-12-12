@@ -85,7 +85,6 @@ fn push<S: BuildHasher>(
 
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
-    let mfs = mfs;
 
     let mut push_url = if url.contains("://") {
         url.to_owned()
@@ -120,8 +119,11 @@ fn push<S: BuildHasher>(
 
     push_url = format!("{}/metrics/job/{}", push_url, url_components.join("/"));
 
-    // Check for pre-existing grouping labels:
-    for mf in &mfs {
+    let encoder = ProtobufEncoder::new();
+    let mut buf = Vec::new();
+
+    for mf in mfs {
+        // Check for pre-existing grouping labels:
         for m in mf.get_metric() {
             for lp in m.get_label() {
                 if lp.get_name() == LABEL_NAME_JOB {
@@ -141,11 +143,9 @@ fn push<S: BuildHasher>(
                 }
             }
         }
+        // Ignore error, `no metrics` and `no name`.
+        let _ = encoder.encode(&[mf], &mut buf);
     }
-
-    let encoder = ProtobufEncoder::new();
-    let mut buf = Vec::new();
-    encoder.encode(&mfs, &mut buf)?;
 
     let request = HTTP_CLIENT
         .request(Method::from_str(method).unwrap(), &push_url)
