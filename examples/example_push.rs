@@ -44,7 +44,7 @@ fn main() {
     let program = args[0].clone();
 
     let mut opts = Options::new();
-    opts.optopt(
+    opts.optflagopt(
         "A",
         "addr",
         "prometheus pushgateway address",
