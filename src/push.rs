@@ -30,7 +30,7 @@ use std::str::{self, FromStr};
 use std::time::Duration;
 
 const HYPER_MAX_IDLE: usize = 1;
-const HYPER_TIMEOUT_SEC: u64 = 3;
+const HYPER_TIMEOUT_SEC: u64 = 10;
 
 lazy_static!{
     static ref HTTP_CLIENT: Client = {
