@@ -27,15 +27,22 @@ use registry::Registry;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::str::{self, FromStr};
+use std::time::Duration;
 
 const HYPER_MAX_IDLE: usize = 1;
+const HYPER_TIMEOUT_SEC: u64 = 10;
 
 lazy_static!{
-    static ref HTTP_CLIENT: Client = Client::with_pool_config(
-            Config{
-                max_idle: HYPER_MAX_IDLE,
-            }
-        );
+    static ref HTTP_CLIENT: Client = {
+            let mut client = Client::with_pool_config(
+                Config{
+                    max_idle: HYPER_MAX_IDLE,
+                }
+            );
+            client.set_read_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
+            client.set_write_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
+            client
+        };
 }
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
