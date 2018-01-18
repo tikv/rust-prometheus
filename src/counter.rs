@@ -15,7 +15,6 @@
 use desc::Desc;
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
-
 use proto;
 use std::sync::Arc;
 use value::{Value, ValueType};
@@ -67,6 +66,10 @@ impl Counter {
     pub fn get(&self) -> f64 {
         self.v.get()
     }
+
+    pub fn local(&self) -> LocalCounter {
+        LocalCounter::new(self.clone())
+    }
 }
 
 impl Collector for Counter {
@@ -116,11 +119,57 @@ impl CounterVec {
     }
 }
 
+pub struct LocalCounter {
+    counter: Counter,
+    val: f64,
+}
+
+// LocalCounter is a thread local copy of Counter
+impl LocalCounter {
+    pub fn new(counter: Counter) -> LocalCounter {
+        LocalCounter {
+            counter: counter,
+            val: 0.0,
+        }
+    }
+
+    /// `inc_by` increments the given value to the local counter. Error if the value is <
+    /// 0.
+    #[inline]
+    pub fn inc_by(&mut self, v: f64) -> Result<()> {
+        if v < 0.0 {
+            return Err(Error::DecreaseCounter(v));
+        }
+        self.val += v;
+        Ok(())
+    }
+
+    /// `inc` increments the local counter by 1.
+    #[inline]
+    pub fn inc(&mut self) {
+        self.val += 1.0;
+    }
+
+    /// `get` returns the local counter value.
+    #[inline]
+    pub fn get(&self) -> f64 {
+        self.val
+    }
+
+    /// `flush` the local counter value to the counter
+    #[inline]
+    pub fn flush(&mut self) {
+        if self.val == 0.0 {
+            return;
+        }
+        self.counter.inc_by(self.val).unwrap();
+        self.val = 0.0;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-
     use super::*;
-
     use metrics::{Collector, Opts};
     use std::collections::HashMap;
 
@@ -142,6 +191,23 @@ mod tests {
         let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
+    }
+
+    #[test]
+    fn test_local_counter() {
+        let counter = Counter::new("counter", "counter helper").unwrap();
+        let mut local_counter1 = counter.local();
+        let mut local_counter2 = counter.local();
+
+        local_counter1.inc();
+        local_counter2.inc();
+        assert_eq!(local_counter1.get() as u64, 1);
+        assert_eq!(local_counter2.get() as u64, 1);
+        assert_eq!(counter.get() as u64, 0);
+        local_counter1.flush();
+        assert_eq!(counter.get() as u64, 1);
+        local_counter2.flush();
+        assert_eq!(counter.get() as u64, 2);
     }
 
     #[test]
