@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #[cfg(feature = "nightly")]
 pub use self::atomic::{AtomicF64, AtomicU64};
 #[cfg(not(feature = "nightly"))]
@@ -103,8 +102,9 @@ mod atomic {
             loop {
                 let current = self.inner.load(Ordering::Acquire);
                 let new = u64_to_f64(current) + delta;
-                let swapped = self.inner
-                    .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
+                let swapped =
+                    self.inner
+                        .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
                 if swapped == current {
                     return;
                 }

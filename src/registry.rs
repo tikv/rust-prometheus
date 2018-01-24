@@ -14,7 +14,6 @@
 
 use errors::{Error, Result};
 use metrics::Collector;
-
 use proto;
 use spin::RwLock;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -98,9 +97,10 @@ impl RegistryCore {
         }
 
         if self.colloctors_by_id.remove(&collector_id).is_none() {
-            return Err(Error::Msg(
-                format!("collector {:?} is not registered", c.desc()),
-            ));
+            return Err(Error::Msg(format!(
+                "collector {:?} is not registered",
+                c.desc()
+            )));
         }
 
         // dim_hashes_by_name is left untouched as those must be consistent
@@ -284,7 +284,6 @@ pub fn gather() -> Vec<proto::MetricFamily> {
 mod tests {
 
     use super::*;
-
     use counter::{Counter, CounterVec};
     use desc::Desc;
     use metrics::{Collector, Opts};
@@ -434,13 +433,13 @@ mod tests {
             Counter::new("c2", "c2 is a counter").unwrap(),
         ];
 
-        let descs = counters
-            .iter()
-            .map(|c| c.desc().into_iter().cloned())
-            .fold(Vec::new(), |mut acc, ds| {
+        let descs = counters.iter().map(|c| c.desc().into_iter().cloned()).fold(
+            Vec::new(),
+            |mut acc, ds| {
                 acc.extend(ds);
                 acc
-            });
+            },
+        );
 
         let mc = MultipleCollector {
             descs: descs,

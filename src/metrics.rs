@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use desc::{Desc, Describer};
 use errors::Result;
 use proto::{self, LabelPair};

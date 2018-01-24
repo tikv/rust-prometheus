@@ -15,7 +15,6 @@
 use desc::Desc;
 use errors::Result;
 use metrics::{Collector, Metric, Opts};
-
 use proto;
 use std::sync::Arc;
 use value::{Value, ValueType};
@@ -137,7 +136,6 @@ impl GaugeVec {
 mod tests {
 
     use super::*;
-
     use metrics::{Collector, Opts};
     use std::collections::HashMap;
 

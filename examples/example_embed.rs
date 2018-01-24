@@ -13,7 +13,6 @@
 
 extern crate prometheus;
 
-
 use prometheus::{Counter, CounterVec, Encoder, Gauge, GaugeVec, Opts, Registry, TextEncoder};
 use std::thread;
 use std::time::Duration;
@@ -74,20 +73,24 @@ fn main() {
     let cv2 = counter_vec.clone();
     let g2 = gauge.clone();
     let gv2 = gauge_vec.clone();
-    thread::spawn(move || for _ in 0..10 {
-        thread::sleep(Duration::from_millis(500));
-        c2.inc();
-        cv2.with_label_values(&["3", "4"]).inc();
-        g2.inc();
-        gv2.with_label_values(&["3", "4"]).inc();
+    thread::spawn(move || {
+        for _ in 0..10 {
+            thread::sleep(Duration::from_millis(500));
+            c2.inc();
+            cv2.with_label_values(&["3", "4"]).inc();
+            g2.inc();
+            gv2.with_label_values(&["3", "4"]).inc();
+        }
     });
 
-    thread::spawn(move || for _ in 0..5 {
-        thread::sleep(Duration::from_secs(1));
-        counter.inc();
-        counter_vec.with_label_values(&["3", "4"]).inc();
-        gauge.dec();
-        gauge_vec.with_label_values(&["3", "4"]).set(42.0);
+    thread::spawn(move || {
+        for _ in 0..5 {
+            thread::sleep(Duration::from_secs(1));
+            counter.inc();
+            counter_vec.with_label_values(&["3", "4"]).inc();
+            gauge.dec();
+            gauge_vec.with_label_values(&["3", "4"]).set(42.0);
+        }
     });
 
     // Choose your writer and encoder.
