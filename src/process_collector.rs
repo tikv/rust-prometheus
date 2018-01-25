@@ -19,14 +19,11 @@ use counter::Counter;
 use desc::Desc;
 use errors::{Error, Result};
 use gauge::Gauge;
-
 use libc;
-
 /// The `pid_t` data type represents process IDs.
 pub use libc::pid_t;
 use metrics::{Collector, Opts};
 use procinfo::pid as pid_info;
-
 use proto;
 use std::fs;
 use std::io::Read;
@@ -209,9 +206,8 @@ fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     if let Some(idx) = all.find(pat) {
         let mut iter = (all[idx + pat.len()..]).split_whitespace();
         if let Some(v) = iter.next() {
-            return v.parse().map_err(|e| {
-                Error::Msg(format!("read statistic {} failed: {}", pat, e))
-            });
+            return v.parse()
+                .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
         }
     }
 
@@ -262,7 +258,6 @@ mod tests {
 
     use super::*;
     use metrics::Collector;
-
     use registry;
     use std::f64::EPSILON;
 

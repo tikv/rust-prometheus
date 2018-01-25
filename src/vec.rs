@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use desc::{Desc, Describer};
 use errors::{Error, Result};
-
 use fnv::FnvHasher;
 use metrics::{Collector, Metric};
 use proto::{MetricFamily, MetricType};
@@ -135,9 +133,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             match labels.get(&name.as_ref()) {
                 Some(val) => h.write(val.as_bytes()),
                 None => {
-                    return Err(Error::Msg(
-                        format!("label name {} missing in label map", name),
-                    ))
+                    return Err(Error::Msg(format!(
+                        "label name {} missing in label map",
+                        name
+                    )))
                 }
             }
         }
@@ -151,9 +150,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
             match labels.get(&name.as_ref()) {
                 Some(val) => values.push(*val),
                 None => {
-                    return Err(Error::Msg(
-                        format!("label name {} missing in label map", name),
-                    ))
+                    return Err(Error::Msg(format!(
+                        "label name {} missing in label map",
+                        name
+                    )))
                 }
             }
         }
@@ -284,13 +284,11 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         self.v.delete(labels)
     }
 
-
     /// `reset` deletes all metrics in this vector.
     pub fn reset(&self) {
         self.v.reset()
     }
 }
-
 
 impl<T: MetricVecBuilder> Collector for MetricVec<T> {
     fn desc(&self) -> Vec<&Desc> {

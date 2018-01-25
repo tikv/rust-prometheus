@@ -11,12 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use super::{check_metric_family, Encoder};
-
 use errors::Result;
 use proto::MetricFamily;
-
 use protobuf::Message;
 use std::io::Write;
 

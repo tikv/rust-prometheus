@@ -13,8 +13,8 @@
 
 #![feature(test)]
 
-extern crate test;
 extern crate prometheus;
+extern crate test;
 
 mod counter;
 mod gauge;
