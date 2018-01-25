@@ -26,6 +26,7 @@ matrix:
   fast_finish: true
   include:
   - env: LINT="dev"
+    rust: nightly
   allow_failures:
   - env: LINT="dev"
 
