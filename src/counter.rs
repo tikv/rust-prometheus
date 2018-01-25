@@ -52,8 +52,8 @@ impl Counter {
         if v < 0.0 {
             return Err(Error::DecreaseCounter(v));
         }
-
-        Ok(self.v.inc_by(v))
+        self.v.inc_by(v);
+        Ok(())
     }
 
     /// `inc` increments the counter by 1.
@@ -319,40 +319,34 @@ mod tests {
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
-            .inc_by(23 as f64)
+            .inc_by(23.0)
             .unwrap();
-        assert_eq!(
-            local_vec_1.with_label_values(&["v1", "v2"]).get() as u64,
-            23
-        );
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 0);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 23.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get() as u64, 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 23);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get() as u64, 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 23);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
-            .inc_by(11 as f64)
+            .inc_by(11.0)
             .unwrap();
-        assert_eq!(
-            local_vec_1.with_label_values(&["v1", "v2"]).get() as u64,
-            11
-        );
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 23);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 11.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get() as u64, 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 34);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34.0);
 
         // When calling `remove_label_values`, it is "flushed" immediately.
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_ok());
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get() as u64, 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 0);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
 
         local_vec_1.with_label_values(&["v1", "v2"]).inc();
         assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
@@ -360,26 +354,23 @@ mod tests {
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
-            .inc_by(13 as f64)
+            .inc_by(13.0)
             .unwrap();
-        assert_eq!(
-            local_vec_1.with_label_values(&["v1", "v2"]).get() as u64,
-            14
-        );
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 0);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 14.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
 
         local_vec_2
             .with_label_values(&["v1", "v2"])
-            .inc_by(7 as f64)
+            .inc_by(7.0)
             .unwrap();
-        assert_eq!(local_vec_2.with_label_values(&["v1", "v2"]).get() as u64, 7);
+        assert_eq!(local_vec_2.with_label_values(&["v1", "v2"]).get(), 7.0);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 21);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 21.0);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get() as u64, 21);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 21.0);
     }
 }
