@@ -22,15 +22,22 @@ env:
     - FEATURES="push process"
     - ARCH=i686
 
+matrix:
+  fast_finish: true
+  include:
+  - env: LINT="dev"
+  allow_failures:
+  - env: LINT="dev"
+
 script:
   # Test common features.
   - cargo test --features="$FEATURES"
   - |
     if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
         # Enable dev for clippy linting.
-        cargo test --features="$FEATURES dev";
+        cargo test --features="$FEATURES $LINT";
         # Lint nightly feature.
-        cargo test --features="$FEATURES nightly dev";
+        cargo test --features="$FEATURES $LINT nightly";
     fi
   - |
     if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
