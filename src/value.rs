@@ -15,7 +15,6 @@
 use atomic64::AtomicF64;
 use desc::{Desc, Describer};
 use errors::{Error, Result};
-
 use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 use protobuf::RepeatedField;
 

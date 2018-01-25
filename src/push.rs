@@ -14,14 +14,12 @@
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
-
 use hyper::client::Client;
 use hyper::client::pool::Config;
 use hyper::header::ContentType;
 use hyper::method::Method;
 use hyper::status::StatusCode;
 use metrics::Collector;
-
 use proto;
 use registry::Registry;
 use std::collections::HashMap;
@@ -89,7 +87,6 @@ fn push<S: BuildHasher>(
     mfs: Vec<proto::MetricFamily>,
     method: &str,
 ) -> Result<()> {
-
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
 
@@ -116,8 +113,7 @@ fn push<S: BuildHasher>(
         if lv.contains('/') {
             return Err(Error::Msg(format!(
                 "value of grouping label {} contains '/': {}",
-                ln,
-                lv
+                ln, lv
             )));
         }
         url_components.push(ln.to_owned());
@@ -164,8 +160,7 @@ fn push<S: BuildHasher>(
         StatusCode::Accepted => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
-            response.status,
-            push_url
+            response.status, push_url
         ))),
     }
 }
@@ -254,7 +249,6 @@ mod tests {
 
     use super::*;
     use proto;
-
     use protobuf::RepeatedField;
     use std::error::Error;
 

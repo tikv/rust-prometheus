@@ -18,19 +18,19 @@
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
 #[macro_use]
-extern crate quick_error;
-extern crate protobuf;
+extern crate cfg_if;
 extern crate fnv;
-#[macro_use]
-extern crate lazy_static;
 #[cfg(feature = "push")]
 extern crate hyper;
+#[macro_use]
+extern crate lazy_static;
 #[cfg(any(feature = "nightly", feature = "push", feature = "process"))]
 extern crate libc;
 #[cfg(all(feature = "process", target_os = "linux"))]
 extern crate procinfo;
+extern crate protobuf;
 #[macro_use]
-extern crate cfg_if;
+extern crate quick_error;
 extern crate spin;
 
 mod errors;

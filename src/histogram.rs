@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use atomic64::{AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
 use proto;
-
 use protobuf::RepeatedField;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -33,17 +31,7 @@ use vec::{MetricVec, MetricVecBuilder};
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
 pub const DEFAULT_BUCKETS: &[f64; 11] = &[
-    0.005,
-    0.01,
-    0.025,
-    0.05,
-    0.1,
-    0.25,
-    0.5,
-    1.0,
-    2.5,
-    5.0,
-    10.0,
+    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0
 ];
 
 /// `BUCKET_LABEL` is used for the label that defines the upper bound of a
@@ -249,8 +237,7 @@ impl HistogramCore {
 
 enum Instant {
     Monotonic(StdInstant),
-    #[cfg(all(feature = "nightly", target_os = "linux"))]
-    MonotonicCoarse(timespec),
+    #[cfg(all(feature = "nightly", target_os = "linux"))] MonotonicCoarse(timespec),
 }
 
 impl Instant {
@@ -299,7 +286,6 @@ use self::coarse::*;
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 mod coarse {
     use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
-
     pub use libc::timespec;
 
     pub const NANOS_PER_MILLI: i64 = 1_000_000;
@@ -419,7 +405,6 @@ impl Histogram {
     }
 }
 
-
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
         let mut m = proto::Metric::new();
@@ -481,7 +466,7 @@ impl HistogramVec {
 
     pub fn local(&self) -> LocalHistogramVec {
         let vec = self.clone();
-        LocalHistogramVec::new( vec)
+        LocalHistogramVec::new(vec)
     }
 }
 
@@ -775,7 +760,6 @@ impl Clone for LocalHistogramVec {
 mod tests {
 
     use super::*;
-
     use metrics::Collector;
     use metrics::Metric;
     use std::f64::{EPSILON, INFINITY};

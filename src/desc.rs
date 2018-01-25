@@ -13,10 +13,8 @@
 // limitations under the License.
 
 use errors::{Error, Result};
-
 use fnv::FnvHasher;
 use metrics::SEPARATOR_BYTE;
-
 use proto::LabelPair;
 use std::collections::{BTreeSet, HashMap};
 use std::hash::Hasher;
@@ -126,9 +124,10 @@ impl Desc {
         }
 
         if !is_valid_metric_name(&desc.fq_name) {
-            return Err(Error::Msg(
-                format!("'{}' is not a valid metric name", desc.fq_name),
-            ));
+            return Err(Error::Msg(format!(
+                "'{}' is not a valid metric name",
+                desc.fq_name
+            )));
         }
 
         let mut label_values = Vec::with_capacity(const_labels.len() + 1);
@@ -138,15 +137,17 @@ impl Desc {
 
         for label_name in const_labels.keys() {
             if !is_valid_label_name(label_name) {
-                return Err(Error::Msg(
-                    format!("'{}' is not a valid label name", &label_name),
-                ));
+                return Err(Error::Msg(format!(
+                    "'{}' is not a valid label name",
+                    &label_name
+                )));
             }
 
             if !label_names.insert(label_name.clone()) {
-                return Err(Error::Msg(
-                    format!("duplicate const label name {}", label_name),
-                ));
+                return Err(Error::Msg(format!(
+                    "duplicate const label name {}",
+                    label_name
+                )));
             }
         }
 
@@ -160,15 +161,17 @@ impl Desc {
         // dimension with a different mix between preset and variable labels.
         for label_name in &desc.variable_labels {
             if !is_valid_label_name(label_name) {
-                return Err(Error::Msg(
-                    format!("'{}' is not a valid label name", &label_name),
-                ));
+                return Err(Error::Msg(format!(
+                    "'{}' is not a valid label name",
+                    &label_name
+                )));
             }
 
             if !label_names.insert(format!("${}", label_name)) {
-                return Err(Error::Msg(
-                    format!("duplicate variable label name {}", label_name),
-                ));
+                return Err(Error::Msg(format!(
+                    "duplicate variable label name {}",
+                    label_name
+                )));
             }
         }
 

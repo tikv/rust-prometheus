@@ -11,9 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use super::{check_metric_family, Encoder};
-
 use errors::Result;
 use histogram::BUCKET_LABEL;
 use proto::{self, MetricType};

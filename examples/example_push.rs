@@ -13,12 +13,11 @@
 
 #![cfg_attr(not(feature = "push"), allow(unused_imports, dead_code))]
 
-#[macro_use]
-extern crate prometheus;
+extern crate getopts;
 #[macro_use]
 extern crate lazy_static;
-extern crate getopts;
-
+#[macro_use]
+extern crate prometheus;
 
 use getopts::Options;
 use prometheus::{Counter, Histogram};
