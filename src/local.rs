@@ -14,5 +14,5 @@
 
 // TODO: define a trait and implement the trait for metrics.
 
-pub use super::counter::LocalCounter;
+pub use super::counter::{LocalCounter, LocalCounterVec};
 pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};
