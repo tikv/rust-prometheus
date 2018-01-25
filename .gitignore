@@ -24,3 +24,5 @@ out/
 target
 tmp
 /bin
+
+Cargo.lock
