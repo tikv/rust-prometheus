@@ -16,6 +16,7 @@ use desc::Desc;
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
 use proto;
+use std::collections::HashMap;
 use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
@@ -51,8 +52,8 @@ impl Counter {
         if v < 0.0 {
             return Err(Error::DecreaseCounter(v));
         }
-
-        Ok(self.v.inc_by(v))
+        self.v.inc_by(v);
+        Ok(())
     }
 
     /// `inc` increments the counter by 1.
@@ -117,6 +118,10 @@ impl CounterVec {
 
         Ok(metric_vec as CounterVec)
     }
+
+    pub fn local(&self) -> LocalCounterVec {
+        LocalCounterVec::new(self.clone())
+    }
 }
 
 pub struct LocalCounter {
@@ -164,6 +169,51 @@ impl LocalCounter {
         }
         self.counter.inc_by(self.val).unwrap();
         self.val = 0.0;
+    }
+}
+
+pub struct LocalCounterVec {
+    vec: CounterVec,
+    local: HashMap<u64, LocalCounter>,
+}
+
+impl LocalCounterVec {
+    fn new(vec: CounterVec) -> LocalCounterVec {
+        let local = HashMap::with_capacity(vec.v.children.read().len());
+        LocalCounterVec { vec, local }
+    }
+
+    /// Get a `LocalCounter` by label values.
+    /// See more [MetricVec::with_label_values]
+    /// (/prometheus/struct.MetricVec.html#method.with_label_values)
+    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut LocalCounter {
+        let hash = self.vec.v.hash_label_values(vals).unwrap();
+        let vec = &self.vec;
+        self.local
+            .entry(hash)
+            .or_insert_with(|| vec.with_label_values(vals).local())
+    }
+
+    /// Remove a `LocalCounter` by label values.
+    /// See more [MetricVec::remove_label_values]
+    /// (/prometheus/struct.MetricVec.html#method.remove_label_values)
+    pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
+        let hash = self.vec.v.hash_label_values(vals)?;
+        self.local.remove(&hash);
+        self.vec.v.delete_label_values(vals)
+    }
+
+    /// `flush` flushes the local metrics to the CounterVec metric.
+    pub fn flush(&mut self) {
+        for h in self.local.values_mut() {
+            h.flush();
+        }
+    }
+}
+
+impl Clone for LocalCounterVec {
+    fn clone(&self) -> LocalCounterVec {
+        LocalCounterVec::new(self.vec.clone())
     }
 }
 
@@ -254,5 +304,73 @@ mod tests {
         vec.with_label_values(&["v1", "v2"]).inc();
         assert!(vec.remove_label_values(&["v1"]).is_err());
         assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_counter_vec_local() {
+        let vec = CounterVec::new(
+            Opts::new("test_vec_local", "test counter vec help"),
+            &["l1", "l2"],
+        ).unwrap();
+        let mut local_vec_1 = vec.local();
+        let mut local_vec_2 = vec.local();
+
+        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
+
+        local_vec_1
+            .with_label_values(&["v1", "v2"])
+            .inc_by(23.0)
+            .unwrap();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 23.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
+
+        local_vec_1
+            .with_label_values(&["v1", "v2"])
+            .inc_by(11.0)
+            .unwrap();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 11.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34.0);
+
+        // When calling `remove_label_values`, it is "flushed" immediately.
+        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_ok());
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
+
+        local_vec_1.with_label_values(&["v1", "v2"]).inc();
+        assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
+        assert!(local_vec_1.remove_label_values(&["v1", "v3"]).is_err());
+
+        local_vec_1
+            .with_label_values(&["v1", "v2"])
+            .inc_by(13.0)
+            .unwrap();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 14.0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
+
+        local_vec_2
+            .with_label_values(&["v1", "v2"])
+            .inc_by(7.0)
+            .unwrap();
+        assert_eq!(local_vec_2.with_label_values(&["v1", "v2"]).get(), 7.0);
+
+        local_vec_1.flush();
+        local_vec_2.flush();
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 21.0);
+
+        local_vec_1.flush();
+        local_vec_2.flush();
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 21.0);
     }
 }
