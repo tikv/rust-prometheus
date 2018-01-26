@@ -35,7 +35,7 @@ path = "benches/benches.rs"
 [dependencies]
 protobuf = "1.4"
 quick-error = "0.2"
-clippy = {version = "*", optional = true}
+clippy = {version = "^0", optional = true}
 fnv = "1.0"
 lazy_static = "0.2"
 libc = {version = "0.2", optional = true}
