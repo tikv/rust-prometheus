@@ -172,6 +172,12 @@ impl LocalCounter {
     }
 }
 
+impl Clone for LocalCounter {
+    fn clone(&self) -> LocalCounter {
+        LocalCounter::new(self.counter.clone())
+    }
+}
+
 pub struct LocalCounterVec {
     vec: CounterVec,
     local: HashMap<u64, LocalCounter>,
@@ -222,6 +228,7 @@ mod tests {
     use super::*;
     use metrics::{Collector, Opts};
     use std::collections::HashMap;
+    use std::f64::EPSILON;
 
     #[test]
     fn test_counter() {
@@ -313,7 +320,7 @@ mod tests {
             &["l1", "l2"],
         ).unwrap();
         let mut local_vec_1 = vec.local();
-        let mut local_vec_2 = vec.local();
+        let mut local_vec_2 = local_vec_1.clone();
 
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
 
@@ -321,32 +328,32 @@ mod tests {
             .with_label_values(&["v1", "v2"])
             .inc_by(23.0)
             .unwrap();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 23.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
             .inc_by(11.0)
             .unwrap();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 11.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 34.0) <= EPSILON);
 
         // When calling `remove_label_values`, it is "flushed" immediately.
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_ok());
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
         local_vec_1.with_label_values(&["v1", "v2"]).inc();
         assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
@@ -356,21 +363,21 @@ mod tests {
             .with_label_values(&["v1", "v2"])
             .inc_by(13.0)
             .unwrap();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 14.0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0.0);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
         local_vec_2
             .with_label_values(&["v1", "v2"])
             .inc_by(7.0)
             .unwrap();
-        assert_eq!(local_vec_2.with_label_values(&["v1", "v2"]).get(), 7.0);
+        assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= EPSILON);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 21.0);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 21.0);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
     }
 }
