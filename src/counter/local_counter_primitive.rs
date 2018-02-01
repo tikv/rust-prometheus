@@ -29,6 +29,7 @@ impl LocalCounterPrimitive {
 }
 
 impl ICounter for LocalCounterPrimitive {
+    #[inline]
     fn try_inc_by(&mut self, v: f64) -> Result<()> {
         if v < 0.0 {
             return Err(Error::DecreaseCounter(v));
@@ -37,10 +38,12 @@ impl ICounter for LocalCounterPrimitive {
         Ok(())
     }
 
+    #[inline]
     fn get(&self) -> f64 {
         self.val
     }
 
+    #[inline]
     fn reset(&mut self) {
         self.val = 0.0;
     }
