@@ -23,7 +23,6 @@ pub use self::local_counter_primitive::LocalCounterPrimitive;
 
 pub trait ICounter {
     /// `try_inc_by` increments the given value to the counter. Error if the value is < 0.
-    #[inline]
     fn try_inc_by(&mut self, v: f64) -> Result<()>;
 
     /// `inc_by` increments the given value to the counter. Panics if the value is < 0.
@@ -39,15 +38,21 @@ pub trait ICounter {
     }
 
     /// `get` returns the counter value.
-    #[inline]
     fn get(&self) -> f64;
 
     /// Reset any temporal value this counter is storing, if applicable.
     fn reset(&mut self);
 
-    /// Merge current counter value into another compatible counter and clear current value.
-    fn flush_to<T: ICounter>(&mut self, another: &mut T) {
+    /// Merge current counter value into another compatible counter.
+    #[inline]
+    fn merge_to<T: ICounter>(&self, another: &mut T) {
         another.inc_by(self.get());
+    }
+
+    /// Merge current counter value into another compatible counter and clear current value.
+    #[inline]
+    fn flush_to<T: ICounter>(&mut self, another: &mut T) {
+        self.merge_to(another);
         self.reset();
     }
 }
