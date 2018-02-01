@@ -43,7 +43,8 @@ pub trait ICounter {
     /// Reset any temporal value this counter is storing, if applicable.
     fn reset(&mut self);
 
-    /// Merge current counter value into another compatible counter.
+    /// Merge current counter value into another compatible counter. Current counter
+    /// value is not changed after merging.
     #[inline]
     fn merge_to<T: ICounter>(&self, another: &mut T) {
         another.inc_by(self.get());
