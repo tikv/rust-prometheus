@@ -131,7 +131,7 @@ pub struct LocalCounter {
 
 // LocalCounter is a thread local copy of Counter
 impl LocalCounter {
-    pub fn new(counter: Counter) -> LocalCounter {
+    fn new(counter: Counter) -> LocalCounter {
         LocalCounter {
             counter: counter,
             val: 0.0,
