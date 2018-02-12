@@ -114,8 +114,12 @@ impl RegistryCore {
         for c in self.colloctors_by_id.values() {
             let mfs = c.collect();
             for mut mf in mfs {
-                let name = mf.get_name().to_owned();
+                // Prune empty MetricFamilies.
+                if mf.get_metric().is_empty() {
+                    continue;
+                }
 
+                let name = mf.get_name().to_owned();
                 match mf_by_name.entry(name) {
                     BEntry::Vacant(entry) => {
                         entry.insert(mf);
@@ -448,5 +452,16 @@ mod tests {
 
         let r = Registry::new();
         r.register(Box::new(mc)).unwrap();
+    }
+
+    #[test]
+    fn test_prune_empty_metric_family() {
+        let counter_vec =
+            CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
+        let r = Registry::new();
+        r.register(Box::new(counter_vec.clone())).unwrap();
+        assert!(r.gather().is_empty());
+        counter_vec.with_label_values(&["1", "2"]).inc();
+        assert!(!r.gather().is_empty());
     }
 }
