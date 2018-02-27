@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use desc::Desc;
-use errors::{Error, Result};
+use errors::Result;
 use metrics::{Collector, Metric, Opts};
 use proto;
 use std::collections::HashMap;
@@ -45,21 +45,20 @@ impl Counter {
         Ok(Counter { v: Arc::new(v) })
     }
 
-    /// `inc_by` increments the given value to the counter. Error if the value is <
-    /// 0.
+    /// `inc_by` increments the given value to the counter. Panics if
+    /// the value is < 0.
     #[inline]
-    pub fn inc_by(&self, v: f64) -> Result<()> {
+    pub fn inc_by(&self, v: f64) {
         if v < 0.0 {
-            return Err(Error::DecreaseCounter(v));
+            panic!("counter cannot inc negative values")
         }
         self.v.inc_by(v);
-        Ok(())
     }
 
     /// `inc` increments the counter by 1.
     #[inline]
     pub fn inc(&self) {
-        self.inc_by(1.0).unwrap()
+        self.inc_by(1.0)
     }
 
     /// `get` returns the counter value.
@@ -138,15 +137,14 @@ impl LocalCounter {
         }
     }
 
-    /// `inc_by` increments the given value to the local counter. Error if the value is <
-    /// 0.
+    /// `inc_by` increments the given value to the local counter. Panics if
+    /// the value is < 0.
     #[inline]
-    pub fn inc_by(&mut self, v: f64) -> Result<()> {
+    pub fn inc_by(&mut self, v: f64) {
         if v < 0.0 {
-            return Err(Error::DecreaseCounter(v));
+            panic!("counter cannot inc negative values")
         }
         self.val += v;
-        Ok(())
     }
 
     /// `inc` increments the local counter by 1.
@@ -167,7 +165,7 @@ impl LocalCounter {
         if self.val == 0.0 {
             return;
         }
-        self.counter.inc_by(self.val).unwrap();
+        self.counter.inc_by(self.val);
         self.val = 0.0;
     }
 }
@@ -238,7 +236,7 @@ mod tests {
         let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.get() as u64, 1);
-        counter.inc_by(42.0).unwrap();
+        counter.inc_by(42.0);
         assert_eq!(counter.get() as u64, 43);
 
         let mut mfs = counter.collect();
@@ -326,8 +324,7 @@ mod tests {
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
-            .inc_by(23.0)
-            .unwrap();
+            .inc_by(23.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
@@ -341,8 +338,7 @@ mod tests {
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
-            .inc_by(11.0)
-            .unwrap();
+            .inc_by(11.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
@@ -361,15 +357,13 @@ mod tests {
 
         local_vec_1
             .with_label_values(&["v1", "v2"])
-            .inc_by(13.0)
-            .unwrap();
+            .inc_by(13.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
         local_vec_2
             .with_label_values(&["v1", "v2"])
-            .inc_by(7.0)
-            .unwrap();
+            .inc_by(7.0);
         assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= EPSILON);
 
         local_vec_1.flush();

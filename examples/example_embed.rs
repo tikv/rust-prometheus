@@ -46,7 +46,7 @@ fn main() {
 
     counter.inc();
     assert_eq!(counter.get() as u64, 1);
-    counter.inc_by(42.0).unwrap();
+    counter.inc_by(42.0);
     assert_eq!(counter.get() as u64, 43);
 
     counter_vec.with_label_values(&["3", "4"]).inc();
@@ -54,8 +54,7 @@ fn main() {
 
     counter_vec
         .with_label_values(&["3", "4"])
-        .inc_by(42.0)
-        .unwrap();
+        .inc_by(42.0);
     assert_eq!(counter_vec.with_label_values(&["3", "4"]).get() as u64, 43);
 
     gauge.inc();
