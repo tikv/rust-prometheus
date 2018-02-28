@@ -52,9 +52,7 @@ fn main() {
     counter_vec.with_label_values(&["3", "4"]).inc();
     assert_eq!(counter_vec.with_label_values(&["3", "4"]).get() as u64, 1);
 
-    counter_vec
-        .with_label_values(&["3", "4"])
-        .inc_by(42.0);
+    counter_vec.with_label_values(&["3", "4"]).inc_by(42.0);
     assert_eq!(counter_vec.with_label_values(&["3", "4"]).get() as u64, 43);
 
     gauge.inc();

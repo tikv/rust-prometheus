@@ -322,9 +322,7 @@ mod tests {
 
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
 
-        local_vec_1
-            .with_label_values(&["v1", "v2"])
-            .inc_by(23.0);
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
@@ -336,9 +334,7 @@ mod tests {
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
-        local_vec_1
-            .with_label_values(&["v1", "v2"])
-            .inc_by(11.0);
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
@@ -355,15 +351,11 @@ mod tests {
         assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
         assert!(local_vec_1.remove_label_values(&["v1", "v3"]).is_err());
 
-        local_vec_1
-            .with_label_values(&["v1", "v2"])
-            .inc_by(13.0);
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(13.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
-        local_vec_2
-            .with_label_values(&["v1", "v2"])
-            .inc_by(7.0);
+        local_vec_2.with_label_values(&["v1", "v2"]).inc_by(7.0);
         assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= EPSILON);
 
         local_vec_1.flush();
