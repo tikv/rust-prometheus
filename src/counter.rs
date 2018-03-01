@@ -45,8 +45,11 @@ impl Counter {
         Ok(Counter { v: Arc::new(v) })
     }
 
-    /// `inc_by` increments the given value to the counter. Panics if
-    /// the value is < 0.
+    /// `inc_by` increments the given value to the counter.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value is < 0.
     #[inline]
     pub fn inc_by(&self, v: f64) {
         if v < 0.0 {
@@ -137,8 +140,11 @@ impl LocalCounter {
         }
     }
 
-    /// `inc_by` increments the given value to the local counter. Panics if
-    /// the value is < 0.
+    /// `inc_by` increments the given value to the local counter.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value is < 0.
     #[inline]
     pub fn inc_by(&mut self, v: f64) {
         if v < 0.0 {
@@ -365,5 +371,20 @@ mod tests {
         local_vec_1.flush();
         local_vec_2.flush();
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_counter_negative_inc() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        counter.inc_by(-42.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_local_counter_negative_inc() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        let mut local = counter.local();
+        local.inc_by(-42.0);
     }
 }
