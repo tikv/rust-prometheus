@@ -13,13 +13,14 @@
 // limitations under the License.
 
 use spin::RwLock;
-use std::ops::AddAssign;
 
-pub struct RwlockAtomic<T: AddAssign + Copy> {
+pub struct RwlockAtomic<T: super::PrimitiveNumber> {
     inner: RwLock<T>,
 }
 
-impl<T: AddAssign + Copy> super::Atomic<T> for RwlockAtomic<T> {
+impl<T: super::PrimitiveNumber> super::Atomic for RwlockAtomic<T> {
+    type T = T;
+
     fn new(val: T) -> Self {
         RwlockAtomic {
             inner: RwLock::new(val),
@@ -44,4 +45,4 @@ impl<T: AddAssign + Copy> super::Atomic<T> for RwlockAtomic<T> {
 
 pub type AtomicF64 = RwlockAtomic<f64>;
 
-pub type AtomicU64 = RwlockAtomic<u64>;
+pub type AtomicI64 = RwlockAtomic<i64>;

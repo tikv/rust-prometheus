@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::f64;
-use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
+use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
 
 pub struct AtomicF64 {
     inner: StdAtomicU64,
@@ -58,29 +58,29 @@ impl super::Atomic<f64> for AtomicF64 {
     }
 }
 
-pub struct AtomicU64 {
-    inner: StdAtomicU64,
+pub struct AtomicI64 {
+    inner: StdAtomicI64,
 }
 
-impl super::Atomic<u64> for AtomicU64 {
-    fn new(val: u64) -> AtomicU64 {
-        AtomicU64 {
-            inner: StdAtomicU64::new(val),
+impl super::Atomic<i64> for AtomicI64 {
+    fn new(val: i64) -> AtomicI64 {
+        AtomicI64 {
+            inner: StdAtomicI64::new(val),
         }
     }
 
     #[inline]
-    fn set(&self, val: u64) {
+    fn set(&self, val: i64) {
         self.inner.store(val, Ordering::Relaxed);
     }
 
     #[inline]
-    fn get(&self) -> u64 {
+    fn get(&self) -> i64 {
         self.inner.load(Ordering::Acquire)
     }
 
     #[inline]
-    fn inc_by(&self, delta: u64) {
+    fn inc_by(&self, delta: i64) {
         self.inner.fetch_add(delta, Ordering::Release);
     }
 }

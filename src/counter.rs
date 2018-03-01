@@ -12,37 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use atomic64::{Atomic, AtomicF64, AtomicI64, PrimitiveNumber};
 use desc::Desc;
 use errors::Result;
 use metrics::{Collector, Metric, Opts};
 use proto;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
 /// `Counter` is a Metric that represents a single numerical value that only ever
 /// goes up.
-#[derive(Clone)]
-pub struct Counter {
-    v: Arc<Value>,
+pub struct GenericCounter<P: Atomic> {
+    v: Arc<Value<P>>,
 }
 
-impl Counter {
+pub type Counter = GenericCounter<AtomicF64>;
+
+pub type IntCounter = GenericCounter<AtomicI64>;
+
+impl<P: Atomic> Clone for GenericCounter<P> {
+    fn clone(&self) -> Self {
+        Self {
+            v: Arc::clone(&self.v),
+        }
+    }
+}
+
+impl<P: Atomic> GenericCounter<P> {
     /// `new` creates a `Counter` with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Counter> {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
-        Counter::with_opts(opts)
+        Self::with_opts(opts)
     }
 
     /// `with_opts` creates a `Counter` with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Counter> {
-        Counter::with_opts_and_label_values(&opts, &[])
+    pub fn with_opts(opts: Opts) -> Result<Self> {
+        Self::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Counter> {
-        let v = Value::new(opts, ValueType::Counter, 0.0, label_values)?;
-        Ok(Counter { v: Arc::new(v) })
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+        let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
+        Ok(Self { v: Arc::new(v) })
     }
 
     /// `inc_by` increments the given value to the counter.
@@ -51,8 +64,8 @@ impl Counter {
     ///
     /// Panics if the value is < 0.
     #[inline]
-    pub fn inc_by(&self, v: f64) {
-        if v < 0.0 {
+    pub fn inc_by(&self, v: P::T) {
+        if v < P::T::from_i64(0) {
             panic!("counter cannot inc negative values")
         }
         self.v.inc_by(v);
@@ -61,21 +74,21 @@ impl Counter {
     /// `inc` increments the counter by 1.
     #[inline]
     pub fn inc(&self) {
-        self.inc_by(1.0)
+        self.v.inc();
     }
 
     /// `get` returns the counter value.
     #[inline]
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> P::T {
         self.v.get()
     }
 
-    pub fn local(&self) -> LocalCounter {
-        LocalCounter::new(self.clone())
+    pub fn local(&self) -> GenericLocalCounter<P> {
+        GenericLocalCounter::new(self.clone())
     }
 }
 
-impl Collector for Counter {
+impl<P: Atomic> Collector for GenericCounter<P> {
     fn desc(&self) -> Vec<&Desc> {
         vec![&self.v.desc]
     }
@@ -85,21 +98,36 @@ impl Collector for Counter {
     }
 }
 
-impl Metric for Counter {
+impl<P: Atomic> Metric for GenericCounter<P> {
     fn metric(&self) -> proto::Metric {
         self.v.metric()
     }
 }
 
-#[derive(Clone)]
-pub struct CounterVecBuilder {}
+pub struct CounterVecBuilder<P: Atomic> {
+    _phantom: PhantomData<P>,
+}
 
-impl MetricVecBuilder for CounterVecBuilder {
-    type M = Counter;
+impl<P: Atomic> CounterVecBuilder<P> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<P: Atomic> Clone for CounterVecBuilder<P> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
+    type M = GenericCounter<P>;
     type P = Opts;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Counter> {
-        Counter::with_opts_and_label_values(opts, vals)
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+        Self::M::with_opts_and_label_values(opts, vals)
     }
 }
 
@@ -107,36 +135,45 @@ impl MetricVecBuilder for CounterVecBuilder {
 /// same Desc, but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of HTTP requests, partitioned by response code and method).
-pub type CounterVec = MetricVec<CounterVecBuilder>;
+pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
 
-impl CounterVec {
+pub type CounterVec = GenericCounterVec<AtomicF64>;
+
+pub type IntCounterVec = GenericCounterVec<AtomicI64>;
+
+impl<P: Atomic> GenericCounterVec<P> {
     /// `new` creates a new `CounterVec` based on the provided `Opts` and
     /// partitioned by the given label names. At least one label name must be
     /// provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
+    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec = MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder {}, opts)?;
+        let metric_vec =
+            MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder::new(), opts)?;
 
-        Ok(metric_vec as CounterVec)
+        Ok(metric_vec as Self)
     }
 
-    pub fn local(&self) -> LocalCounterVec {
-        LocalCounterVec::new(self.clone())
+    pub fn local(&self) -> GenericLocalCounterVec<P> {
+        GenericLocalCounterVec::new(self.clone())
     }
 }
 
-pub struct LocalCounter {
-    counter: Counter,
-    val: f64,
+pub struct GenericLocalCounter<P: Atomic> {
+    counter: GenericCounter<P>,
+    val: P::T,
 }
+
+pub type LocalCounter = GenericLocalCounter<AtomicF64>;
+
+pub type IntLocalCounter = GenericLocalCounter<AtomicI64>;
 
 // LocalCounter is a thread local copy of Counter
-impl LocalCounter {
-    fn new(counter: Counter) -> LocalCounter {
-        LocalCounter {
-            counter: counter,
-            val: 0.0,
+impl<P: Atomic> GenericLocalCounter<P> {
+    fn new(counter: GenericCounter<P>) -> Self {
+        Self {
+            counter,
+            val: P::T::from_i64(0),
         }
     }
 
@@ -146,8 +183,8 @@ impl LocalCounter {
     ///
     /// Panics if the value is < 0.
     #[inline]
-    pub fn inc_by(&mut self, v: f64) {
-        if v < 0.0 {
+    pub fn inc_by(&mut self, v: P::T) {
+        if v < P::T::from_i64(0) {
             panic!("counter cannot inc negative values")
         }
         self.val += v;
@@ -156,47 +193,51 @@ impl LocalCounter {
     /// `inc` increments the local counter by 1.
     #[inline]
     pub fn inc(&mut self) {
-        self.val += 1.0;
+        self.val += P::T::from_i64(1);
     }
 
     /// `get` returns the local counter value.
     #[inline]
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> P::T {
         self.val
     }
 
     /// `flush` the local counter value to the counter
     #[inline]
     pub fn flush(&mut self) {
-        if self.val == 0.0 {
+        if self.val == P::T::from_i64(0) {
             return;
         }
         self.counter.inc_by(self.val);
-        self.val = 0.0;
+        self.val = P::T::from_i64(0);
     }
 }
 
-impl Clone for LocalCounter {
-    fn clone(&self) -> LocalCounter {
-        LocalCounter::new(self.counter.clone())
+impl<P: Atomic> Clone for GenericLocalCounter<P> {
+    fn clone(&self) -> Self {
+        Self::new(self.counter.clone())
     }
 }
 
-pub struct LocalCounterVec {
-    vec: CounterVec,
-    local: HashMap<u64, LocalCounter>,
+pub struct GenericLocalCounterVec<P: Atomic> {
+    vec: GenericCounterVec<P>,
+    local: HashMap<u64, GenericLocalCounter<P>>,
 }
 
-impl LocalCounterVec {
-    fn new(vec: CounterVec) -> LocalCounterVec {
+pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
+
+pub type IntLocalCounterVec = GenericLocalCounterVec<AtomicI64>;
+
+impl<P: Atomic> GenericLocalCounterVec<P> {
+    fn new(vec: GenericCounterVec<P>) -> Self {
         let local = HashMap::with_capacity(vec.v.children.read().len());
-        LocalCounterVec { vec, local }
+        Self { vec, local }
     }
 
     /// Get a `LocalCounter` by label values.
     /// See more [MetricVec::with_label_values]
     /// (/prometheus/struct.MetricVec.html#method.with_label_values)
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut LocalCounter {
+    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut GenericLocalCounter<P> {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
         self.local
@@ -221,9 +262,9 @@ impl LocalCounterVec {
     }
 }
 
-impl Clone for LocalCounterVec {
-    fn clone(&self) -> LocalCounterVec {
-        LocalCounterVec::new(self.vec.clone())
+impl<P: Atomic> Clone for GenericLocalCounterVec<P> {
+    fn clone(&self) -> Self {
+        Self::new(self.vec.clone())
     }
 }
 
