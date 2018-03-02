@@ -19,15 +19,19 @@ pub struct AtomicF64 {
     inner: StdAtomicU64,
 }
 
+#[inline]
 fn u64_to_f64(val: u64) -> f64 {
     f64::from_bits(val)
 }
 
+#[inline]
 fn f64_to_u64(val: f64) -> u64 {
     f64::to_bits(val)
 }
 
-impl super::Atomic<f64> for AtomicF64 {
+impl super::Atomic for AtomicF64 {
+    type T = f64;
+
     fn new(val: f64) -> AtomicF64 {
         AtomicF64 {
             inner: StdAtomicU64::new(f64_to_u64(val)),
@@ -62,7 +66,9 @@ pub struct AtomicI64 {
     inner: StdAtomicI64,
 }
 
-impl super::Atomic<i64> for AtomicI64 {
+impl super::Atomic for AtomicI64 {
+    type T = i64;
+
     fn new(val: i64) -> AtomicI64 {
         AtomicI64 {
             inner: StdAtomicI64::new(val),

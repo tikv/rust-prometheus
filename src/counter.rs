@@ -296,6 +296,23 @@ mod tests {
     }
 
     #[test]
+    fn test_int_counter() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        counter.inc();
+        assert_eq!(counter.get(), 1);
+        counter.inc_by(11);
+        assert_eq!(counter.get(), 12);
+
+        let mut mfs = counter.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
+        let m = mf.get_metric().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 0);
+        assert_eq!(m.get_counter().get_value() as u64, 12);
+    }
+
+    #[test]
     fn test_local_counter() {
         let counter = Counter::new("counter", "counter helper").unwrap();
         let mut local_counter1 = counter.local();
@@ -307,9 +324,25 @@ mod tests {
         assert_eq!(local_counter2.get() as u64, 1);
         assert_eq!(counter.get() as u64, 0);
         local_counter1.flush();
+        assert_eq!(local_counter1.get() as u64, 0);
         assert_eq!(counter.get() as u64, 1);
         local_counter2.flush();
         assert_eq!(counter.get() as u64, 2);
+    }
+
+    #[test]
+    fn test_int_local_counter() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        let mut local_counter = counter.local();
+
+        local_counter.inc();
+        assert_eq!(local_counter.get(), 1);
+        assert_eq!(counter.get(), 0);
+
+        local_counter.inc_by(5);
+        local_counter.flush();
+        assert_eq!(local_counter.get(), 0);
+        assert_eq!(counter.get(), 6);
     }
 
     #[test]
@@ -340,6 +373,31 @@ mod tests {
         let mut labels3 = HashMap::new();
         labels3.insert("l1", "v1");
         assert!(vec.remove(&labels3).is_err());
+    }
+
+    #[test]
+    fn test_int_counter_vec() {
+        let vec = IntCounterVec::new(
+            Opts::new("foo", "bar"),
+            &["l1", "l2"],
+        ).unwrap();
+
+        vec.with_label_values(&["v1", "v3"]).inc();
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+
+        vec.with_label_values(&["v1", "v2"]).inc_by(12);
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+
+        vec.with_label_values(&["v4", "v2"]).inc_by(2);
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+        assert_eq!(vec.with_label_values(&["v4", "v2"]).get(), 2);
+
+        vec.with_label_values(&["v1", "v3"]).inc_by(5);
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 6);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+        assert_eq!(vec.with_label_values(&["v4", "v2"]).get(), 2);
     }
 
     #[test]
@@ -415,6 +473,36 @@ mod tests {
     }
 
     #[test]
+    fn test_int_counter_vec_local() {
+        let vec = IntCounterVec::new(
+            Opts::new("foo", "bar"),
+            &["l1", "l2"],
+        ).unwrap();
+        let mut local_vec_1 = vec.local();
+        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
+
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 23);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 11);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34);
+    }
+
+    #[test]
     #[should_panic(expected = "counter cannot inc negative values")]
     fn test_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
@@ -427,5 +515,20 @@ mod tests {
         let counter = Counter::new("foo", "bar").unwrap();
         let mut local = counter.local();
         local.inc_by(-42.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_int_counter_negative_inc() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        counter.inc_by(-42);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_int_local_counter_negative_inc() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        let mut local = counter.local();
+        local.inc_by(-42);
     }
 }
