@@ -34,7 +34,6 @@ mod test {
     use super::*;
     use std::f64::{self, EPSILON};
     use std::f64::consts::PI;
-    use test::Bencher;
 
     #[test]
     fn test_atomic_f64() {
@@ -53,6 +52,12 @@ mod test {
         au64.inc_by(1);
         assert_eq!(au64.get(), 1);
     }
+}
+
+#[cfg(all(test, feature = "bench"))]
+mod bench {
+    use super::*;
+    use test::Bencher;
 
     #[bench]
     fn bench_atomic_f64(b: &mut Bencher) {
