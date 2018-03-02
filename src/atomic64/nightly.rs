@@ -19,10 +19,12 @@ pub struct AtomicF64 {
     inner: StdAtomicU64,
 }
 
+#[inline]
 fn u64_to_f64(val: u64) -> f64 {
     f64::from_bits(val)
 }
 
+#[inline]
 fn f64_to_u64(val: f64) -> u64 {
     f64::to_bits(val)
 }
