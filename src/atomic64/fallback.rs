@@ -14,11 +14,11 @@
 
 use spin::RwLock;
 
-pub struct RwlockAtomic<T: super::PrimitiveNumber> {
+pub struct RwlockAtomic<T: super::Number> {
     inner: RwLock<T>,
 }
 
-impl<T: super::PrimitiveNumber> super::Atomic for RwlockAtomic<T> {
+impl<T: super::Number> super::Atomic for RwlockAtomic<T> {
     type T = T;
 
     fn new(val: T) -> Self {

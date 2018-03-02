@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use atomic64::{Atomic, PrimitiveNumber};
+use atomic64::{Atomic, Number};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};

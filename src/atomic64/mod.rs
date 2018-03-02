@@ -24,7 +24,7 @@ pub use self::nightly::{AtomicF64, AtomicI64};
 use std::cmp;
 use std::ops;
 
-pub trait PrimitiveNumber
+pub trait Number
     : Sized
     + ops::AddAssign
     + ops::Mul<Output = Self>
@@ -33,13 +33,13 @@ pub trait PrimitiveNumber
     + Copy
     + Send
     + Sync {
+    /// `std::convert::From<i64> for f64` is not implemented, so that we need to implement our own.
     fn from_i64(v: i64) -> Self;
+
     fn into_f64(self) -> f64;
 }
 
-// `std::convert::From<i64> for f64` is not implemented, so that we need to implement our own.
-
-impl PrimitiveNumber for i64 {
+impl Number for i64 {
     #[inline]
     fn from_i64(v: i64) -> Self {
         v
@@ -51,7 +51,7 @@ impl PrimitiveNumber for i64 {
     }
 }
 
-impl PrimitiveNumber for f64 {
+impl Number for f64 {
     #[inline]
     fn from_i64(v: i64) -> Self {
         v as f64
@@ -64,7 +64,7 @@ impl PrimitiveNumber for f64 {
 }
 
 pub trait Atomic: Send + Sync {
-    type T: PrimitiveNumber;
+    type T: Number;
     fn new(val: Self::T) -> Self;
     fn set(&self, val: Self::T);
     fn get(&self) -> Self::T;
