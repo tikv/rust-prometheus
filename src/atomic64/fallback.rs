@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{Number, Atomic};
+use super::{Atomic, Number};
 use spin::RwLock;
 
 pub struct RwlockAtomic<T: super::Number> {

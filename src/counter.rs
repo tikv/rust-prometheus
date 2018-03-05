@@ -377,10 +377,7 @@ mod tests {
 
     #[test]
     fn test_int_counter_vec() {
-        let vec = IntCounterVec::new(
-            Opts::new("foo", "bar"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
 
         vec.with_label_values(&["v1", "v3"]).inc();
         assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
@@ -474,10 +471,7 @@ mod tests {
 
     #[test]
     fn test_int_counter_vec_local() {
-        let vec = IntCounterVec::new(
-            Opts::new("foo", "bar"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
         let mut local_vec_1 = vec.local();
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
 
