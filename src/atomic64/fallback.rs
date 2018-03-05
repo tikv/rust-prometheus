@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::Atomic;
 use spin::RwLock;
 use std::ops::AddAssign;
-
-use super::Atomic;
 
 pub struct RwlockAtomic<T: AddAssign + Copy> {
     inner: RwLock<T>,
