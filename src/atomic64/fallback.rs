@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::{Number, Atomic};
 use spin::RwLock;
 
 pub struct RwlockAtomic<T: super::Number> {
     inner: RwLock<T>,
 }
 
-impl<T: super::Number> super::Atomic for RwlockAtomic<T> {
+impl<T: Number> Atomic for RwlockAtomic<T> {
     type T = T;
 
     fn new(val: T) -> Self {

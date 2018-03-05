@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::Atomic;
 use std::f64;
 use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
 
@@ -29,7 +30,7 @@ fn f64_to_u64(val: f64) -> u64 {
     f64::to_bits(val)
 }
 
-impl super::Atomic for AtomicF64 {
+impl Atomic for AtomicF64 {
     type T = f64;
 
     fn new(val: f64) -> AtomicF64 {
@@ -66,7 +67,7 @@ pub struct AtomicI64 {
     inner: StdAtomicI64,
 }
 
-impl super::Atomic for AtomicI64 {
+impl Atomic for AtomicI64 {
     type T = i64;
 
     fn new(val: i64) -> AtomicI64 {
