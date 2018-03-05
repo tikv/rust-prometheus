@@ -15,6 +15,8 @@
 use std::f64;
 use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
 
+use super::Atomic;
+
 pub struct AtomicF64 {
     inner: StdAtomicU64,
 }
@@ -29,7 +31,7 @@ fn f64_to_u64(val: f64) -> u64 {
     f64::to_bits(val)
 }
 
-impl super::Atomic<f64> for AtomicF64 {
+impl Atomic<f64> for AtomicF64 {
     fn new(val: f64) -> AtomicF64 {
         AtomicF64 {
             inner: StdAtomicU64::new(f64_to_u64(val)),
@@ -64,7 +66,7 @@ pub struct AtomicU64 {
     inner: StdAtomicU64,
 }
 
-impl super::Atomic<u64> for AtomicU64 {
+impl Atomic<u64> for AtomicU64 {
     fn new(val: u64) -> AtomicU64 {
         AtomicU64 {
             inner: StdAtomicU64::new(val),

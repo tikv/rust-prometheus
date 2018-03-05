@@ -15,11 +15,13 @@
 use spin::RwLock;
 use std::ops::AddAssign;
 
+use super::Atomic;
+
 pub struct RwlockAtomic<T: AddAssign + Copy> {
     inner: RwLock<T>,
 }
 
-impl<T: AddAssign + Copy> super::Atomic<T> for RwlockAtomic<T> {
+impl<T: AddAssign + Copy> Atomic<T> for RwlockAtomic<T> {
     fn new(val: T) -> Self {
         RwlockAtomic {
             inner: RwLock::new(val),
