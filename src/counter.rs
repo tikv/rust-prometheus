@@ -166,7 +166,7 @@ pub struct GenericLocalCounter<P: Atomic> {
 
 pub type LocalCounter = GenericLocalCounter<AtomicF64>;
 
-pub type IntLocalCounter = GenericLocalCounter<AtomicI64>;
+pub type LocalIntCounter = GenericLocalCounter<AtomicI64>;
 
 // LocalCounter is a thread local copy of Counter
 impl<P: Atomic> GenericLocalCounter<P> {
@@ -226,7 +226,7 @@ pub struct GenericLocalCounterVec<P: Atomic> {
 
 pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
 
-pub type IntLocalCounterVec = GenericLocalCounterVec<AtomicI64>;
+pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicI64>;
 
 impl<P: Atomic> GenericLocalCounterVec<P> {
     fn new(vec: GenericCounterVec<P>) -> Self {
