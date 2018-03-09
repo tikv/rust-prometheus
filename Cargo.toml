@@ -56,3 +56,6 @@ optional = true
 [dev-dependencies]
 getopts = "0.2"
 hyper = {version = "0.9", default-features = false}
+
+[workspace]
+members = ["static-metric"]

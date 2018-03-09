@@ -1,0 +1,5 @@
+reorder_imports = true
+reorder_imports_in_group = true
+reorder_extern_crates = true
+reorder_extern_crates_in_group = true
+use_try_shorthand = true
