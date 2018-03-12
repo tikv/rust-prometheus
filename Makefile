@@ -12,7 +12,7 @@ dev: format
 	cargo test --features="${ENABLE_FEATURES} dev" -- --nocapture
 
 bench: format
-	cargo bench --features=${ENABLE_FEATURES} -- --nocapture
+	RUSTFLAGS="--cfg bench" cargo bench --features="${ENABLE_FEATURES}" -- --nocapture
 
 format:
 	@cargo fmt --all -- --write-mode diff >/dev/null || cargo fmt --all

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use atomic64::{AtomicF64, AtomicU64};
+use atomic64::{Atomic, AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
