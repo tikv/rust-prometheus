@@ -99,7 +99,7 @@ mod test {
     }
 }
 
-#[cfg(all(test, feature = "bench"))]
+#[cfg(all(test, bench))]
 mod bench {
     use super::*;
     use test::Bencher;
