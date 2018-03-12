@@ -27,7 +27,6 @@ dev = ["clippy"]
 nightly = ["libc", "spin/unstable"]
 push = ["hyper", "libc"]
 process = ["libc", "procinfo"]
-bench = []
 
 [[bench]]
 name = "benches"
