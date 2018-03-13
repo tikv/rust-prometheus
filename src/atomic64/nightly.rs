@@ -102,7 +102,7 @@ impl Atomic for AtomicI64 {
     }
 }
 
-pub struct Atomic64 {
+pub struct AtomicU64 {
     inner: StdAtomicU64,
 }
 
