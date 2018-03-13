@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use atomic64::{Atomic, AtomicF64, AtomicI64};
+use atomic64::{Atomic, AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
@@ -166,10 +166,10 @@ pub struct HistogramCore {
     label_pairs: Vec<proto::LabelPair>,
 
     sum: AtomicF64,
-    count: AtomicI64,
+    count: AtomicU64,
 
     upper_bounds: Vec<f64>,
-    counts: Vec<AtomicI64>,
+    counts: Vec<AtomicU64>,
 }
 
 impl HistogramCore {
@@ -188,14 +188,14 @@ impl HistogramCore {
 
         let mut counts = Vec::new();
         for _ in 0..buckets.len() {
-            counts.push(AtomicI64::new(0));
+            counts.push(AtomicU64::new(0));
         }
 
         Ok(HistogramCore {
             desc: desc,
             label_pairs: pairs,
             sum: AtomicF64::new(0.0),
-            count: AtomicI64::new(0),
+            count: AtomicU64::new(0),
             upper_bounds: buckets,
             counts: counts,
         })
@@ -551,8 +551,8 @@ fn duration_to_seconds(d: Duration) -> f64 {
 #[derive(Clone)]
 pub struct LocalHistogramCore {
     histogram: Histogram,
-    counts: Vec<i64>,
-    count: i64,
+    counts: Vec<u64>,
+    count: u64,
     sum: f64,
 }
 

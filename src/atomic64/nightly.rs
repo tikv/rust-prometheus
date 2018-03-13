@@ -33,24 +33,24 @@ fn f64_to_u64(val: f64) -> u64 {
 impl Atomic for AtomicF64 {
     type T = f64;
 
-    fn new(val: f64) -> AtomicF64 {
+    fn new(val: Self::T) -> AtomicF64 {
         AtomicF64 {
             inner: StdAtomicU64::new(f64_to_u64(val)),
         }
     }
 
     #[inline]
-    fn set(&self, val: f64) {
+    fn set(&self, val: Self::T) {
         self.inner.store(f64_to_u64(val), Ordering::Relaxed);
     }
 
     #[inline]
-    fn get(&self) -> f64 {
+    fn get(&self) -> Self::T {
         u64_to_f64(self.inner.load(Ordering::Relaxed))
     }
 
     #[inline]
-    fn inc_by(&self, delta: f64) {
+    fn inc_by(&self, delta: Self::T) {
         loop {
             let current = self.inner.load(Ordering::Acquire);
             let new = u64_to_f64(current) + delta;
@@ -61,6 +61,11 @@ impl Atomic for AtomicF64 {
             }
         }
     }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inc_by(-delta);
+    }
 }
 
 pub struct AtomicI64 {
@@ -70,24 +75,63 @@ pub struct AtomicI64 {
 impl Atomic for AtomicI64 {
     type T = i64;
 
-    fn new(val: i64) -> AtomicI64 {
+    fn new(val: Self::T) -> AtomicI64 {
         AtomicI64 {
             inner: StdAtomicI64::new(val),
         }
     }
 
     #[inline]
-    fn set(&self, val: i64) {
+    fn set(&self, val: Self::T) {
         self.inner.store(val, Ordering::Relaxed);
     }
 
     #[inline]
-    fn get(&self) -> i64 {
+    fn get(&self) -> Self::T {
         self.inner.load(Ordering::Acquire)
     }
 
     #[inline]
-    fn inc_by(&self, delta: i64) {
+    fn inc_by(&self, delta: Self::T) {
         self.inner.fetch_add(delta, Ordering::Release);
+    }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inner.fetch_sub(delta, Ordering::Release);
+    }
+}
+
+pub struct Atomic64 {
+    inner: StdAtomicU64,
+}
+
+impl Atomic for AtomicU64 {
+    type T = u64;
+
+    fn new(val: Self::T) -> AtomicU64 {
+        AtomicU64 {
+            inner: StdAtomicU64::new(val),
+        }
+    }
+
+    #[inline]
+    fn set(&self, val: Self::T) {
+        self.inner.store(val, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn get(&self) -> Self::T {
+        self.inner.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn inc_by(&self, delta: Self::T) {
+        self.inner.fetch_add(delta, Ordering::Release);
+    }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inner.fetch_sub(delta, Ordering::Release);
     }
 }

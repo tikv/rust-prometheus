@@ -42,8 +42,15 @@ impl<T: Number> Atomic for RwlockAtomic<T> {
     fn inc_by(&self, delta: T) {
         *self.inner.write() += delta;
     }
+
+    #[inline]
+    fn dec_by(&self, delta: T) {
+        *self.inner.write() -= delta;
+    }
 }
 
 pub type AtomicF64 = RwlockAtomic<f64>;
 
 pub type AtomicI64 = RwlockAtomic<i64>;
+
+pub type AtomicU64 = RwlockAtomic<u64>;
