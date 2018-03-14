@@ -117,6 +117,10 @@ impl ProcessCollector {
         let pid = unsafe { libc::getpid() };
         ProcessCollector::new(pid, "")
     }
+
+    pub fn get_rss() -> Gauge {
+        self.rss.clone()
+    }
 }
 
 impl Collector for ProcessCollector {
