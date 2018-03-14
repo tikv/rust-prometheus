@@ -59,13 +59,13 @@ pub mod proto;
 pub mod process_collector;
 pub mod local;
 
-pub use self::counter::{Counter, CounterVec};
+pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
 pub use self::desc::Desc;
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
 pub use self::encoder::Encoder;
 pub use self::errors::{Error, Result};
-pub use self::gauge::{Gauge, GaugeVec};
+pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
 pub use self::histogram::{exponential_buckets, linear_buckets};
 pub use self::histogram::DEFAULT_BUCKETS;

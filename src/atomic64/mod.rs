@@ -15,18 +15,67 @@
 #[cfg(not(feature = "nightly"))]
 mod fallback;
 #[cfg(not(feature = "nightly"))]
-pub use self::fallback::{AtomicF64, AtomicU64};
+pub use self::fallback::{AtomicF64, AtomicI64, AtomicU64};
 
 #[cfg(feature = "nightly")]
 mod nightly;
 #[cfg(feature = "nightly")]
-pub use self::nightly::{AtomicF64, AtomicU64};
+pub use self::nightly::{AtomicF64, AtomicI64, AtomicU64};
+use std::cmp::*;
+use std::ops::*;
 
-pub trait Atomic<T> {
-    fn new(val: T) -> Self;
-    fn set(&self, val: T);
-    fn get(&self) -> T;
-    fn inc_by(&self, delta: T);
+pub trait Number
+    : Sized + AddAssign + SubAssign + PartialOrd + PartialEq + Copy + Send + Sync
+    {
+    /// `std::convert::From<i64> for f64` is not implemented, so that we need to implement our own.
+    fn from_i64(v: i64) -> Self;
+
+    fn into_f64(self) -> f64;
+}
+
+impl Number for i64 {
+    #[inline]
+    fn from_i64(v: i64) -> Self {
+        v
+    }
+
+    #[inline]
+    fn into_f64(self) -> f64 {
+        self as f64
+    }
+}
+
+impl Number for u64 {
+    #[inline]
+    fn from_i64(v: i64) -> Self {
+        v as u64
+    }
+
+    #[inline]
+    fn into_f64(self) -> f64 {
+        self as f64
+    }
+}
+
+impl Number for f64 {
+    #[inline]
+    fn from_i64(v: i64) -> Self {
+        v as f64
+    }
+
+    #[inline]
+    fn into_f64(self) -> f64 {
+        self
+    }
+}
+
+pub trait Atomic: Send + Sync {
+    type T: Number;
+    fn new(val: Self::T) -> Self;
+    fn set(&self, val: Self::T);
+    fn get(&self) -> Self::T;
+    fn inc_by(&self, delta: Self::T);
+    fn dec_by(&self, delta: Self::T);
 }
 
 #[cfg(test)]
@@ -45,12 +94,24 @@ mod test {
     }
 
     #[test]
+    fn test_atomic_i64() {
+        let ai64 = AtomicI64::new(0);
+        assert_eq!(ai64.get(), 0);
+
+        ai64.inc_by(1);
+        assert_eq!(ai64.get(), 1);
+
+        ai64.inc_by(-5);
+        assert_eq!(ai64.get(), -4);
+    }
+
+    #[test]
     fn test_atomic_u64() {
         let au64 = AtomicU64::new(0);
         assert_eq!(au64.get(), 0);
 
-        au64.inc_by(1);
-        assert_eq!(au64.get(), 1);
+        au64.inc_by(123);
+        assert_eq!(au64.get(), 123);
     }
 }
 
@@ -68,8 +129,8 @@ mod bench {
     }
 
     #[bench]
-    fn bench_atomic_u64(b: &mut Bencher) {
-        let val = AtomicU64::new(0);
+    fn bench_atomic_i64(b: &mut Bencher) {
+        let val = AtomicI64::new(0);
         b.iter(|| {
             val.inc_by(12);
         });

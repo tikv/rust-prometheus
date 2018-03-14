@@ -218,14 +218,14 @@ impl HistogramCore {
     pub fn proto(&self) -> proto::Histogram {
         let mut h = proto::Histogram::new();
         h.set_sample_sum(self.sum.get());
-        h.set_sample_count(self.count.get());
+        h.set_sample_count(self.count.get() as u64);
 
         let mut count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
             count += self.counts[i].get();
             let mut b = proto::Bucket::new();
-            b.set_cumulative_count(count);
+            b.set_cumulative_count(count as u64);
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
         }

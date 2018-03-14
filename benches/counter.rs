@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use prometheus::{Counter, CounterVec, Opts};
+use prometheus::{Counter, CounterVec, IntCounter, Opts};
 use std::collections::HashMap;
 use test::Bencher;
 
@@ -59,6 +59,12 @@ fn bench_counter_with_prepared_mapped_labels(b: &mut Bencher) {
 
 #[bench]
 fn bench_counter_no_labels(b: &mut Bencher) {
-    let counter = Counter::new("benchmark_counter", "A counter to benchmark it.").unwrap();
+    let counter = Counter::new("benchmark_counter", "A counter to benchmark.").unwrap();
+    b.iter(|| counter.inc())
+}
+
+#[bench]
+fn bench_int_counter_no_labels(b: &mut Bencher) {
+    let counter = IntCounter::new("benchmark_int_counter", "A int_counter to benchmark.").unwrap();
     b.iter(|| counter.inc())
 }

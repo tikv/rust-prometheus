@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::Atomic;
+use super::{Atomic, Number};
 use spin::RwLock;
-use std::ops::AddAssign;
 
-pub struct RwlockAtomic<T: AddAssign + Copy> {
+pub struct RwlockAtomic<T: super::Number> {
     inner: RwLock<T>,
 }
 
-impl<T: AddAssign + Copy> Atomic<T> for RwlockAtomic<T> {
+impl<T: Number> Atomic for RwlockAtomic<T> {
+    type T = T;
+
     fn new(val: T) -> Self {
         RwlockAtomic {
             inner: RwLock::new(val),
@@ -41,8 +42,15 @@ impl<T: AddAssign + Copy> Atomic<T> for RwlockAtomic<T> {
     fn inc_by(&self, delta: T) {
         *self.inner.write() += delta;
     }
+
+    #[inline]
+    fn dec_by(&self, delta: T) {
+        *self.inner.write() -= delta;
+    }
 }
 
 pub type AtomicF64 = RwlockAtomic<f64>;
+
+pub type AtomicI64 = RwlockAtomic<i64>;
 
 pub type AtomicU64 = RwlockAtomic<u64>;
