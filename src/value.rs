@@ -93,12 +93,12 @@ impl<P: Atomic> Value<P> {
 
     #[inline]
     pub fn dec(&self) {
-        self.inc_by(P::T::from_i64(-1));
+        self.dec_by(P::T::from_i64(1));
     }
 
     #[inline]
     pub fn dec_by(&self, val: P::T) {
-        self.inc_by(val * P::T::from_i64(-1))
+        self.val.dec_by(val)
     }
 
     pub fn metric(&self) -> Metric {

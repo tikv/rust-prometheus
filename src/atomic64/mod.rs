@@ -15,24 +15,18 @@
 #[cfg(not(feature = "nightly"))]
 mod fallback;
 #[cfg(not(feature = "nightly"))]
-pub use self::fallback::{AtomicF64, AtomicI64};
+pub use self::fallback::{AtomicF64, AtomicI64, AtomicU64};
 
 #[cfg(feature = "nightly")]
 mod nightly;
 #[cfg(feature = "nightly")]
-pub use self::nightly::{AtomicF64, AtomicI64};
-use std::cmp;
-use std::ops;
+pub use self::nightly::{AtomicF64, AtomicI64, AtomicU64};
+use std::cmp::*;
+use std::ops::*;
 
 pub trait Number
-    : Sized
-    + ops::AddAssign
-    + ops::Mul<Output = Self>
-    + cmp::PartialOrd
-    + cmp::PartialEq
-    + Copy
-    + Send
-    + Sync {
+    : Sized + AddAssign + SubAssign + PartialOrd + PartialEq + Copy + Send + Sync
+    {
     /// `std::convert::From<i64> for f64` is not implemented, so that we need to implement our own.
     fn from_i64(v: i64) -> Self;
 
@@ -43,6 +37,18 @@ impl Number for i64 {
     #[inline]
     fn from_i64(v: i64) -> Self {
         v
+    }
+
+    #[inline]
+    fn into_f64(self) -> f64 {
+        self as f64
+    }
+}
+
+impl Number for u64 {
+    #[inline]
+    fn from_i64(v: i64) -> Self {
+        v as u64
     }
 
     #[inline]
@@ -69,6 +75,7 @@ pub trait Atomic: Send + Sync {
     fn set(&self, val: Self::T);
     fn get(&self) -> Self::T;
     fn inc_by(&self, delta: Self::T);
+    fn dec_by(&self, delta: Self::T);
 }
 
 #[cfg(test)]
@@ -96,6 +103,15 @@ mod test {
 
         ai64.inc_by(-5);
         assert_eq!(ai64.get(), -4);
+    }
+
+    #[test]
+    fn test_atomic_u64() {
+        let au64 = AtomicU64::new(0);
+        assert_eq!(au64.get(), 0);
+
+        au64.inc_by(123);
+        assert_eq!(au64.get(), 123);
     }
 }
 
