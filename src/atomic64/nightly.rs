@@ -88,17 +88,17 @@ impl Atomic for AtomicI64 {
 
     #[inline]
     fn get(&self) -> Self::T {
-        self.inner.load(Ordering::Acquire)
+        self.inner.load(Ordering::Relaxed)
     }
 
     #[inline]
     fn inc_by(&self, delta: Self::T) {
-        self.inner.fetch_add(delta, Ordering::Release);
+        self.inner.fetch_add(delta, Ordering::Relaxed);
     }
 
     #[inline]
     fn dec_by(&self, delta: Self::T) {
-        self.inner.fetch_sub(delta, Ordering::Release);
+        self.inner.fetch_sub(delta, Ordering::Relaxed);
     }
 }
 
@@ -122,16 +122,16 @@ impl Atomic for AtomicU64 {
 
     #[inline]
     fn get(&self) -> Self::T {
-        self.inner.load(Ordering::Acquire)
+        self.inner.load(Ordering::Relaxed)
     }
 
     #[inline]
     fn inc_by(&self, delta: Self::T) {
-        self.inner.fetch_add(delta, Ordering::Release);
+        self.inner.fetch_add(delta, Ordering::Relaxed);
     }
 
     #[inline]
     fn dec_by(&self, delta: Self::T) {
-        self.inner.fetch_sub(delta, Ordering::Release);
+        self.inner.fetch_sub(delta, Ordering::Relaxed);
     }
 }
