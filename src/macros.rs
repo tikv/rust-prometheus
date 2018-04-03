@@ -166,7 +166,7 @@ macro_rules! __register_counter {
     };
 }
 
-/// Creates a `Counter` and register to default registry.
+/// Creates a `Counter` and registerss to default registry.
 ///
 /// # Examples
 ///
@@ -196,7 +196,7 @@ macro_rules! register_counter {
     };
 }
 
-/// Creates an `IntCounter` and register to default registry.
+/// Creates an `IntCounter` and registers to default registry.
 ///
 /// View docs of `register_counter` for examples.
 #[macro_export]
@@ -225,7 +225,7 @@ macro_rules! __register_counter_vec {
     };
 }
 
-/// Creates a `CounterVec` and register to default registry.
+/// Creates a `CounterVec` and registers to default registry.
 ///
 /// # Examples
 ///
@@ -255,7 +255,7 @@ macro_rules! register_counter_vec {
     };
 }
 
-/// Creates an `IntCounterVec` and register to default registry.
+/// Creates an `IntCounterVec` and registers to default registry.
 ///
 /// View docs of `register_counter_vec` for examples.
 #[macro_export]
@@ -284,7 +284,7 @@ macro_rules! __register_gauge {
     };
 }
 
-/// Creates a `Gauge` and register to default registry.
+/// Creates a `Gauge` and registers to default registry.
 ///
 /// # Examples
 ///
@@ -314,7 +314,7 @@ macro_rules! register_gauge {
     };
 }
 
-/// Creates an `IntGauge` and register to default registry.
+/// Creates an `IntGauge` and registers to default registry.
 ///
 /// View docs of `register_gauge` for examples.
 #[macro_export]
@@ -343,7 +343,7 @@ macro_rules! __register_gauge_vec {
     };
 }
 
-/// Creates a `GaugeVec` and register to default registry.
+/// Creates a `GaugeVec` and registers to default registry.
 ///
 /// # Examples
 ///
@@ -373,7 +373,7 @@ macro_rules! register_gauge_vec {
     };
 }
 
-/// Creates an `IntGaugeVec` and register to default registry.
+/// Creates an `IntGaugeVec` and registers to default registry.
 ///
 /// View docs of `register_gauge_vec` for examples.
 #[macro_export]
@@ -391,7 +391,7 @@ macro_rules! register_int_gauge_vec {
     };
 }
 
-/// Creates a `Histogram` and register to default registry.
+/// Creates a `Histogram` and registers to default registry.
 ///
 /// # Examples
 ///
@@ -429,7 +429,7 @@ macro_rules! register_histogram {
     }
 }
 
-/// Creates a `HistogramVec` and register to default registry.
+/// Creates a `HistogramVec` and registers to default registry.
 ///
 /// # Examples
 ///
