@@ -20,8 +20,7 @@ use std::collections::HashMap;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
-/// `Collector` is the trait that can be used to collect metrics.
-/// A Collector has to be registered for collection.
+/// An interface for collecting metrics.
 pub trait Collector: Sync + Send {
     /// `desc` returns descriptors for metrics.
     fn desc(&self) -> Vec<&Desc>;
@@ -37,7 +36,7 @@ pub trait Metric: Sync + Send + Clone {
     fn metric(&self) -> proto::Metric;
 }
 
-/// `Opts` bundles the options for creating most Metric types.
+/// A struct that bundles the options for creating most Metric types.
 #[derive(Debug, Clone)]
 pub struct Opts {
     /// namespace, subsystem, and name are components of the fully-qualified

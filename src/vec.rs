@@ -173,7 +173,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 }
 
-/// `MetricVec` is a Collector to bundle metrics of the same name that
+/// A Collector to bundle metrics of the same name that
 /// differ in their label values. `MetricVec` is usually not used directly but as a
 /// building block for implementations of vectors of a given metric
 /// type. `GaugeVec`, `CounterVec`, `SummaryVec`, and `UntypedVec` are examples already
@@ -204,7 +204,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// label values is accessed for the first time, a new Metric is created.
     ///
     /// It is possible to call this method without using the returned Metric to only
-    /// create the new Metric but leave it at its start value (e.g. a Summary or
+    /// Creates the new Metric but leave it at its start value (e.g. a Summary or
     /// Histogram without any observations). See also the SummaryVec example.
     ///
     /// Keeping the Metric for later use is possible (and should be considered if

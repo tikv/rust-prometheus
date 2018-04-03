@@ -23,14 +23,14 @@ use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
-/// `Counter` is a Metric that represents a single numerical value that only ever
-/// goes up.
 pub struct GenericCounter<P: Atomic> {
     v: Arc<Value<P>>,
 }
 
+/// A Metric represents a single numerical value that only ever goes up.
 pub type Counter = GenericCounter<AtomicF64>;
 
+/// The integer version of `Counter`. Provides better performance if metric values are all integers.
 pub type IntCounter = GenericCounter<AtomicI64>;
 
 impl<P: Atomic> Clone for GenericCounter<P> {
@@ -131,14 +131,15 @@ impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
     }
 }
 
-/// `CounterVec` is a Collector that bundles a set of Counters that all share the
+pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
+
+/// A Collector that bundles a set of `Counter`s that all share the
 /// same Desc, but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of HTTP requests, partitioned by response code and method).
-pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
-
 pub type CounterVec = GenericCounterVec<AtomicF64>;
 
+/// The integer version of `CounterVec`. Provides better performance if metric values are all integers.
 pub type IntCounterVec = GenericCounterVec<AtomicI64>;
 
 impl<P: Atomic> GenericCounterVec<P> {

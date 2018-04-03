@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*!
+
+Unsync local metrics, provides better performance.
+
+*/
+
 // TODO: define a trait and implement the trait for metrics.
 
 pub use super::counter::{LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec};

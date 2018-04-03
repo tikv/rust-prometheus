@@ -11,6 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*!
+The Rust client library for [Prometheus](https://prometheus.io/).
+*/
+
 #![cfg_attr(all(test, bench), feature(test))]
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
