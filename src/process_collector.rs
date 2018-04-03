@@ -32,7 +32,7 @@ use std::sync::Mutex;
 // Six metrics per ProcessCollector.
 const MERTICS_NUMBER: usize = 6;
 
-/// `ProcessCollector` a collector which exports the current state of
+/// A collector which exports the current state of
 /// process metrics including cpu, memory and file descriptor usage as well as
 /// the process start time for the given process id.
 pub struct ProcessCollector {
@@ -47,7 +47,7 @@ pub struct ProcessCollector {
 }
 
 impl ProcessCollector {
-    /// Create a `ProcessCollector` with the given process id and namespace.
+    /// Creates a `ProcessCollector` with the given process id and namespace.
     pub fn new<S: Into<String>>(pid: pid_t, namespace: S) -> ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();

@@ -22,14 +22,14 @@ use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
-/// `Gauge` is a Metric that represents a single numerical value that can
-/// arbitrarily go up and down.
 pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
 
+/// A Metric represents a single numerical value that can arbitrarily go up and down.
 pub type Gauge = GenericGauge<AtomicF64>;
 
+/// The integer version of `Gauge`. Provides better performance if metric values are all integers.
 pub type IntGauge = GenericGauge<AtomicI64>;
 
 impl<P: Atomic> Clone for GenericGauge<P> {
@@ -141,14 +141,15 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
     }
 }
 
-/// `GaugeVec` is a Collector that bundles a set of Gauges that all share the same
+pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
+
+/// A Collector that bundles a set of `Gauge`s that all share the same
 /// Desc, but have different values for their variable labels. This is used if
 /// you want to count the same thing partitioned by various dimensions
 /// (e.g. number of operations queued, partitioned by user and operation type).
-pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
-
 pub type GaugeVec = GenericGaugeVec<AtomicF64>;
 
+/// The integer version of `GaugeVec`. Provides better performance if metric values are all integers.
 pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
 
 impl<P: Atomic> GenericGaugeVec<P> {

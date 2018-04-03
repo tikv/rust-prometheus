@@ -66,9 +66,9 @@ fn is_valid_label_name(name: &str) -> bool {
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
 }
 
-/// Desc is the descriptor used by every Prometheus Metric. It is essentially
-/// the immutable meta-data of a Metric. The normal Metric implementations
-/// included in this package manage their Desc under the hood.
+/// The descriptor used by every Prometheus Metric. It is essentially
+/// the immutable meta-data of a metric. The normal metric implementations
+/// included in this package manage their `Desc` under the hood.
 ///
 /// Descriptors registered with the same registry have to fulfill certain
 /// consistency and uniqueness criteria if they share the same fully-qualified
