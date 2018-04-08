@@ -30,10 +30,6 @@ quick_error!{
             description(msg)
             display("Error: {}", msg)
         }
-        DecreaseCounter(v: f64) {
-            description("counter cannot decrease in value")
-            display("add invalid {} for counter", v)
-        }
         Io(err: IoError) {
             from()
             cause(err)

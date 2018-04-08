@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use prometheus::{Gauge, GaugeVec, Opts};
+use prometheus::{Gauge, GaugeVec, IntGauge, Opts};
 use test::Bencher;
 
 #[bench]
@@ -25,6 +25,12 @@ fn bench_gauge_with_label_values(b: &mut Bencher) {
 
 #[bench]
 fn bench_gauge_no_labels(b: &mut Bencher) {
-    let gauge = Gauge::new("benchmark_gauge", "A gauge to benchmark it.").unwrap();
+    let gauge = Gauge::new("benchmark_gauge", "A gauge to benchmark.").unwrap();
+    b.iter(|| gauge.inc())
+}
+
+#[bench]
+fn bench_int_gauge_no_labels(b: &mut Bencher) {
+    let gauge = IntGauge::new("benchmark_int_gauge", "A int_gauge to benchmark.").unwrap();
     b.iter(|| gauge.inc())
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use atomic64::{AtomicF64, AtomicU64};
+use atomic64::{Atomic, AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
@@ -26,7 +26,7 @@ use std::time::{Duration, Instant as StdInstant};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 
-/// `DEFAULT_BUCKETS` are the default Histogram buckets. The default buckets are
+/// The default Histogram buckets. The default buckets are
 /// tailored to broadly measure the response time (in seconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
@@ -34,7 +34,7 @@ pub const DEFAULT_BUCKETS: &[f64; 11] = &[
     0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0
 ];
 
-/// `BUCKET_LABEL` is used for the label that defines the upper bound of a
+/// Used for the label that defines the upper bound of a
 /// bucket of a histogram ("le" -> "less or equal").
 pub const BUCKET_LABEL: &str = "le";
 
@@ -74,14 +74,14 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
     Ok(buckets)
 }
 
-/// `HistogramOpts` bundles the options for creating a Histogram metric. It is
+/// A struct that bundles the options for creating a Histogram metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
 #[derive(Clone)]
 pub struct HistogramOpts {
     pub common_opts: Opts,
 
-    // buckets defines the buckets into which observations are counted. Each
+    // Defines the buckets into which observations are counted. Each
     // element in the slice is the upper inclusive bound of a bucket. The
     // values must be sorted in strictly increasing order. There is no need
     // to add a highest bucket with +Inf bound, it will be added
@@ -218,14 +218,14 @@ impl HistogramCore {
     pub fn proto(&self) -> proto::Histogram {
         let mut h = proto::Histogram::new();
         h.set_sample_sum(self.sum.get());
-        h.set_sample_count(self.count.get());
+        h.set_sample_count(self.count.get() as u64);
 
         let mut count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
             count += self.counts[i].get();
             let mut b = proto::Bucket::new();
-            b.set_cumulative_count(count);
+            b.set_cumulative_count(count as u64);
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
         }
@@ -301,7 +301,7 @@ mod coarse {
     }
 }
 
-/// `HistogramTimer` represents an event being timed. When the timer goes out of
+/// A struct represents an event being timed. When the timer goes out of
 /// scope, the duration will be observed, or call `observe_duration` to manually
 /// observe.
 ///
@@ -345,7 +345,7 @@ impl Drop for HistogramTimer {
     }
 }
 
-/// A `Histogram` counts individual observations from an event or sample stream in
+/// A Metric counts individual observations from an event or sample stream in
 /// configurable buckets. Similar to a summary, it also provides a sum of
 /// observations and an observation count.
 ///
@@ -445,7 +445,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
     }
 }
 
-/// `HistogramVec` is a Collector that bundles a set of Histograms that all share the
+/// A Collector that bundles a set of Histograms that all share the
 /// same Desc, but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
@@ -470,7 +470,7 @@ impl HistogramVec {
     }
 }
 
-/// `linear_buckets` creates `count` buckets, each `width` wide, where the lowest
+/// Creates `count` buckets, each `width` wide, where the lowest
 /// bucket has an upper bound of `start`. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
 /// used for the Buckets field of `HistogramOpts`.
@@ -501,9 +501,9 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
     Ok(buckets)
 }
 
-/// `exponential_buckets` creates `count` buckets, where the lowest bucket has an
-/// upper bound of `start` and each following bucket`s upper bound is `factor`
-/// times the previous bucket`s upper bound. The final +Inf bucket is not counted
+/// Creates `count` buckets, where the lowest bucket has an
+/// upper bound of `start` and each following bucket's upper bound is `factor`
+/// times the previous bucket's upper bound. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
 /// used for the Buckets field of `HistogramOpts`.
 ///
@@ -577,7 +577,7 @@ pub struct LocalHistogramTimer {
     start: Instant,
 }
 
-/// `LocalHistogramTimer` represents an event being timed. When the timer goes out of
+/// A struct represents an event being timed. When the timer goes out of
 /// scope, the duration will be observed, or call `observe_duration` to manually
 /// observe.
 ///

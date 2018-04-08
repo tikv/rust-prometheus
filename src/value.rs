@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use atomic64::AtomicF64;
+use atomic64::{Atomic, Number};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
@@ -38,21 +38,21 @@ impl ValueType {
 /// `Value` is a generic metric for Counter, Gauge and Untyped.
 /// Its effective type is determined by `ValueType`. This is a low-level
 /// building block used by the library to back the implementations of
-/// `Counter`, `Gauge`, and `Untyped`.
-pub struct Value {
+/// `Counter` and `Gauge`.
+pub struct Value<P: Atomic> {
     pub desc: Desc,
-    pub val: AtomicF64,
+    pub val: P,
     pub val_type: ValueType,
     pub label_pairs: Vec<LabelPair>,
 }
 
-impl Value {
+impl<P: Atomic> Value<P> {
     pub fn new<D: Describer>(
         describer: &D,
         value_type: ValueType,
-        val: f64,
+        val: P::T,
         label_values: &[&str],
-    ) -> Result<Value> {
+    ) -> Result<Self> {
         let desc = describer.describe()?;
         if desc.variable_labels.len() != label_values.len() {
             return Err(Error::InconsistentCardinality(
@@ -63,42 +63,42 @@ impl Value {
 
         let label_pairs = make_label_pairs(&desc, label_values);
 
-        Ok(Value {
+        Ok(Self {
             desc: desc,
-            val: AtomicF64::new(val),
+            val: P::new(val),
             val_type: value_type,
             label_pairs: label_pairs,
         })
     }
 
     #[inline]
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> P::T {
         self.val.get()
     }
 
     #[inline]
-    pub fn set(&self, val: f64) {
+    pub fn set(&self, val: P::T) {
         self.val.set(val);
     }
 
     #[inline]
-    pub fn inc_by(&self, val: f64) {
+    pub fn inc_by(&self, val: P::T) {
         self.val.inc_by(val);
     }
 
     #[inline]
     pub fn inc(&self) {
-        self.inc_by(1.0);
+        self.inc_by(P::T::from_i64(1));
     }
 
     #[inline]
     pub fn dec(&self) {
-        self.inc_by(-1.0);
+        self.dec_by(P::T::from_i64(1));
     }
 
     #[inline]
-    pub fn dec_by(&self, val: f64) {
-        self.inc_by(val * -1.0)
+    pub fn dec_by(&self, val: P::T) {
+        self.val.dec_by(val)
     }
 
     pub fn metric(&self) -> Metric {
@@ -109,12 +109,12 @@ impl Value {
         match self.val_type {
             ValueType::Counter => {
                 let mut counter = Counter::new();
-                counter.set_value(val);
+                counter.set_value(val.into_f64());
                 m.set_counter(counter);
             }
             ValueType::Gauge => {
                 let mut gauge = Gauge::new();
-                gauge.set_value(val);
+                gauge.set_value(val.into_f64());
                 m.set_gauge(gauge);
             }
         }

@@ -12,43 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
 use errors::Result;
 use metrics::{Collector, Metric, Opts};
 use proto;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
-/// `Gauge` is a Metric that represents a single numerical value that can
-/// arbitrarily go up and down.
-#[derive(Clone)]
-pub struct Gauge {
-    v: Arc<Value>,
+pub struct GenericGauge<P: Atomic> {
+    v: Arc<Value<P>>,
 }
 
-impl Gauge {
+/// A Metric represents a single numerical value that can arbitrarily go up and down.
+pub type Gauge = GenericGauge<AtomicF64>;
+
+/// The integer version of `Gauge`. Provides better performance if metric values are all integers.
+pub type IntGauge = GenericGauge<AtomicI64>;
+
+impl<P: Atomic> Clone for GenericGauge<P> {
+    fn clone(&self) -> Self {
+        Self {
+            v: Arc::clone(&self.v),
+        }
+    }
+}
+
+impl<P: Atomic> GenericGauge<P> {
     /// `new` create a `Guage` with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Gauge> {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
-        Gauge::with_opts(opts)
+        Self::with_opts(opts)
     }
 
     /// `with_opts` create a `Guage` with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Gauge> {
-        Gauge::with_opts_and_label_values(&opts, &[])
+    pub fn with_opts(opts: Opts) -> Result<Self> {
+        Self::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Gauge> {
-        let v = Value::new(opts, ValueType::Gauge, 0.0, label_values)?;
-        Ok(Gauge { v: Arc::new(v) })
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+        let v = Value::new(opts, ValueType::Gauge, P::T::from_i64(0), label_values)?;
+        Ok(Self { v: Arc::new(v) })
     }
 }
 
-impl Gauge {
+impl<P: Atomic> GenericGauge<P> {
     /// `set` sets the gauge to an arbitrary value.
     #[inline]
-    pub fn set(&self, v: f64) {
+    pub fn set(&self, v: P::T) {
         self.v.set(v);
     }
 
@@ -67,25 +80,25 @@ impl Gauge {
     /// `add` adds the given value to the gauge. (The value can be
     /// negative, resulting in a decrease of the gauge.)
     #[inline]
-    pub fn add(&self, v: f64) {
+    pub fn add(&self, v: P::T) {
         self.v.inc_by(v);
     }
 
     /// `sub` subtracts the given value from the gauge. (The value can be
     /// negative, resulting in an increase of the gauge.)
     #[inline]
-    pub fn sub(&self, v: f64) {
+    pub fn sub(&self, v: P::T) {
         self.v.dec_by(v);
     }
 
     /// `get` returns the gauge value.
     #[inline]
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> P::T {
         self.v.get()
     }
 }
 
-impl Collector for Gauge {
+impl<P: Atomic> Collector for GenericGauge<P> {
     fn desc(&self) -> Vec<&Desc> {
         vec![&self.v.desc]
     }
@@ -95,46 +108,65 @@ impl Collector for Gauge {
     }
 }
 
-impl Metric for Gauge {
+impl<P: Atomic> Metric for GenericGauge<P> {
     fn metric(&self) -> proto::Metric {
         self.v.metric()
     }
 }
 
-#[derive(Clone)]
-pub struct GaugeVecBuilder {}
+pub struct GaugeVecBuilder<P: Atomic> {
+    _phantom: PhantomData<P>,
+}
 
-impl MetricVecBuilder for GaugeVecBuilder {
-    type M = Gauge;
-    type P = Opts;
-
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Gauge> {
-        Gauge::with_opts_and_label_values(opts, vals)
+impl<P: Atomic> GaugeVecBuilder<P> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
     }
 }
 
-/// `GaugeVec` is a Collector that bundles a set of Gauges that all share the same
+impl<P: Atomic> Clone for GaugeVecBuilder<P> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
+    type M = GenericGauge<P>;
+    type P = Opts;
+
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+        Self::M::with_opts_and_label_values(opts, vals)
+    }
+}
+
+pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
+
+/// A Collector that bundles a set of `Gauge`s that all share the same
 /// Desc, but have different values for their variable labels. This is used if
 /// you want to count the same thing partitioned by various dimensions
 /// (e.g. number of operations queued, partitioned by user and operation type).
-pub type GaugeVec = MetricVec<GaugeVecBuilder>;
+pub type GaugeVec = GenericGaugeVec<AtomicF64>;
 
-impl GaugeVec {
+/// The integer version of `GaugeVec`. Provides better performance if metric values are all integers.
+pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
+
+impl<P: Atomic> GenericGaugeVec<P> {
     /// `new` creates a new `GaugeVec` based on the provided `Opts` and
     /// partitioned by the given label names. At least one label name must be
     /// provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<GaugeVec> {
+    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder {}, opts)?;
+        let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder::new(), opts)?;
 
-        Ok(metric_vec as GaugeVec)
+        Ok(metric_vec as Self)
     }
 }
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use metrics::{Collector, Opts};
     use std::collections::HashMap;

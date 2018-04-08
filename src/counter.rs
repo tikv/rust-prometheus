@@ -12,68 +12,83 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
-use errors::{Error, Result};
+use errors::Result;
 use metrics::{Collector, Metric, Opts};
 use proto;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
-/// `Counter` is a Metric that represents a single numerical value that only ever
-/// goes up.
-#[derive(Clone)]
-pub struct Counter {
-    v: Arc<Value>,
+pub struct GenericCounter<P: Atomic> {
+    v: Arc<Value<P>>,
 }
 
-impl Counter {
+/// A Metric represents a single numerical value that only ever goes up.
+pub type Counter = GenericCounter<AtomicF64>;
+
+/// The integer version of `Counter`. Provides better performance if metric values are all integers.
+pub type IntCounter = GenericCounter<AtomicI64>;
+
+impl<P: Atomic> Clone for GenericCounter<P> {
+    fn clone(&self) -> Self {
+        Self {
+            v: Arc::clone(&self.v),
+        }
+    }
+}
+
+impl<P: Atomic> GenericCounter<P> {
     /// `new` creates a `Counter` with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Counter> {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
-        Counter::with_opts(opts)
+        Self::with_opts(opts)
     }
 
     /// `with_opts` creates a `Counter` with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Counter> {
-        Counter::with_opts_and_label_values(&opts, &[])
+    pub fn with_opts(opts: Opts) -> Result<Self> {
+        Self::with_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Counter> {
-        let v = Value::new(opts, ValueType::Counter, 0.0, label_values)?;
-        Ok(Counter { v: Arc::new(v) })
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+        let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
+        Ok(Self { v: Arc::new(v) })
     }
 
-    /// `inc_by` increments the given value to the counter. Error if the value is <
-    /// 0.
+    /// `inc_by` increments the given value to the counter.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value is < 0.
     #[inline]
-    pub fn inc_by(&self, v: f64) -> Result<()> {
-        if v < 0.0 {
-            return Err(Error::DecreaseCounter(v));
+    pub fn inc_by(&self, v: P::T) {
+        if v < P::T::from_i64(0) {
+            panic!("counter cannot inc negative values")
         }
         self.v.inc_by(v);
-        Ok(())
     }
 
     /// `inc` increments the counter by 1.
     #[inline]
     pub fn inc(&self) {
-        self.inc_by(1.0).unwrap()
+        self.v.inc();
     }
 
     /// `get` returns the counter value.
     #[inline]
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> P::T {
         self.v.get()
     }
 
-    pub fn local(&self) -> LocalCounter {
-        LocalCounter::new(self.clone())
+    pub fn local(&self) -> GenericLocalCounter<P> {
+        GenericLocalCounter::new(self.clone())
     }
 }
 
-impl Collector for Counter {
+impl<P: Atomic> Collector for GenericCounter<P> {
     fn desc(&self) -> Vec<&Desc> {
         vec![&self.v.desc]
     }
@@ -83,116 +98,147 @@ impl Collector for Counter {
     }
 }
 
-impl Metric for Counter {
+impl<P: Atomic> Metric for GenericCounter<P> {
     fn metric(&self) -> proto::Metric {
         self.v.metric()
     }
 }
 
-#[derive(Clone)]
-pub struct CounterVecBuilder {}
+pub struct CounterVecBuilder<P: Atomic> {
+    _phantom: PhantomData<P>,
+}
 
-impl MetricVecBuilder for CounterVecBuilder {
-    type M = Counter;
-    type P = Opts;
-
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Counter> {
-        Counter::with_opts_and_label_values(opts, vals)
+impl<P: Atomic> CounterVecBuilder<P> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
     }
 }
 
-/// `CounterVec` is a Collector that bundles a set of Counters that all share the
+impl<P: Atomic> Clone for CounterVecBuilder<P> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
+    type M = GenericCounter<P>;
+    type P = Opts;
+
+    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+        Self::M::with_opts_and_label_values(opts, vals)
+    }
+}
+
+pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
+
+/// A Collector that bundles a set of `Counter`s that all share the
 /// same Desc, but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of HTTP requests, partitioned by response code and method).
-pub type CounterVec = MetricVec<CounterVecBuilder>;
+pub type CounterVec = GenericCounterVec<AtomicF64>;
 
-impl CounterVec {
+/// The integer version of `CounterVec`. Provides better performance if metric values are all integers.
+pub type IntCounterVec = GenericCounterVec<AtomicI64>;
+
+impl<P: Atomic> GenericCounterVec<P> {
     /// `new` creates a new `CounterVec` based on the provided `Opts` and
     /// partitioned by the given label names. At least one label name must be
     /// provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<CounterVec> {
+    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec = MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder {}, opts)?;
+        let metric_vec =
+            MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder::new(), opts)?;
 
-        Ok(metric_vec as CounterVec)
+        Ok(metric_vec as Self)
     }
 
-    pub fn local(&self) -> LocalCounterVec {
-        LocalCounterVec::new(self.clone())
+    pub fn local(&self) -> GenericLocalCounterVec<P> {
+        GenericLocalCounterVec::new(self.clone())
     }
 }
 
-pub struct LocalCounter {
-    counter: Counter,
-    val: f64,
+pub struct GenericLocalCounter<P: Atomic> {
+    counter: GenericCounter<P>,
+    val: P::T,
 }
+
+pub type LocalCounter = GenericLocalCounter<AtomicF64>;
+
+pub type LocalIntCounter = GenericLocalCounter<AtomicI64>;
 
 // LocalCounter is a thread local copy of Counter
-impl LocalCounter {
-    fn new(counter: Counter) -> LocalCounter {
-        LocalCounter {
-            counter: counter,
-            val: 0.0,
+impl<P: Atomic> GenericLocalCounter<P> {
+    fn new(counter: GenericCounter<P>) -> Self {
+        Self {
+            counter,
+            val: P::T::from_i64(0),
         }
     }
 
-    /// `inc_by` increments the given value to the local counter. Error if the value is <
-    /// 0.
+    /// `inc_by` increments the given value to the local counter.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value is < 0.
     #[inline]
-    pub fn inc_by(&mut self, v: f64) -> Result<()> {
-        if v < 0.0 {
-            return Err(Error::DecreaseCounter(v));
+    pub fn inc_by(&mut self, v: P::T) {
+        if v < P::T::from_i64(0) {
+            panic!("counter cannot inc negative values")
         }
         self.val += v;
-        Ok(())
     }
 
     /// `inc` increments the local counter by 1.
     #[inline]
     pub fn inc(&mut self) {
-        self.val += 1.0;
+        self.val += P::T::from_i64(1);
     }
 
     /// `get` returns the local counter value.
     #[inline]
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> P::T {
         self.val
     }
 
     /// `flush` the local counter value to the counter
     #[inline]
     pub fn flush(&mut self) {
-        if self.val == 0.0 {
+        if self.val == P::T::from_i64(0) {
             return;
         }
-        self.counter.inc_by(self.val).unwrap();
-        self.val = 0.0;
+        self.counter.inc_by(self.val);
+        self.val = P::T::from_i64(0);
     }
 }
 
-impl Clone for LocalCounter {
-    fn clone(&self) -> LocalCounter {
-        LocalCounter::new(self.counter.clone())
+impl<P: Atomic> Clone for GenericLocalCounter<P> {
+    fn clone(&self) -> Self {
+        Self::new(self.counter.clone())
     }
 }
 
-pub struct LocalCounterVec {
-    vec: CounterVec,
-    local: HashMap<u64, LocalCounter>,
+pub struct GenericLocalCounterVec<P: Atomic> {
+    vec: GenericCounterVec<P>,
+    local: HashMap<u64, GenericLocalCounter<P>>,
 }
 
-impl LocalCounterVec {
-    fn new(vec: CounterVec) -> LocalCounterVec {
+pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
+
+pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicI64>;
+
+impl<P: Atomic> GenericLocalCounterVec<P> {
+    fn new(vec: GenericCounterVec<P>) -> Self {
         let local = HashMap::with_capacity(vec.v.children.read().len());
-        LocalCounterVec { vec, local }
+        Self { vec, local }
     }
 
     /// Get a `LocalCounter` by label values.
     /// See more [MetricVec::with_label_values]
     /// (/prometheus/struct.MetricVec.html#method.with_label_values)
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut LocalCounter {
+    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut GenericLocalCounter<P> {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
         self.local
@@ -217,9 +263,9 @@ impl LocalCounterVec {
     }
 }
 
-impl Clone for LocalCounterVec {
-    fn clone(&self) -> LocalCounterVec {
-        LocalCounterVec::new(self.vec.clone())
+impl<P: Atomic> Clone for GenericLocalCounterVec<P> {
+    fn clone(&self) -> Self {
+        Self::new(self.vec.clone())
     }
 }
 
@@ -238,7 +284,7 @@ mod tests {
         let counter = Counter::with_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.get() as u64, 1);
-        counter.inc_by(42.0).unwrap();
+        counter.inc_by(42.0);
         assert_eq!(counter.get() as u64, 43);
 
         let mut mfs = counter.collect();
@@ -248,6 +294,23 @@ mod tests {
         let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
+    }
+
+    #[test]
+    fn test_int_counter() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        counter.inc();
+        assert_eq!(counter.get(), 1);
+        counter.inc_by(11);
+        assert_eq!(counter.get(), 12);
+
+        let mut mfs = counter.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
+        let m = mf.get_metric().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 0);
+        assert_eq!(m.get_counter().get_value() as u64, 12);
     }
 
     #[test]
@@ -262,9 +325,25 @@ mod tests {
         assert_eq!(local_counter2.get() as u64, 1);
         assert_eq!(counter.get() as u64, 0);
         local_counter1.flush();
+        assert_eq!(local_counter1.get() as u64, 0);
         assert_eq!(counter.get() as u64, 1);
         local_counter2.flush();
         assert_eq!(counter.get() as u64, 2);
+    }
+
+    #[test]
+    fn test_int_local_counter() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        let mut local_counter = counter.local();
+
+        local_counter.inc();
+        assert_eq!(local_counter.get(), 1);
+        assert_eq!(counter.get(), 0);
+
+        local_counter.inc_by(5);
+        local_counter.flush();
+        assert_eq!(local_counter.get(), 0);
+        assert_eq!(counter.get(), 6);
     }
 
     #[test]
@@ -298,6 +377,28 @@ mod tests {
     }
 
     #[test]
+    fn test_int_counter_vec() {
+        let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
+
+        vec.with_label_values(&["v1", "v3"]).inc();
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+
+        vec.with_label_values(&["v1", "v2"]).inc_by(12);
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+
+        vec.with_label_values(&["v4", "v2"]).inc_by(2);
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+        assert_eq!(vec.with_label_values(&["v4", "v2"]).get(), 2);
+
+        vec.with_label_values(&["v1", "v3"]).inc_by(5);
+        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 6);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+        assert_eq!(vec.with_label_values(&["v4", "v2"]).get(), 2);
+    }
+
+    #[test]
     fn test_counter_vec_with_label_values() {
         let vec = CounterVec::new(
             Opts::new("test_vec", "test counter vec help"),
@@ -324,10 +425,7 @@ mod tests {
 
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
 
-        local_vec_1
-            .with_label_values(&["v1", "v2"])
-            .inc_by(23.0)
-            .unwrap();
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
@@ -339,10 +437,7 @@ mod tests {
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
-        local_vec_1
-            .with_label_values(&["v1", "v2"])
-            .inc_by(11.0)
-            .unwrap();
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
 
@@ -359,17 +454,11 @@ mod tests {
         assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
         assert!(local_vec_1.remove_label_values(&["v1", "v3"]).is_err());
 
-        local_vec_1
-            .with_label_values(&["v1", "v2"])
-            .inc_by(13.0)
-            .unwrap();
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(13.0);
         assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= EPSILON);
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
 
-        local_vec_2
-            .with_label_values(&["v1", "v2"])
-            .inc_by(7.0)
-            .unwrap();
+        local_vec_2.with_label_values(&["v1", "v2"]).inc_by(7.0);
         assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= EPSILON);
 
         local_vec_1.flush();
@@ -379,5 +468,62 @@ mod tests {
         local_vec_1.flush();
         local_vec_2.flush();
         assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
+    }
+
+    #[test]
+    fn test_int_counter_vec_local() {
+        let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
+        let mut local_vec_1 = vec.local();
+        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
+
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 23);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+
+        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11);
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 11);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_counter_negative_inc() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        counter.inc_by(-42.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_local_counter_negative_inc() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        let mut local = counter.local();
+        local.inc_by(-42.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_int_counter_negative_inc() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        counter.inc_by(-42);
+    }
+
+    #[test]
+    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_int_local_counter_negative_inc() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        let mut local = counter.local();
+        local.inc_by(-42);
     }
 }

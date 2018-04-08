@@ -11,6 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*!
+The Rust client library for [Prometheus](https://prometheus.io/).
+*/
+
+#![cfg_attr(all(test, bench), feature(test))]
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
 #![cfg_attr(not(feature = "dev"), allow(unknown_lints))]
@@ -32,6 +37,8 @@ extern crate protobuf;
 #[macro_use]
 extern crate quick_error;
 extern crate spin;
+#[cfg(all(test, bench))]
+extern crate test;
 
 mod errors;
 mod encoder;
@@ -56,13 +63,13 @@ pub mod proto;
 pub mod process_collector;
 pub mod local;
 
-pub use self::counter::{Counter, CounterVec};
+pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
 pub use self::desc::Desc;
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
 pub use self::encoder::Encoder;
 pub use self::errors::{Error, Result};
-pub use self::gauge::{Gauge, GaugeVec};
+pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
 pub use self::histogram::{exponential_buckets, linear_buckets};
 pub use self::histogram::DEFAULT_BUCKETS;

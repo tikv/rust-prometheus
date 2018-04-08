@@ -179,7 +179,7 @@ impl RegistryCore {
     }
 }
 
-/// `Registry` registers Prometheus collectors, collects their metrics, and gathers
+/// A struct for registering Prometheus collectors, collecting their metrics, and gathering
 /// them into `MetricFamilies` for exposition.
 #[derive(Clone)]
 pub struct Registry {
@@ -262,7 +262,7 @@ lazy_static! {
     };
 }
 
-/// `register` registers a new Collector to be included in metrics collection. It
+/// Registers a new Collector to be included in metrics collection. It
 /// returns an error if the descriptors provided by the Collector are invalid or
 /// if they - in combination with descriptors of already registered Collectors -
 /// do not fulfill the consistency and uniqueness criteria described in the Desc
@@ -271,7 +271,7 @@ pub fn register(c: Box<Collector>) -> Result<()> {
     DEFAULT_REGISTRY.register(c)
 }
 
-/// `unregister` unregisters the Collector that equals the Collector passed in as
+/// Unregisters the Collector that equals the Collector passed in as
 /// an argument. (Two Collectors are considered equal if their Describe method
 /// yields the same set of descriptors.) The function returns an error if a
 /// Collector was not registered.
@@ -279,7 +279,7 @@ pub fn unregister(c: Box<Collector>) -> Result<()> {
     DEFAULT_REGISTRY.unregister(c)
 }
 
-/// `gather` returns all `MetricFamily` of `DEFAULT_REGISTRY`.
+/// Returns all `MetricFamily` of `DEFAULT_REGISTRY`.
 pub fn gather() -> Vec<proto::MetricFamily> {
     DEFAULT_REGISTRY.gather()
 }
