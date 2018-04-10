@@ -429,7 +429,7 @@ macro_rules! register_histogram {
     }
 }
 
-/// Create a [`HistogramVec`](::core::HistogramVec) and registers to default registry.
+/// Create a [`HistogramVec`](::HistogramVec) and registers to default registry.
 ///
 /// # Examples
 ///

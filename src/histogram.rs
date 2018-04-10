@@ -452,7 +452,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
-    /// Create a new [`HistogramVec`](::core::HistogramVec) based on the provided
+    /// Create a new [`HistogramVec`](::HistogramVec) based on the provided
     /// [`HistogramOpts`](::HistogramOpts) and partitioned by the given label names. At least
     /// one label name must be provided.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
