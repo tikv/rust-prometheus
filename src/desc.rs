@@ -66,9 +66,9 @@ fn is_valid_label_name(name: &str) -> bool {
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
 }
 
-/// The descriptor used by every Prometheus Metric. It is essentially
+/// The descriptor used by every Prometheus [`Metric`](::core::Metric). It is essentially
 /// the immutable meta-data of a metric. The normal metric implementations
-/// included in this package manage their `Desc` under the hood.
+/// included in this package manage their [`Desc`](::core::Desc) under the hood.
 ///
 /// Descriptors registered with the same registry have to fulfill certain
 /// consistency and uniqueness criteria if they share the same fully-qualified
@@ -207,9 +207,9 @@ impl Desc {
     }
 }
 
-/// `Describer` describes the immutable meta-data of a Metric.
+/// An interface for describing the immutable meta-data of a [`Metric`](::core::Metric).
 pub trait Describer {
-    /// `describe` returns a `Desc`.
+    /// `describe` returns a [`Desc`](::core::Desc).
     fn describe(&self) -> Result<Desc>;
 }
 

@@ -22,25 +22,24 @@ pub const SEPARATOR_BYTE: u8 = 0xFF;
 
 /// An interface for collecting metrics.
 pub trait Collector: Sync + Send {
-    /// `desc` returns descriptors for metrics.
+    /// Return descriptors for metrics.
     fn desc(&self) -> Vec<&Desc>;
 
-    /// `collect` collects metrics.
+    /// Collect metrics.
     fn collect(&self) -> Vec<proto::MetricFamily>;
 }
 
-/// `Metric` is the trait that models a single sample value with its meta data being
-/// exported to Prometheus.
+/// An interface models a single sample value with its meta data being exported to Prometheus.
 pub trait Metric: Sync + Send + Clone {
-    /// `metric` returns the protocol Metric.
+    /// Return the protocol Metric.
     fn metric(&self) -> proto::Metric;
 }
 
-/// A struct that bundles the options for creating most Metric types.
+/// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.
 #[derive(Debug, Clone)]
 pub struct Opts {
     /// namespace, subsystem, and name are components of the fully-qualified
-    /// name of the Metric (created by joining these components with
+    /// name of the [`Metric`](::core::Metric) (created by joining these components with
     /// "_"). Only Name is mandatory, the others merely help structuring the
     /// name. Note that the fully-qualified name of the metric must be a
     /// valid Prometheus metric name.
@@ -60,14 +59,14 @@ pub struct Opts {
     ///
     /// Note that in most cases, labels have a value that varies during the
     /// lifetime of a process. Those labels are usually managed with a metric
-    /// vector collector (like CounterVec, GaugeVec, UntypedVec). ConstLabels
+    /// vector collector (like CounterVec, GaugeVec). ConstLabels
     /// serve only special purposes. One is for the special case where the
     /// value of a label does not change during the lifetime of a process,
     /// e.g. if the revision of the running binary is put into a
-    /// label. Another, more advanced purpose is if more than one Collector
+    /// label. Another, more advanced purpose is if more than one [`Collector`](::core::Collector)
     /// needs to collect Metrics with the same fully-qualified name. In that
     /// case, those Metrics must differ in the values of their
-    /// ConstLabels. See the Collector examples.
+    /// ConstLabels. See the [`Collector`](::core::Collector) examples.
     ///
     /// If the value of a label never changes (not even between binaries),
     /// that label most likely should not be a label at all (but part of the
@@ -165,10 +164,10 @@ impl PartialOrd for LabelPair {
 
 /// `build_fq_name` joins the given three name components by "_". Empty name
 /// components are ignored. If the name parameter itself is empty, an empty
-/// string is returned, no matter what. Metric implementations included in this
+/// string is returned, no matter what. [`Metric`](::core::Metric) implementations included in this
 /// library use this function internally to generate the fully-qualified metric
 /// name from the name component in their Opts. Users of the library will only
-/// need this function if they implement their own Metric or instantiate a Desc
+/// need this function if they implement their own [`Metric`](::core::Metric) or instantiate a Desc
 /// directly.
 fn build_fq_name(namespace: &str, subsystem: &str, name: &str) -> String {
     if name.is_empty() {

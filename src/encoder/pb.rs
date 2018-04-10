@@ -22,7 +22,7 @@ pub const PROTOBUF_FORMAT: &str = "application/vnd.google.protobuf; \
                                    proto=io.prometheus.client.MetricFamily; \
                                    encoding=delimited";
 
-/// An implementation of an `Encoder` that converts a `MetricFamily` proto message
+/// An implementation of an [`Encoder`](::Encoder) that converts a `MetricFamily` proto message
 /// into the binary wire format of protobuf.
 #[derive(Debug, Default)]
 pub struct ProtobufEncoder;

@@ -47,7 +47,7 @@ pub struct ProcessCollector {
 }
 
 impl ProcessCollector {
-    /// Creates a `ProcessCollector` with the given process id and namespace.
+    /// Create a `ProcessCollector` with the given process id and namespace.
     pub fn new<S: Into<String>>(pid: pid_t, namespace: S) -> ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
@@ -112,7 +112,7 @@ impl ProcessCollector {
         }
     }
 
-    /// Returns a `ProcessCollector` of the calling process.
+    /// Return a `ProcessCollector` of the calling process.
     pub fn for_self() -> ProcessCollector {
         let pid = unsafe { libc::getpid() };
         ProcessCollector::new(pid, "")

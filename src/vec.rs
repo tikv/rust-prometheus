@@ -23,12 +23,12 @@ use std::collections::HashMap;
 use std::hash::Hasher;
 use std::sync::Arc;
 
-/// `MetricVecBuilder` is the trait to build a metric.
+/// An interface for building a metric vector.
 pub trait MetricVecBuilder: Send + Sync + Clone {
     type M: Metric;
     type P: Describer + Sync + Send + Clone;
 
-    /// `build` builds a Metric with option and corresponding label names.
+    /// `build` builds a [`Metric`](::core::Metric) with option and corresponding label names.
     fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
 }
 
@@ -173,10 +173,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 }
 
-/// A Collector to bundle metrics of the same name that
-/// differ in their label values. `MetricVec` is usually not used directly but as a
+/// A [`Collector`](::core::Collector) to bundle metrics of the same name that
+/// differ in their label values. It is usually not used directly but as a
 /// building block for implementations of vectors of a given metric
-/// type. `GaugeVec`, `CounterVec`, `SummaryVec`, and `UntypedVec` are examples already
+/// type. [`GaugeVec`](::GaugeVec) and [`CounterVec`](::CounterVec) are examples already
 /// provided in this package.
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
@@ -199,20 +199,20 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         Ok(MetricVec { v: Arc::new(v) })
     }
 
-    /// `get_metric_with_label_values` returns the Metric for the given slice of label
-    /// values (same order as the VariableLabels in Desc). If that combination of
-    /// label values is accessed for the first time, a new Metric is created.
+    /// `get_metric_with_label_values` returns the [`Metric`](::core::Metric) for the given slice
+    /// of label values (same order as the VariableLabels in Desc). If that combination of
+    /// label values is accessed for the first time, a new [`Metric`](::core::Metric) is created.
     ///
-    /// It is possible to call this method without using the returned Metric to only
-    /// Creates the new Metric but leave it at its start value (e.g. a Summary or
-    /// Histogram without any observations). See also the SummaryVec example.
+    /// It is possible to call this method without using the returned [`Metric`](::core::Metric)
+    /// to only create the new [`Metric`](::core::Metric) but leave it at its start value (e.g. a
+    /// [`Histogram`](::Histogram) without any observations).
     ///
-    /// Keeping the Metric for later use is possible (and should be considered if
-    /// performance is critical), but keep in mind that Reset, DeleteLabelValues and
-    /// Delete can be used to delete the Metric from the MetricVec. In that case, the
-    /// Metric will still exist, but it will not be exported anymore, even if a
-    /// Metric with the same label values is created later. See also the CounterVec
-    /// example.
+    /// Keeping the [`Metric`](::core::Metric) for later use is possible (and should be considered
+    /// if performance is critical), but keep in mind that Reset, DeleteLabelValues and Delete can
+    /// be used to delete the [`Metric`](::core::Metric) from the MetricVec. In thatcase, the
+    /// [`Metric`](::core::Metric) will still exist, but it will not be exported anymore, even if a
+    /// [`Metric`](::core::Metric) with the same label values is created later. See also the
+    /// CounterVec example.
     ///
     /// An error is returned if the number of label values is not the same as the
     /// number of VariableLabels in Desc.
@@ -226,11 +226,11 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         self.v.get_metric_with_label_values(vals)
     }
 
-    /// `get_metric_with` returns the Metric for the given Labels map (the label names
-    /// must match those of the VariableLabels in Desc). If that label map is
-    /// accessed for the first time, a new Metric is created. Implications of
-    /// creating a Metric without using it and keeping the Metric for later use are
-    /// the same as for GetMetricWithLabelValues.
+    /// `get_metric_with` returns the [`Metric`](::core::Metric) for the given Labels map (the
+    /// label names must match those of the VariableLabels in Desc). If that label map is
+    /// accessed for the first time, a new [`Metric`](::core::Metric) is created. Implications of
+    /// creating a [`Metric`](::core::Metric) without using it and keeping the
+    /// [`Metric`](::core::Metric) for later use are the same as for GetMetricWithLabelValues.
     ///
     /// An error is returned if the number and names of the Labels are inconsistent
     /// with those of the VariableLabels in Desc.

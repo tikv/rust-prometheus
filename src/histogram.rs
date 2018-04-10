@@ -26,7 +26,7 @@ use std::time::{Duration, Instant as StdInstant};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 
-/// The default Histogram buckets. The default buckets are
+/// The default [`Histogram`](::Histogram) buckets. The default buckets are
 /// tailored to broadly measure the response time (in seconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
@@ -74,7 +74,7 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
     Ok(buckets)
 }
 
-/// A struct that bundles the options for creating a Histogram metric. It is
+/// A struct that bundles the options for creating a [`Histogram`](::Histogram) metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
 #[derive(Clone)]
@@ -90,7 +90,7 @@ pub struct HistogramOpts {
 }
 
 impl HistogramOpts {
-    /// `new` creates a `HistogramOpts` with the `name` and `help` arguments.
+    /// Create a [`HistogramOpts`](::HistogramOpts) with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
         HistogramOpts {
             common_opts: Opts::new(name, help),
@@ -345,18 +345,18 @@ impl Drop for HistogramTimer {
     }
 }
 
-/// A Metric counts individual observations from an event or sample stream in
+/// A [`Metric`](::core::Metric) counts individual observations from an event or sample stream in
 /// configurable buckets. Similar to a summary, it also provides a sum of
 /// observations and an observation count.
 ///
-/// On the Prometheus server, quantiles can be calculated from a Histogram using
+/// On the Prometheus server, quantiles can be calculated from a [`Histogram`](::Histogram) using
 /// the `histogram_quantile` function in the query language.
 ///
 /// Note that Histograms, in contrast to Summaries, can be aggregated with the
 /// Prometheus query language (see the documentation for detailed
 /// procedures). However, Histograms require the user to pre-define suitable
 /// buckets, and they are in general less accurate. The Observe method of a
-/// Histogram has a very low performance overhead in comparison with the Observe
+/// [`Histogram`](::Histogram) has a very low performance overhead in comparison with the Observe
 /// method of a Summary.
 #[derive(Clone)]
 pub struct Histogram {
@@ -364,7 +364,7 @@ pub struct Histogram {
 }
 
 impl Histogram {
-    /// `with_opts` creates a `Histogram` with the `opts` options.
+    /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
         Histogram::with_opts_and_label_values(&opts, &[])
     }
@@ -382,7 +382,7 @@ impl Histogram {
 }
 
 impl Histogram {
-    /// `observe` adds a single observation to the `Histogram`.
+    /// `observe` adds a single observation to the [`Histogram`](::Histogram).
     pub fn observe(&self, v: f64) {
         self.core.observe(v)
     }
@@ -445,16 +445,16 @@ impl MetricVecBuilder for HistogramVecBuilder {
     }
 }
 
-/// A Collector that bundles a set of Histograms that all share the
+/// A [`Collector`](::core::Collector) that bundles a set of Histograms that all share the
 /// same Desc, but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
-    /// `new` creates a new `HistogramVec` based on the provided `HistogramOpts` and
-    /// partitioned by the given label names. At least one label name must be
-    /// provided.
+    /// Create a new [`HistogramVec`](::core::HistogramVec) based on the provided
+    /// [`HistogramOpts`](::HistogramOpts) and partitioned by the given label names. At least
+    /// one label name must be provided.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
@@ -470,10 +470,10 @@ impl HistogramVec {
     }
 }
 
-/// Creates `count` buckets, each `width` wide, where the lowest
+/// Create `count` buckets, each `width` wide, where the lowest
 /// bucket has an upper bound of `start`. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
-/// used for the Buckets field of `HistogramOpts`.
+/// used for the Buckets field of [`HistogramOpts`](::HistogramOpts).
 ///
 /// The function returns an error if `count` is zero or `width` is zero or
 /// negative.
@@ -501,11 +501,11 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
     Ok(buckets)
 }
 
-/// Creates `count` buckets, where the lowest bucket has an
+/// Create `count` buckets, where the lowest bucket has an
 /// upper bound of `start` and each following bucket's upper bound is `factor`
 /// times the previous bucket's upper bound. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
-/// used for the Buckets field of `HistogramOpts`.
+/// used for the Buckets field of [`HistogramOpts`](::HistogramOpts).
 ///
 /// The function returns an error if `count` is zero, if `start` is zero or
 /// negative, or if `factor` is less than or equal 1.
@@ -669,7 +669,7 @@ impl LocalHistogram {
         }
     }
 
-    /// `observe` adds a single observation to the `Histogram`.
+    /// `observe` adds a single observation to the [`Histogram`](::Histogram).
     pub fn observe(&self, v: f64) {
         self.core.borrow_mut().observe(v);
     }
