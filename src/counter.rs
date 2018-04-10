@@ -31,7 +31,8 @@ pub struct GenericCounter<P: Atomic> {
 /// A [`Metric`](::core::Metric) represents a single numerical value that only ever goes up.
 pub type Counter = GenericCounter<AtomicF64>;
 
-/// The integer version of [`Counter`](::Counter). Provides better performance if metric values are all integers.
+/// The integer version of [`Counter`](::Counter). Provides better performance if metric values
+/// are all integers.
 pub type IntCounter = GenericCounter<AtomicI64>;
 
 impl<P: Atomic> Clone for GenericCounter<P> {
@@ -84,6 +85,7 @@ impl<P: Atomic> GenericCounter<P> {
         self.v.get()
     }
 
+    /// Return a [`GenericLocalCounter`](::core::GenericLocalCounter) for single thread usage.
     pub fn local(&self) -> GenericLocalCounter<P> {
         GenericLocalCounter::new(self.clone())
     }
@@ -135,18 +137,19 @@ impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
 /// The underlying implementation for [`CounterVec`](::CounterVec) and [`IntCounterVec`](::IntCounterVec).
 pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
 
-/// A [`Collector`](::core::Collector) that bundles a set of [`Counter`](::Counter)s that all share the
-/// same Desc, but have different values for their variable labels. This is used
-/// if you want to count the same thing partitioned by various dimensions
+/// A [`Collector`](::core::Collector) that bundles a set of [`Counter`](::Counter)s that all share
+/// the same [`Desc`](::core::Desc), but have different values for their variable labels. This is
+/// used if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of HTTP requests, partitioned by response code and method).
 pub type CounterVec = GenericCounterVec<AtomicF64>;
 
-/// The integer version of [`CounterVec`](::CounterVec). Provides better performance if metric values are all integers.
+/// The integer version of [`CounterVec`](::CounterVec). Provides better performance if metric
+/// values are all integers.
 pub type IntCounterVec = GenericCounterVec<AtomicI64>;
 
 impl<P: Atomic> GenericCounterVec<P> {
-    /// Create a new [`GenericCounterVec`](::core::GenericCounterVec) based on the provided [`Opts`](::Opts) and
-    /// partitioned by the given label names. At least one label name must be
+    /// Create a new [`GenericCounterVec`](::core::GenericCounterVec) based on the provided
+    /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must be
     /// provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
@@ -157,12 +160,14 @@ impl<P: Atomic> GenericCounterVec<P> {
         Ok(metric_vec as Self)
     }
 
+    /// Return a [`GenericLocalCounterVec`](::core::GenericLocalCounterVec) for single thread usage.
     pub fn local(&self) -> GenericLocalCounterVec<P> {
         GenericLocalCounterVec::new(self.clone())
     }
 }
 
-/// The underlying implementation for [`LocalCounter`](::local::LocalCounter) and [`LocalIntCounter`](::local::LocalIntCounter).
+/// The underlying implementation for [`LocalCounter`](::local::LocalCounter)
+/// and [`LocalIntCounter`](::local::LocalIntCounter).
 pub struct GenericLocalCounter<P: Atomic> {
     counter: GenericCounter<P>,
     val: P::T,
@@ -171,7 +176,8 @@ pub struct GenericLocalCounter<P: Atomic> {
 /// An unsync thread local copy of [`Counter`](::Counter).
 pub type LocalCounter = GenericLocalCounter<AtomicF64>;
 
-/// The integer version of [`LocalCounter`](::local::LocalCounter). Provides better performance if metric values are all integers.
+/// The integer version of [`LocalCounter`](::local::LocalCounter). Provides better performance
+/// if metric values are all integers.
 pub type LocalIntCounter = GenericLocalCounter<AtomicI64>;
 
 impl<P: Atomic> GenericLocalCounter<P> {
@@ -207,7 +213,7 @@ impl<P: Atomic> GenericLocalCounter<P> {
         self.val
     }
 
-    /// Flush the local counter value to the counter
+    /// Flush the local value to the [`Counter`](::Counter).
     #[inline]
     pub fn flush(&mut self) {
         if self.val == P::T::from_i64(0) {
@@ -224,7 +230,8 @@ impl<P: Atomic> Clone for GenericLocalCounter<P> {
     }
 }
 
-/// The underlying implementation for [`LocalCounterVec`](::local::LocalCounterVec) and [`LocalIntCounterVec`](::local::LocalIntCounterVec).
+/// The underlying implementation for [`LocalCounterVec`](::local::LocalCounterVec)
+/// and [`LocalIntCounterVec`](::local::LocalIntCounterVec).
 pub struct GenericLocalCounterVec<P: Atomic> {
     vec: GenericCounterVec<P>,
     local: HashMap<u64, GenericLocalCounter<P>>,
@@ -233,7 +240,8 @@ pub struct GenericLocalCounterVec<P: Atomic> {
 /// An unsync thread local copy of [`CounterVec`](::CounterVec).
 pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
 
-/// The integer version of [`LocalCounterVec`](::local::LocalCounterVec). Provides better performance if metric values are all integers.
+/// The integer version of [`LocalCounterVec`](::local::LocalCounterVec).
+/// Provides better performance if metric values are all integers.
 pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicI64>;
 
 impl<P: Atomic> GenericLocalCounterVec<P> {
@@ -242,9 +250,9 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
         Self { vec, local }
     }
 
-    /// Get a `GenericLocalCounter` by label values.
+    /// Get a [`GenericLocalCounter`](::core::GenericLocalCounter) by label values.
     /// See more [MetricVec::with_label_values]
-    /// (/prometheus/struct.MetricVec.html#method.with_label_values)
+    /// (/prometheus/core/struct.MetricVec.html#method.with_label_values)
     pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut GenericLocalCounter<P> {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
@@ -253,16 +261,16 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
             .or_insert_with(|| vec.with_label_values(vals).local())
     }
 
-    /// Remove a `GenericLocalCounter` by label values.
+    /// Remove a [`GenericLocalCounter`](::core::GenericLocalCounter) by label values.
     /// See more [MetricVec::remove_label_values]
-    /// (/prometheus/struct.MetricVec.html#method.remove_label_values)
+    /// (/prometheus/core/struct.MetricVec.html#method.remove_label_values)
     pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
         let hash = self.vec.v.hash_label_values(vals)?;
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
 
-    /// `flush` flushes the local metrics to the CounterVec metric.
+    /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
     pub fn flush(&mut self) {
         for h in self.local.values_mut() {
             h.flush();

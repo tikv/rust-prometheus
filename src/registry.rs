@@ -265,7 +265,7 @@ lazy_static! {
 /// Registers a new [`Collector`](::core::Collector) to be included in metrics collection. It
 /// returns an error if the descriptors provided by the [`Collector`](::core::Collector) are invalid or
 /// if they - in combination with descriptors of already registered Collectors -
-/// do not fulfill the consistency and uniqueness criteria described in the Desc
+/// do not fulfill the consistency and uniqueness criteria described in the [`Desc`](::core::Desc)
 /// documentation.
 pub fn register(c: Box<Collector>) -> Result<()> {
     DEFAULT_REGISTRY.register(c)

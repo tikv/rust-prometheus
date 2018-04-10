@@ -27,10 +27,12 @@ pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
 
-/// A [`Metric`](::core::Metric) represents a single numerical value that can arbitrarily go up and down.
+/// A [`Metric`](::core::Metric) represents a single numerical value that can arbitrarily go up
+/// and down.
 pub type Gauge = GenericGauge<AtomicF64>;
 
-/// The integer version of [`Gauge`](::Gauge). Provides better performance if metric values are all integers.
+/// The integer version of [`Gauge`](::Gauge). Provides better performance if metric values are
+/// all integers.
 pub type IntGauge = GenericGauge<AtomicI64>;
 
 impl<P: Atomic> Clone for GenericGauge<P> {
@@ -143,19 +145,20 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
 /// The underlying implementation for [`GaugeVec`](::GaugeVec) and [`IntGaugeVec`](::IntGaugeVec).
 pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
 
-/// A [`Collector`](::core::Collector) that bundles a set of [`Gauge`](::Gauge)s that all share the same
-/// Desc, but have different values for their variable labels. This is used if
-/// you want to count the same thing partitioned by various dimensions
+/// A [`Collector`](::core::Collector) that bundles a set of [`Gauge`](::Gauge)s that all share
+/// the same [`Desc`](::core::Desc), but have different values for their variable labels. This is
+/// used if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of operations queued, partitioned by user and operation type).
 pub type GaugeVec = GenericGaugeVec<AtomicF64>;
 
-/// The integer version of [`GaugeVec`](::GaugeVec). Provides better performance if metric values are all integers.
+/// The integer version of [`GaugeVec`](::GaugeVec). Provides better performance if metric values
+/// are all integers.
 pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
 
 impl<P: Atomic> GenericGaugeVec<P> {
-    /// Create a new [`GenericGaugeVec`](::core::GenericGaugeVec) based on the provided [`Opts`](::Opts) and
-    /// partitioned by the given label names. At least one label name must be
-    /// provided.
+    /// Create a new [`GenericGaugeVec`](::core::GenericGaugeVec) based on the provided
+    /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must
+    /// be provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);

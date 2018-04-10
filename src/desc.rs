@@ -101,7 +101,7 @@ pub struct Desc {
 }
 
 impl Desc {
-    /// Initializes a new Desc. Errors are recorded in the Desc
+    /// Initializes a new [`Desc`](::core::Desc). Errors are recorded in the Desc
     /// and will be reported on registration time. variableLabels and constLabels can
     /// be nil if no such labels should be set. fqName and help must not be empty.
     pub fn new(

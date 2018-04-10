@@ -382,24 +382,24 @@ impl Histogram {
 }
 
 impl Histogram {
-    /// `observe` adds a single observation to the [`Histogram`](::Histogram).
+    /// Add a single observation to the [`Histogram`](::Histogram).
     pub fn observe(&self, v: f64) {
         self.core.observe(v)
     }
 
-    /// `start_timer` returns a `HistogramTimer` to track a duration.
+    /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
     pub fn start_timer(&self) -> HistogramTimer {
         HistogramTimer::new(self.clone())
     }
 
-    /// `start_coarse_timer` returns a `HistogramTimer` to track a duration,
-    /// it is faster but less precise.
+    /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
+    /// It is faster but less precise.
     #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> HistogramTimer {
         HistogramTimer::new_coarse(self.clone())
     }
 
-    /// `local` returns a `LocalHistogram` for single thread usage.
+    /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
     pub fn local(&self) -> LocalHistogram {
         LocalHistogram::new(self.clone())
     }
@@ -446,7 +446,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
 }
 
 /// A [`Collector`](::core::Collector) that bundles a set of Histograms that all share the
-/// same Desc, but have different values for their variable labels. This is used
+/// same [`Desc`](::core::Desc), but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
@@ -464,6 +464,7 @@ impl HistogramVec {
         Ok(metric_vec as HistogramVec)
     }
 
+    /// Return a `LocalHistogramVec` for single thread usage.
     pub fn local(&self) -> LocalHistogramVec {
         let vec = self.clone();
         LocalHistogramVec::new(vec)
@@ -556,9 +557,7 @@ pub struct LocalHistogramCore {
     sum: f64,
 }
 
-/// `LocalHistogram` is used for performance and in single-thread.
-/// Sometimes, if you very care the performance, you can use the `LocalHistogram`
-/// and then flush the metric interval.
+/// An unsync thread local copy of [`Histogram`](::Histogram).
 pub struct LocalHistogram {
     core: RefCell<LocalHistogramCore>,
 }
@@ -572,16 +571,12 @@ impl Clone for LocalHistogram {
     }
 }
 
+/// An unsync thread local copy of [`HistogramTimer`](::HistogramTimer).
 pub struct LocalHistogramTimer {
     local: LocalHistogram,
     start: Instant,
 }
 
-/// A struct represents an event being timed. When the timer goes out of
-/// scope, the duration will be observed, or call `observe_duration` to manually
-/// observe.
-///
-/// NOTICE: A timer can be observed only once (automatically or manually).
 impl LocalHistogramTimer {
     /// `observe_duration` observes the amount of time in seconds since
     /// `LocalHistogram.start_timer` was called.
@@ -669,12 +664,12 @@ impl LocalHistogram {
         }
     }
 
-    /// `observe` adds a single observation to the [`Histogram`](::Histogram).
+    /// Add a single observation to the [`Histogram`](::Histogram).
     pub fn observe(&self, v: f64) {
         self.core.borrow_mut().observe(v);
     }
 
-    /// `start_timer` returns a `LocalHistogramTimer` to track a duration.
+    /// Return a `LocalHistogramTimer` to track a duration.
     pub fn start_timer(&self) -> LocalHistogramTimer {
         LocalHistogramTimer {
             local: self.clone(),
@@ -682,8 +677,8 @@ impl LocalHistogram {
         }
     }
 
-    /// `start_coarse_timer` returns a `LocalHistogramTimer` to track a duration.
-    /// it is faster but less precise.
+    /// Return a `LocalHistogramTimer` to track a duration.
+    /// It is faster but less precise.
     #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
         LocalHistogramTimer {
@@ -692,12 +687,12 @@ impl LocalHistogram {
         }
     }
 
-    /// `clear` clears the local metric.
+    /// Clear the local metric.
     pub fn clear(&self) {
         self.core.borrow_mut().clear();
     }
 
-    /// `flush` flushes the local metric to the Histogram metric.
+    /// Flush the local metric to the [`Histogram`](::Histogram) metric.
     pub fn flush(&self) {
         self.core.borrow_mut().flush();
     }
@@ -709,8 +704,7 @@ impl Drop for LocalHistogram {
     }
 }
 
-/// `LocalHistogramVec` can only be access by a single thread, like `LocalHistogram`.
-/// You can use the `LocalHistogramVec`, if you very care the performance.
+/// An unsync thread local copy of [`HistogramVec`](::HistogramVec).
 pub struct LocalHistogramVec {
     vec: HistogramVec,
     local: HashMap<u64, LocalHistogram>,
@@ -722,9 +716,9 @@ impl LocalHistogramVec {
         LocalHistogramVec { vec, local }
     }
 
-    /// Get a `LocalHistogram` by label values.
+    /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::with_label_values]
-    /// (/prometheus/struct.MetricVec.html#method.with_label_values)
+    /// (/prometheus/core/struct.MetricVec.html#method.with_label_values)
     pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
@@ -733,16 +727,16 @@ impl LocalHistogramVec {
             .or_insert_with(|| vec.with_label_values(vals).local())
     }
 
-    /// Remove a `LocalHistogram` by label values.
+    /// Remove a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::remove_label_values]
-    /// (/prometheus/struct.MetricVec.html#method.remove_label_values)
+    /// (/prometheus/core/struct.MetricVec.html#method.remove_label_values)
     pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
         let hash = self.vec.v.hash_label_values(vals)?;
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
 
-    /// `flush` flushes the local metrics to the HistogramVec metric.
+    /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
     pub fn flush(&mut self) {
         for h in self.local.values() {
             h.flush();
