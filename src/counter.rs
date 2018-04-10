@@ -213,7 +213,7 @@ impl<P: Atomic> GenericLocalCounter<P> {
         self.val
     }
 
-    /// Flush the local value to the [`Counter`](::Counter).
+    /// Flush the local metrics to the [`Counter`](::Counter).
     #[inline]
     pub fn flush(&mut self) {
         if self.val == P::T::from_i64(0) {
@@ -251,8 +251,7 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
     }
 
     /// Get a [`GenericLocalCounter`](::core::GenericLocalCounter) by label values.
-    /// See more [MetricVec::with_label_values]
-    /// (/prometheus/core/struct.MetricVec.html#method.with_label_values)
+    /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
     pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut GenericLocalCounter<P> {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
@@ -262,8 +261,7 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
     }
 
     /// Remove a [`GenericLocalCounter`](::core::GenericLocalCounter) by label values.
-    /// See more [MetricVec::remove_label_values]
-    /// (/prometheus/core/struct.MetricVec.html#method.remove_label_values)
+    /// See more [MetricVec::remove_label_values](::core::MetricVec::remove_label_values).
     pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
         let hash = self.vec.v.hash_label_values(vals)?;
         self.local.remove(&hash);

@@ -692,7 +692,7 @@ impl LocalHistogram {
         self.core.borrow_mut().clear();
     }
 
-    /// Flush the local metric to the [`Histogram`](::Histogram) metric.
+    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
     pub fn flush(&self) {
         self.core.borrow_mut().flush();
     }
@@ -717,8 +717,7 @@ impl LocalHistogramVec {
     }
 
     /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
-    /// See more [MetricVec::with_label_values]
-    /// (/prometheus/core/struct.MetricVec.html#method.with_label_values)
+    /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
     pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
@@ -728,8 +727,7 @@ impl LocalHistogramVec {
     }
 
     /// Remove a [`LocalHistogram`](::local::LocalHistogram) by label values.
-    /// See more [MetricVec::remove_label_values]
-    /// (/prometheus/core/struct.MetricVec.html#method.remove_label_values)
+    /// See more [MetricVec::remove_label_values](::core::MetricVec::remove_label_values).
     pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
         let hash = self.vec.v.hash_label_values(vals)?;
         self.local.remove(&hash);
