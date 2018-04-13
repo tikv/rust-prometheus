@@ -173,7 +173,7 @@ pub struct GenericLocalCounter<P: Atomic> {
     val: P::T,
 }
 
-/// An unsync thread local copy of [`Counter`](::Counter).
+/// An unsync [`Counter`](::Counter).
 pub type LocalCounter = GenericLocalCounter<AtomicF64>;
 
 /// The integer version of [`LocalCounter`](::local::LocalCounter). Provides better performance
@@ -237,7 +237,7 @@ pub struct GenericLocalCounterVec<P: Atomic> {
     local: HashMap<u64, GenericLocalCounter<P>>,
 }
 
-/// An unsync thread local copy of [`CounterVec`](::CounterVec).
+/// An unsync [`CounterVec`](::CounterVec).
 pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
 
 /// The integer version of [`LocalCounterVec`](::local::LocalCounterVec).

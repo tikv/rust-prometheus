@@ -557,7 +557,7 @@ pub struct LocalHistogramCore {
     sum: f64,
 }
 
-/// An unsync thread local copy of [`Histogram`](::Histogram).
+/// An unsync [`Histogram`](::Histogram).
 pub struct LocalHistogram {
     core: RefCell<LocalHistogramCore>,
 }
@@ -571,7 +571,7 @@ impl Clone for LocalHistogram {
     }
 }
 
-/// An unsync thread local copy of [`HistogramTimer`](::HistogramTimer).
+/// An unsync [`HistogramTimer`](::HistogramTimer).
 pub struct LocalHistogramTimer {
     local: LocalHistogram,
     start: Instant,
@@ -704,7 +704,7 @@ impl Drop for LocalHistogram {
     }
 }
 
-/// An unsync thread local copy of [`HistogramVec`](::HistogramVec).
+/// An unsync [`HistogramVec`](::HistogramVec).
 pub struct LocalHistogramVec {
     vec: HistogramVec,
     local: HashMap<u64, LocalHistogram>,
