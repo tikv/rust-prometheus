@@ -206,23 +206,23 @@ impl Registry {
         Registry::default()
     }
 
-    /// `register` registers a new Collector to be included in metrics
+    /// `register` registers a new [`Collector`](::core::Collector) to be included in metrics
     /// collection. It returns an error if the descriptors provided by the
-    /// Collector are invalid or if they — in combination with descriptors of
+    /// [`Collector`](::core::Collector) are invalid or if they — in combination with descriptors of
     /// already registered Collectors — do not fulfill the consistency and
-    /// uniqueness criteria described in the documentation of `Desc`.
+    /// uniqueness criteria described in the documentation of [`Desc`](::core::Desc).
     ///
-    /// If the provided Collector is equal to a Collector already registered
-    /// (which includes the case of re-registering the same Collector), the
+    /// If the provided [`Collector`](::core::Collector) is equal to a [`Collector`](::core::Collector) already registered
+    /// (which includes the case of re-registering the same [`Collector`](::core::Collector)), the
     /// AlreadyReg error returns.
     pub fn register(&self, c: Box<Collector>) -> Result<()> {
         self.r.write().register(c)
     }
 
-    /// `unregister` unregisters the Collector that equals the Collector passed
+    /// `unregister` unregisters the [`Collector`](::core::Collector) that equals the [`Collector`](::core::Collector) passed
     /// in as an argument.  (Two Collectors are considered equal if their
     /// Describe method yields the same set of descriptors.) The function
-    /// returns error when the Collector is not registered.
+    /// returns error when the [`Collector`](::core::Collector) is not registered.
     pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
         self.r.write().unregister(c)
     }
@@ -262,24 +262,24 @@ lazy_static! {
     };
 }
 
-/// Registers a new Collector to be included in metrics collection. It
-/// returns an error if the descriptors provided by the Collector are invalid or
+/// Registers a new [`Collector`](::core::Collector) to be included in metrics collection. It
+/// returns an error if the descriptors provided by the [`Collector`](::core::Collector) are invalid or
 /// if they - in combination with descriptors of already registered Collectors -
-/// do not fulfill the consistency and uniqueness criteria described in the Desc
+/// do not fulfill the consistency and uniqueness criteria described in the [`Desc`](::core::Desc)
 /// documentation.
 pub fn register(c: Box<Collector>) -> Result<()> {
     DEFAULT_REGISTRY.register(c)
 }
 
-/// Unregisters the Collector that equals the Collector passed in as
+/// Unregisters the [`Collector`](::core::Collector) that equals the [`Collector`](::core::Collector) passed in as
 /// an argument. (Two Collectors are considered equal if their Describe method
 /// yields the same set of descriptors.) The function returns an error if a
-/// Collector was not registered.
+/// [`Collector`](::core::Collector) was not registered.
 pub fn unregister(c: Box<Collector>) -> Result<()> {
     DEFAULT_REGISTRY.unregister(c)
 }
 
-/// Returns all `MetricFamily` of `DEFAULT_REGISTRY`.
+/// Return all `MetricFamily` of `DEFAULT_REGISTRY`.
 pub fn gather() -> Vec<proto::MetricFamily> {
     DEFAULT_REGISTRY.gather()
 }

@@ -24,6 +24,8 @@ pub use self::nightly::{AtomicF64, AtomicI64, AtomicU64};
 use std::cmp::*;
 use std::ops::*;
 
+/// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
+/// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
 pub trait Number
     : Sized + AddAssign + SubAssign + PartialOrd + PartialEq + Copy + Send + Sync
     {
@@ -69,6 +71,8 @@ impl Number for f64 {
     }
 }
 
+/// An interface for atomics. Used to generically model float metrics and integer metrics, i.e.
+/// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
 pub trait Atomic: Send + Sync {
     type T: Number;
     fn new(val: Self::T) -> Self;

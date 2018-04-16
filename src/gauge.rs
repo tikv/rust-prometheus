@@ -22,14 +22,17 @@ use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
+/// The underlying implementation for [`Gauge`](::Gauge) and [`IntGauge`](::IntGauge).
 pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
 
-/// A Metric represents a single numerical value that can arbitrarily go up and down.
+/// A [`Metric`](::core::Metric) represents a single numerical value that can arbitrarily go up
+/// and down.
 pub type Gauge = GenericGauge<AtomicF64>;
 
-/// The integer version of `Gauge`. Provides better performance if metric values are all integers.
+/// The integer version of [`Gauge`](::Gauge). Provides better performance if metric values are
+/// all integers.
 pub type IntGauge = GenericGauge<AtomicI64>;
 
 impl<P: Atomic> Clone for GenericGauge<P> {
@@ -41,13 +44,13 @@ impl<P: Atomic> Clone for GenericGauge<P> {
 }
 
 impl<P: Atomic> GenericGauge<P> {
-    /// `new` create a `Guage` with the `name` and `help` arguments.
+    /// Create a [`GenericGauge`](::core::GenericGauge) with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
         Self::with_opts(opts)
     }
 
-    /// `with_opts` create a `Guage` with the `opts` options.
+    /// Create a [`GenericGauge`](::core::GenericGauge) with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Self> {
         Self::with_opts_and_label_values(&opts, &[])
     }
@@ -56,42 +59,40 @@ impl<P: Atomic> GenericGauge<P> {
         let v = Value::new(opts, ValueType::Gauge, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
-}
 
-impl<P: Atomic> GenericGauge<P> {
-    /// `set` sets the gauge to an arbitrary value.
+    /// Set the gauge to an arbitrary value.
     #[inline]
     pub fn set(&self, v: P::T) {
         self.v.set(v);
     }
 
-    /// `inc` increments the gauge by 1.
+    /// Increase the gauge by 1.
     #[inline]
     pub fn inc(&self) {
         self.v.inc();
     }
 
-    /// `dec` decrements the gauge by 1.
+    /// Decrease the gauge by 1.
     #[inline]
     pub fn dec(&self) {
         self.v.dec();
     }
 
-    /// `add` adds the given value to the gauge. (The value can be
-    /// negative, resulting in a decrease of the gauge.)
+    /// Add the given value to the gauge. (The value can be
+    /// negative, resulting in a decrement of the gauge.)
     #[inline]
     pub fn add(&self, v: P::T) {
         self.v.inc_by(v);
     }
 
-    /// `sub` subtracts the given value from the gauge. (The value can be
-    /// negative, resulting in an increase of the gauge.)
+    /// Subtract the given value from the gauge. (The value can be
+    /// negative, resulting in an increment of the gauge.)
     #[inline]
     pub fn sub(&self, v: P::T) {
         self.v.dec_by(v);
     }
 
-    /// `get` returns the gauge value.
+    /// Return the gauge value.
     #[inline]
     pub fn get(&self) -> P::T {
         self.v.get()
@@ -141,21 +142,23 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
     }
 }
 
+/// The underlying implementation for [`GaugeVec`](::GaugeVec) and [`IntGaugeVec`](::IntGaugeVec).
 pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
 
-/// A Collector that bundles a set of `Gauge`s that all share the same
-/// Desc, but have different values for their variable labels. This is used if
-/// you want to count the same thing partitioned by various dimensions
+/// A [`Collector`](::core::Collector) that bundles a set of [`Gauge`](::Gauge)s that all share
+/// the same [`Desc`](::core::Desc), but have different values for their variable labels. This is
+/// used if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of operations queued, partitioned by user and operation type).
 pub type GaugeVec = GenericGaugeVec<AtomicF64>;
 
-/// The integer version of `GaugeVec`. Provides better performance if metric values are all integers.
+/// The integer version of [`GaugeVec`](::GaugeVec). Provides better performance if metric values
+/// are all integers.
 pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
 
 impl<P: Atomic> GenericGaugeVec<P> {
-    /// `new` creates a new `GaugeVec` based on the provided `Opts` and
-    /// partitioned by the given label names. At least one label name must be
-    /// provided.
+    /// Create a new [`GenericGaugeVec`](::core::GenericGaugeVec) based on the provided
+    /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must
+    /// be provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
