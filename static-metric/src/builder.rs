@@ -14,7 +14,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use quote::Tokens;
-use syn::{Expr, Ident, LitStr};
+use syn::Ident;
 
 use super::parser::*;
 use super::util;
@@ -37,7 +37,7 @@ impl TokensBuilder {
     }
 
     fn build_static_metric(metric: &MetricDef) -> Tokens {
-        let label_struct: Vec<Tokens> = metric
+        let label_struct: Vec<_> = metric
             .labels
             .iter()
             .enumerate()
@@ -114,8 +114,8 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_struct(&self) -> Tokens {
         let struct_name = &self.struct_name;
 
-        let field_names: Vec<&Ident> = self.label.values.iter().map(|v| &v.name).collect();
-        let member_types: Vec<&Ident> = field_names.iter().map(|_| &self.member_type).collect();
+        let field_names: Vec<_> = self.label.values.iter().map(|v| &v.name).collect();
+        let member_types: Vec<_> = field_names.iter().map(|_| &self.member_type).collect();
 
         quote!{
             #[allow(missing_copy_implementations)]
@@ -143,7 +143,7 @@ impl<'a> MetricBuilderContext<'a> {
         let struct_name = &self.struct_name;
         let metric_vec_type = &self.metric_vec_type;
 
-        let prev_labels_ident: Vec<Ident> = (0..self.label_index)
+        let prev_labels_ident: Vec<_> = (0..self.label_index)
             .map(|i| Ident::from(format!("label_{}", i)))
             .collect();
         let body = self.build_impl_from_body(prev_labels_ident.clone());
@@ -164,7 +164,7 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_from_body(&self, prev_labels_ident: Vec<Ident>) -> Tokens {
         let member_type = &self.member_type;
-        let bodies: Vec<Tokens> = self.label
+        let bodies: Vec<_> = self.label
             .values
             .iter()
             .map(|value| {
@@ -172,7 +172,7 @@ impl<'a> MetricBuilderContext<'a> {
                 let value = &value.value;
                 if self.is_last_label {
                     let current_label = &self.label.label_key;
-                    let prev_labels_str: Vec<&LitStr> = prev_labels_ident
+                    let prev_labels_str: Vec<_> = prev_labels_ident
                         .iter()
                         .enumerate()
                         .map(|(i, _)| &self.metric.labels[i].label_key)
@@ -211,8 +211,8 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_get(&self) -> Tokens {
         let member_type = &self.member_type;
-        let values_str: Vec<&Expr> = self.label.values.iter().map(|v| &v.value).collect();
-        let names_ident: Vec<&Ident> = self.label.values.iter().map(|v| &v.name).collect();
+        let values_str: Vec<_> = self.label.values.iter().map(|v| &v.value).collect();
+        let names_ident: Vec<_> = self.label.values.iter().map(|v| &v.name).collect();
         quote!{
             pub fn get(&self, value: &str) -> &#member_type {
                 match value {
