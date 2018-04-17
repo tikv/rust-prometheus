@@ -11,6 +11,9 @@ test:
 format:
 	@cargo fmt --all -- --write-mode diff >/dev/null || cargo fmt --all
 
+bench: format
+	RUSTFLAGS="--cfg bench" cargo bench --features="${ENABLE_FEATURES}" -- --nocapture
+
 clean:
 	cargo clean
 
