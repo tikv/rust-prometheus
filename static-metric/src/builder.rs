@@ -63,6 +63,7 @@ impl TokensBuilder {
         quote!{
             #visibility use self::#scope_name::#struct_name;
 
+            #[allow(dead_code)]
             mod #scope_name {
                 use std::collections::HashMap;
                 use prometheus::#metric_type;
@@ -111,7 +112,6 @@ impl<'a> MetricBuilderContext<'a> {
     }
 
     fn build_struct(&self) -> Tokens {
-        let visibility = &self.metric.visibility;
         let struct_name = &self.struct_name;
 
         let field_names: Vec<&Ident> = self.label.values.iter().map(|v| &v.name).collect();
@@ -119,7 +119,7 @@ impl<'a> MetricBuilderContext<'a> {
 
         quote!{
             #[allow(missing_copy_implementations)]
-            #visibility struct #struct_name {
+            pub struct #struct_name {
                 #(
                     pub #field_names: #member_types,
                 )*

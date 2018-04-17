@@ -63,7 +63,7 @@ fn bench_static_metrics_handwrite_2(b: &mut Bencher) {
 }
 
 make_static_metric! {
-    pub struct StaticCounter2: IntCounter {
+    struct StaticCounter2: IntCounter {
         "d1" => {
             foo,
         },
@@ -90,7 +90,7 @@ fn bench_static_metrics_macro_with_lookup(b: &mut Bencher) {
 }
 
 make_static_metric! {
-    pub struct StaticCounter3: IntCounter {
+    struct StaticCounter3: IntCounter {
         "d1" => { val1 },
         "d2" => { val2 },
         "d3" => { val3 },
