@@ -8,7 +8,7 @@ Utility macro to build static metrics for the [rust-prometheus](https://github.c
 ## Why?
 
 `MetricVec` (i.e. `CounterVec`, `GaugeVec` or `HistogramVec`) is slow. However if every possible values for labels are
-known, each metrics in the `MetricVec` can be cached to avoid the runtime cost.
+known, each metric in the `MetricVec` can be cached to avoid the runtime cost.
 
 For example, the following code can be slow when it is invoked multiple times:
 
