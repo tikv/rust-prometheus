@@ -14,7 +14,7 @@
 
 use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
-use errors::Result;
+use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
 use proto;
 use std::collections::HashMap;
@@ -62,15 +62,25 @@ impl<P: Atomic> GenericCounter<P> {
 
     /// Increase the given value to the counter.
     ///
+    /// # Errors
+    ///
+    /// Returns `DecreaseCounter` error if the value is < 0.
+    #[inline]
+    pub fn try_inc_by(&self, v: P::T) -> Result<()> {
+        if v < P::T::from_i64(0) {
+            return Err(Error::DecreaseCounter);
+        }
+        self.v.inc_by(v);
+        Ok(())
+    }
+
+    /// Increase the given value to the counter.
+    ///
     /// # Panics
     ///
     /// Panics if the value is < 0.
-    #[inline]
     pub fn inc_by(&self, v: P::T) {
-        if v < P::T::from_i64(0) {
-            panic!("counter cannot inc negative values")
-        }
-        self.v.inc_by(v);
+        self.try_inc_by(v).unwrap();
     }
 
     /// Increase the counter by 1.
@@ -190,15 +200,25 @@ impl<P: Atomic> GenericLocalCounter<P> {
 
     /// Increase the given value to the local counter.
     ///
+    /// # Errors
+    ///
+    /// Returns `DecreaseCounter` error if the value is < 0.
+    #[inline]
+    pub fn try_inc_by(&mut self, v: P::T) -> Result<()> {
+        if v < P::T::from_i64(0) {
+            return Err(Error::DecreaseCounter);
+        }
+        self.val += v;
+        Ok(())
+    }
+
+    /// Increase the given value to the local counter.
+    ///
     /// # Panics
     ///
     /// Panics if the value is < 0.
-    #[inline]
     pub fn inc_by(&mut self, v: P::T) {
-        if v < P::T::from_i64(0) {
-            panic!("counter cannot inc negative values")
-        }
-        self.val += v;
+        self.try_inc_by(v).unwrap();
     }
 
     /// Increase the local counter by 1.
@@ -511,14 +531,20 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    #[should_panic(expected = "DecreaseCounter")]
     fn test_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
         counter.inc_by(-42.0);
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_counter_try_negative_inc() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        assert!(counter.try_inc_by(-42.0).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "DecreaseCounter")]
     fn test_local_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
         let mut local = counter.local();
@@ -526,17 +552,37 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_local_counter_try_negative_inc() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        let mut local = counter.local();
+        assert!(local.try_inc_by(-42.0).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "DecreaseCounter")]
     fn test_int_counter_negative_inc() {
         let counter = IntCounter::new("foo", "bar").unwrap();
         counter.inc_by(-42);
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    fn test_int_counter_try_negative_inc() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        assert!(counter.try_inc_by(-42).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "DecreaseCounter")]
     fn test_int_local_counter_negative_inc() {
         let counter = IntCounter::new("foo", "bar").unwrap();
         let mut local = counter.local();
         local.inc_by(-42);
+    }
+
+    #[test]
+    fn test_int_local_counter_try_negative_inc() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        let mut local = counter.local();
+        assert!(local.try_inc_by(-42).is_err());
     }
 }
