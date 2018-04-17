@@ -21,7 +21,7 @@ mod pb;
 pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
 pub use self::text::{TextEncoder, TEXT_FORMAT};
 
-/// `Encoder` types encode metric families into an underlying wire protocol.
+/// An interface for encoding metric families into an underlying wire protocol.
 pub trait Encoder {
     /// `encode` converts a slice of MetricFamily proto messages into target
     /// format and writes the resulting lines to `writer`. It returns the number

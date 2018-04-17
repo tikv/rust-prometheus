@@ -32,7 +32,7 @@ use std::sync::Mutex;
 // Six metrics per ProcessCollector.
 const MERTICS_NUMBER: usize = 6;
 
-/// `ProcessCollector` a collector which exports the current state of
+/// A collector which exports the current state of
 /// process metrics including cpu, memory and file descriptor usage as well as
 /// the process start time for the given process id.
 pub struct ProcessCollector {
@@ -112,7 +112,7 @@ impl ProcessCollector {
         }
     }
 
-    /// Returns a `ProcessCollector` of the calling process.
+    /// Return a `ProcessCollector` of the calling process.
     pub fn for_self() -> ProcessCollector {
         let pid = unsafe { libc::getpid() };
         ProcessCollector::new(pid, "")

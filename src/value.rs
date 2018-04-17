@@ -19,7 +19,7 @@ use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 use protobuf::RepeatedField;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
-/// for `Counter` and `Gauge`.
+/// for [`Counter`](::Counter) and [`Gauge`](::Gauge).
 pub enum ValueType {
     Counter,
     Gauge,
@@ -35,10 +35,10 @@ impl ValueType {
     }
 }
 
-/// `Value` is a generic metric for Counter, Gauge and Untyped.
+/// A generic metric for [`Counter`](::Counter) and [`Gauge`](::Gauge).
 /// Its effective type is determined by `ValueType`. This is a low-level
 /// building block used by the library to back the implementations of
-/// `Counter` and `Gauge`.
+/// [`Counter`](::Counter) and [`Gauge`](::Gauge).
 pub struct Value<P: Atomic> {
     pub desc: Desc,
     pub val: P,
