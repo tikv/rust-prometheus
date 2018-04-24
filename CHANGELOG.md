@@ -2,7 +2,7 @@
 
 ## 0.4.1
 
-- Change: `(Local)(Int)Counter.inc_by` only panics in debug build if the given value is < 0.
+- Change: `(Local)(Int)Counter.inc_by` only panics in debug build if the given value is < 0 (#168).
 
 ## 0.4.0
 
