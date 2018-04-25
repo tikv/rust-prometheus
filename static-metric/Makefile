@@ -19,6 +19,7 @@ clean:
 
 examples:
 	cargo build --example simple
+	cargo build --example metric_enum
 	cargo build --example with_lazy_static
 	cargo build --example advanced
 

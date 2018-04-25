@@ -21,8 +21,8 @@ extern crate quote;
 #[macro_use]
 extern crate syn;
 
-mod parser;
 mod builder;
+mod parser;
 mod util;
 
 use proc_macro::TokenStream;
@@ -34,5 +34,5 @@ use self::parser::StaticMetricMacroBody;
 #[proc_macro]
 pub fn make_static_metric(input: TokenStream) -> TokenStream {
     let body: StaticMetricMacroBody = syn::parse(input).unwrap();
-    TokensBuilder::build(&body).into()
+    TokensBuilder::build(body).into()
 }
