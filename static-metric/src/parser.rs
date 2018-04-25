@@ -13,9 +13,31 @@
 
 use std::collections::HashMap;
 
+use proc_macro2::Span;
+use syn::buffer::Cursor;
 use syn::punctuated::Punctuated;
-use syn::synom::Synom;
-use syn::{Expr, ExprLit, Ident, Lit, LitStr, Visibility};
+use syn::synom::{PResult, Synom};
+use syn::*;
+
+/// Matches `label_enum` keyword.
+struct LabelEnum {
+    pub span: Span,
+}
+
+impl Synom for LabelEnum {
+    fn parse(tokens: Cursor) -> PResult<Self> {
+        if let Some((term, rest)) = tokens.term() {
+            if term.as_str() == "label_enum" {
+                return Ok((LabelEnum { span: term.span() }, rest));
+            }
+        }
+        parse_error()
+    }
+
+    fn description() -> Option<&'static str> {
+        Some("label_enum")
+    }
+}
 
 /// Matches `... => { ... name: value_expr ... }`
 #[derive(Debug)]
@@ -72,7 +94,7 @@ impl From<MetricValueDefFull> for MetricValueDef {
 
 impl From<MetricValueDefShort> for MetricValueDef {
     fn from(e: MetricValueDefShort) -> MetricValueDef {
-        let value_lit = Lit::from(LitStr::new(e.value.as_ref(), e.value.span));
+        let value_lit = Lit::from(LitStr::new(e.value.as_ref(), e.value.span()));
         MetricValueDef {
             name: e.value,
             value: Expr::from(ExprLit {
@@ -98,7 +120,7 @@ impl Synom for MetricValueList {
     ));
 }
 
-/// Matches `enum Foo { value_definition, value_definition, ... }`
+/// Matches `label_enum Foo { value_definition, value_definition, ... }`
 #[derive(Debug)]
 pub struct MetricEnumDef {
     pub enum_name: Ident,
@@ -107,7 +129,7 @@ pub struct MetricEnumDef {
 
 impl Synom for MetricEnumDef {
     named!(parse -> Self, do_parse!(
-        keyword!(enum) >>
+        syn!(LabelEnum) >>
         enum_name: syn!(Ident) >>
         values: syn!(MetricValueList) >>
         (MetricEnumDef {
@@ -139,7 +161,7 @@ impl MetricLabelValuesOrEnum {
             MetricLabelValuesOrEnum::Enum(ref e) => {
                 let enum_definition = enum_definitions.get(e);
                 if enum_definition.is_none() {
-                    panic!("metric enum {} is undefined", e)
+                    panic!("label enum {} is undefined", e)
                 }
                 &enum_definition.unwrap().get_values()
             }

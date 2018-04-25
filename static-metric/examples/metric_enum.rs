@@ -26,14 +26,14 @@ use prometheus::{CounterVec, IntCounterVec, Opts};
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {
-    enum Methods {
+    label_enum Methods {
         post,
         get,
         put,
         delete,
     }
 
-    enum Products {
+    label_enum Products {
         foo,
         bar,
     }
