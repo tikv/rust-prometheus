@@ -134,36 +134,28 @@ macro_rules! opts {
 /// ```
 #[macro_export]
 macro_rules! histogram_opts {
-    ( $ NAME : expr , $ HELP : expr ) => {
-        {
-            $crate::HistogramOpts::new($NAME, $HELP)
-        }
-    };
+    ($NAME:expr, $HELP:expr) => {{
+        $crate::HistogramOpts::new($NAME, $HELP)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ BUCKETS : expr ) => {
-        {
-            let hopts = histogram_opts!($NAME, $HELP);
-            hopts.buckets($BUCKETS)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $BUCKETS:expr) => {{
+        let hopts = histogram_opts!($NAME, $HELP);
+        hopts.buckets($BUCKETS)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ BUCKETS : expr , $ CONST_LABELS : expr ) => {
-        {
-            let hopts = histogram_opts!($NAME, $HELP, $BUCKETS);
-            hopts.const_labels($CONST_LABELS)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $BUCKETS:expr, $CONST_LABELS:expr) => {{
+        let hopts = histogram_opts!($NAME, $HELP, $BUCKETS);
+        hopts.const_labels($CONST_LABELS)
+    }};
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __register_counter {
-    ( $ TYPE : ident, $ OPTS : expr ) => {
-        {
-            let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
-            $crate::register(Box::new(counter.clone())).map(|_| counter)
-        }
-    };
+    ($TYPE:ident, $OPTS:expr) => {{
+        let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
+        $crate::register(Box::new(counter.clone())).map(|_| counter)
+    }};
 }
 
 /// Create a [`Counter`](::Counter) and registerss to default registry.
@@ -183,17 +175,13 @@ macro_rules! __register_counter {
 /// ```
 #[macro_export]
 macro_rules! register_counter {
-    ( $ OPTS : expr ) => {
-        {
-            __register_counter!(Counter, $OPTS)
-        }
-    };
+    ($OPTS:expr) => {{
+        __register_counter!(Counter, $OPTS)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr ) => {
-        {
-            register_counter!(opts!($NAME, $HELP))
-        }
-    };
+    ($NAME:expr, $HELP:expr) => {{
+        register_counter!(opts!($NAME, $HELP))
+    }};
 }
 
 /// Create an [`IntCounter`](::IntCounter) and registers to default registry.
@@ -201,28 +189,22 @@ macro_rules! register_counter {
 /// View docs of `register_counter` for examples.
 #[macro_export]
 macro_rules! register_int_counter {
-    ( $ OPTS : expr ) => {
-        {
-            __register_counter!(IntCounter, $OPTS)
-        }
-    };
+    ($OPTS:expr) => {{
+        __register_counter!(IntCounter, $OPTS)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr ) => {
-        {
-            register_int_counter!(opts!($NAME, $HELP))
-        }
-    };
+    ($NAME:expr, $HELP:expr) => {{
+        register_int_counter!(opts!($NAME, $HELP))
+    }};
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __register_counter_vec {
-    ( $ TYPE : ident , $ OPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            let counter_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
-            $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
-        }
-    };
+    ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr) => {{
+        let counter_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
+        $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+    }};
 }
 
 /// Create a [`CounterVec`](::CounterVec) and registers to default registry.
@@ -242,17 +224,13 @@ macro_rules! __register_counter_vec {
 /// ```
 #[macro_export]
 macro_rules! register_counter_vec {
-    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            __register_counter_vec!(CounterVec, $OPTS, $LABELS_NAMES)
-        }
-    };
+    ($OPTS:expr, $LABELS_NAMES:expr) => {{
+        __register_counter_vec!(CounterVec, $OPTS, $LABELS_NAMES)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr) => {{
+        register_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+    }};
 }
 
 /// Create an [`IntCounterVec`](::IntCounterVec) and registers to default registry.
@@ -260,28 +238,22 @@ macro_rules! register_counter_vec {
 /// View docs of `register_counter_vec` for examples.
 #[macro_export]
 macro_rules! register_int_counter_vec {
-    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            __register_counter_vec!(IntCounterVec, $OPTS, $LABELS_NAMES)
-        }
-    };
+    ($OPTS:expr, $LABELS_NAMES:expr) => {{
+        __register_counter_vec!(IntCounterVec, $OPTS, $LABELS_NAMES)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_int_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr) => {{
+        register_int_counter_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+    }};
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __register_gauge {
-    ( $ TYPE : ident , $ OPTS : expr ) => {
-        {
-            let gauge = $crate::$TYPE::with_opts($OPTS).unwrap();
-            $crate::register(Box::new(gauge.clone())).map(|_| gauge)
-        }
-    };
+    ($TYPE:ident, $OPTS:expr) => {{
+        let gauge = $crate::$TYPE::with_opts($OPTS).unwrap();
+        $crate::register(Box::new(gauge.clone())).map(|_| gauge)
+    }};
 }
 
 /// Create a [`Gauge`](::Gauge) and registers to default registry.
@@ -301,17 +273,13 @@ macro_rules! __register_gauge {
 /// ```
 #[macro_export]
 macro_rules! register_gauge {
-    ( $ OPTS : expr ) => {
-        {
-            __register_gauge!(Gauge, $OPTS)
-        }
-    };
+    ($OPTS:expr) => {{
+        __register_gauge!(Gauge, $OPTS)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr ) => {
-        {
-            register_gauge!(opts!($NAME, $HELP))
-        }
-    };
+    ($NAME:expr, $HELP:expr) => {{
+        register_gauge!(opts!($NAME, $HELP))
+    }};
 }
 
 /// Create an [`IntGauge`](::IntGauge) and registers to default registry.
@@ -319,28 +287,22 @@ macro_rules! register_gauge {
 /// View docs of `register_gauge` for examples.
 #[macro_export]
 macro_rules! register_int_gauge {
-    ( $ OPTS : expr ) => {
-        {
-            __register_gauge!(IntGauge, $OPTS)
-        }
-    };
+    ($OPTS:expr) => {{
+        __register_gauge!(IntGauge, $OPTS)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr ) => {
-        {
-            register_int_gauge!(opts!($NAME, $HELP))
-        }
-    };
+    ($NAME:expr, $HELP:expr) => {{
+        register_int_gauge!(opts!($NAME, $HELP))
+    }};
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __register_gauge_vec {
-    ( $ TYPE : ident , $ OPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            let gauge_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
-            $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
-        }
-    };
+    ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr) => {{
+        let gauge_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
+        $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+    }};
 }
 
 /// Create a [`GaugeVec`](::GaugeVec) and registers to default registry.
@@ -360,17 +322,13 @@ macro_rules! __register_gauge_vec {
 /// ```
 #[macro_export]
 macro_rules! register_gauge_vec {
-    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            __register_gauge_vec!(GaugeVec, $OPTS, $LABELS_NAMES)
-        }
-    };
+    ($OPTS:expr, $LABELS_NAMES:expr) => {{
+        __register_gauge_vec!(GaugeVec, $OPTS, $LABELS_NAMES)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr) => {{
+        register_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+    }};
 }
 
 /// Create an [`IntGaugeVec`](::IntGaugeVec) and registers to default registry.
@@ -378,17 +336,13 @@ macro_rules! register_gauge_vec {
 /// View docs of `register_gauge_vec` for examples.
 #[macro_export]
 macro_rules! register_int_gauge_vec {
-    ( $ OPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            __register_gauge_vec!(IntGaugeVec, $OPTS, $LABELS_NAMES)
-        }
-    };
+    ($OPTS:expr, $LABELS_NAMES:expr) => {{
+        __register_gauge_vec!(IntGaugeVec, $OPTS, $LABELS_NAMES)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_int_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr) => {{
+        register_int_gauge_vec!(opts!($NAME, $HELP), $LABELS_NAMES)
+    }};
 }
 
 /// Create a [`Histogram`](::Histogram) and registers to default registry.
@@ -413,20 +367,18 @@ macro_rules! register_int_gauge_vec {
 /// ```
 #[macro_export]
 macro_rules! register_histogram {
-    ( $ NAME : expr , $ HELP : expr ) => {
+    ($NAME:expr, $HELP:expr) => {
         register_histogram!(histogram_opts!($NAME, $HELP))
     };
 
-    ( $ NAME : expr , $ HELP : expr , $ BUCKETS : expr ) => {
+    ($NAME:expr, $HELP:expr, $BUCKETS:expr) => {
         register_histogram!(histogram_opts!($NAME, $HELP, $BUCKETS))
     };
 
-    ( $ HOPTS : expr ) => {
-        {
-            let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
-            $crate::register(Box::new(histogram.clone())).map(|_| histogram)
-        }
-    }
+    ($HOPTS:expr) => {{
+        let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
+        $crate::register(Box::new(histogram.clone())).map(|_| histogram)
+    }};
 }
 
 /// Create a [`HistogramVec`](::HistogramVec) and registers to default registry.
@@ -453,22 +405,16 @@ macro_rules! register_histogram {
 /// ```
 #[macro_export]
 macro_rules! register_histogram_vec {
-    ( $ HOPTS : expr , $ LABELS_NAMES : expr ) => {
-        {
-            let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
-            $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
-        }
-    };
+    ($HOPTS:expr, $LABELS_NAMES:expr) => {{
+        let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
+        $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr ) => {
-        {
-            register_histogram_vec!(histogram_opts!($NAME, $HELP), $LABELS_NAMES)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr) => {{
+        register_histogram_vec!(histogram_opts!($NAME, $HELP), $LABELS_NAMES)
+    }};
 
-    ( $ NAME : expr , $ HELP : expr , $ LABELS_NAMES : expr , $ BUCKETS : expr) => {
-        {
-            register_histogram_vec!(histogram_opts!($NAME, $HELP, $BUCKETS), $LABELS_NAMES)
-        }
-    };
+    ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr, $BUCKETS:expr) => {{
+        register_histogram_vec!(histogram_opts!($NAME, $HELP, $BUCKETS), $LABELS_NAMES)
+    }};
 }

@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::btree_map::Entry as BEntry;
+use std::collections::hash_map::Entry as HEntry;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::iter::FromIterator;
+use std::sync::Arc;
+
+use spin::RwLock;
+
 use errors::{Error, Result};
 use metrics::Collector;
 use proto;
-use spin::RwLock;
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::collections::btree_map::Entry as BEntry;
-use std::collections::hash_map::Entry as HEntry;
-use std::iter::FromIterator;
-use std::sync::Arc;
 
 struct RegistryCore {
     pub colloctors_by_id: HashMap<u64, Box<Collector>>,
@@ -445,10 +447,7 @@ mod tests {
             },
         );
 
-        let mc = MultipleCollector {
-            descs: descs,
-            counters: counters,
-        };
+        let mc = MultipleCollector { descs, counters };
 
         let r = Registry::new();
         r.register(Box::new(mc)).unwrap();

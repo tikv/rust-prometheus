@@ -12,35 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use encoder::{Encoder, ProtobufEncoder};
-use errors::{Error, Result};
-use hyper::client::Client;
-use hyper::client::pool::Config;
-use hyper::header::ContentType;
-use hyper::method::Method;
-use hyper::status::StatusCode;
-use metrics::Collector;
-use proto;
-use registry::Registry;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
+use hyper::client::Client;
+use hyper::client::pool::Config;
+use hyper::header::ContentType;
+use hyper::method::Method;
+use hyper::status::StatusCode;
+
+use encoder::{Encoder, ProtobufEncoder};
+use errors::{Error, Result};
+use metrics::Collector;
+use proto;
+use registry::Registry;
+
 const HYPER_MAX_IDLE: usize = 1;
 const HYPER_TIMEOUT_SEC: u64 = 10;
 
-lazy_static!{
+lazy_static! {
     static ref HTTP_CLIENT: Client = {
-            let mut client = Client::with_pool_config(
-                Config{
-                    max_idle: HYPER_MAX_IDLE,
-                }
-            );
-            client.set_read_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
-            client.set_write_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
-            client
-        };
+        let mut client = Client::with_pool_config(Config {
+            max_idle: HYPER_MAX_IDLE,
+        });
+        client.set_read_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
+        client.set_write_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
+        client
+    };
 }
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
