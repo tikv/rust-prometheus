@@ -69,7 +69,13 @@ fn main() {
 
     // Note: You cannot specify values other than the definition in `get()` because
     // it is purely static.
-    HTTP_COUNTER.get("delete").get("HTTP/1").foo.inc_by(7);
+    HTTP_COUNTER
+        .get("delete")
+        .unwrap()
+        .get("HTTP/1")
+        .unwrap()
+        .foo
+        .inc_by(7);
     assert_eq!(
         HTTP_COUNTER_VEC
             .with_label_values(&["foo", "delete", "HTTP/1"])

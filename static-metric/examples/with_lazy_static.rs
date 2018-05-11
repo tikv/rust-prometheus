@@ -38,15 +38,13 @@ make_static_metric! {
 }
 
 lazy_static! {
-    pub static ref HTTP_COUNTER_VEC: CounterVec =
-        register_counter_vec!(
-            "http_requests",
-            "Total number of HTTP requests.",
-            &["method", "product"]
-        ).unwrap();
-
-    pub static ref HTTP_COUNTER: HttpRequestStatistics = HttpRequestStatistics
-        ::from(&HTTP_COUNTER_VEC);
+    pub static ref HTTP_COUNTER_VEC: CounterVec = register_counter_vec!(
+        "http_requests",
+        "Total number of HTTP requests.",
+        &["method", "product"]
+    ).unwrap();
+    pub static ref HTTP_COUNTER: HttpRequestStatistics =
+        HttpRequestStatistics::from(&HTTP_COUNTER_VEC);
 }
 
 fn main() {

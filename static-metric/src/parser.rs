@@ -11,9 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use syn::{Expr, ExprLit, Ident, Lit, LitStr, Visibility};
 use syn::punctuated::Punctuated;
 use syn::synom::Synom;
+use syn::{Expr, ExprLit, Ident, Lit, LitStr, Visibility};
 
 /// Matches `... => { ... name: value_expr ... }`
 #[derive(Debug)]

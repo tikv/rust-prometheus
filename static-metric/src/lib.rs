@@ -21,8 +21,8 @@ extern crate quote;
 #[macro_use]
 extern crate syn;
 
-mod parser;
 mod builder;
+mod parser;
 mod util;
 
 use proc_macro::TokenStream;
