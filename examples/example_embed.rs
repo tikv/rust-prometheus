@@ -13,9 +13,10 @@
 
 extern crate prometheus;
 
-use prometheus::{Counter, CounterVec, Encoder, Gauge, GaugeVec, Opts, Registry, TextEncoder};
 use std::thread;
 use std::time::Duration;
+
+use prometheus::{Counter, CounterVec, Encoder, Gauge, GaugeVec, Opts, Registry, TextEncoder};
 
 fn main() {
     let r = Registry::new();

@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::Atomic;
 use std::f64;
 use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
+
+use super::Atomic;
 
 pub struct AtomicF64 {
     inner: StdAtomicU64,
