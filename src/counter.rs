@@ -64,12 +64,10 @@ impl<P: Atomic> GenericCounter<P> {
     ///
     /// # Panics
     ///
-    /// Panics if the value is < 0.
+    /// Panics in debug build if the value is < 0.
     #[inline]
     pub fn inc_by(&self, v: P::T) {
-        if v < P::T::from_i64(0) {
-            panic!("counter cannot inc negative values")
-        }
+        debug_assert!(v >= P::T::from_i64(0));
         self.v.inc_by(v);
     }
 
@@ -192,12 +190,10 @@ impl<P: Atomic> GenericLocalCounter<P> {
     ///
     /// # Panics
     ///
-    /// Panics if the value is < 0.
+    /// Panics in debug build if the value is < 0.
     #[inline]
     pub fn inc_by(&mut self, v: P::T) {
-        if v < P::T::from_i64(0) {
-            panic!("counter cannot inc negative values")
-        }
+        debug_assert!(v >= P::T::from_i64(0));
         self.val += v;
     }
 
@@ -511,14 +507,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    #[should_panic(expected = "assertion failed")]
     fn test_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
         counter.inc_by(-42.0);
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    #[should_panic(expected = "assertion failed")]
     fn test_local_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
         let mut local = counter.local();
@@ -526,14 +522,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    #[should_panic(expected = "assertion failed")]
     fn test_int_counter_negative_inc() {
         let counter = IntCounter::new("foo", "bar").unwrap();
         counter.inc_by(-42);
     }
 
     #[test]
-    #[should_panic(expected = "counter cannot inc negative values")]
+    #[should_panic(expected = "assertion failed")]
     fn test_int_local_counter_negative_inc() {
         let counter = IntCounter::new("foo", "bar").unwrap();
         let mut local = counter.local();
