@@ -214,12 +214,12 @@ impl<'a> MetricBuilderContext<'a> {
         let values_str: Vec<_> = self.label.values.iter().map(|v| &v.value).collect();
         let names_ident: Vec<_> = self.label.values.iter().map(|v| &v.name).collect();
         quote!{
-            pub fn get(&self, value: &str) -> &#member_type {
+            pub fn get(&self, value: &str) -> Option<&#member_type> {
                 match value {
                     #(
-                        #values_str => &self.#names_ident,
+                        #values_str => Some(&self.#names_ident),
                     )*
-                    _ => panic!("unknown field `{}`", value),
+                    _ => None,
                 }
             }
         }
