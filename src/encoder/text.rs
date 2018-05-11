@@ -11,12 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{check_metric_family, Encoder};
+use std::io::Write;
+
 use errors::Result;
 use histogram::BUCKET_LABEL;
-use proto::{self, MetricType};
 use proto::MetricFamily;
-use std::io::Write;
+use proto::{self, MetricType};
+
+use super::{check_metric_family, Encoder};
 
 /// The text format of metric family.
 pub const TEXT_FORMAT: &str = "text/plain; version=0.0.4";

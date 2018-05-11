@@ -19,18 +19,18 @@ extern crate lazy_static;
 #[macro_use]
 extern crate prometheus;
 
-use getopts::Options;
-use prometheus::{Counter, Histogram};
 use std::env;
 use std::thread;
 use std::time;
+
+use getopts::Options;
+use prometheus::{Counter, Histogram};
 
 lazy_static! {
     static ref PUSH_COUNTER: Counter = register_counter!(
         "example_push_total",
         "Total number of prometheus client pushed."
     ).unwrap();
-
     static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
         "example_push_request_duration_seconds",
         "The push request latencies in seconds."

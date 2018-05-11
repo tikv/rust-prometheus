@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cmp::*;
+use std::ops::*;
+
 #[cfg(not(feature = "nightly"))]
 mod fallback;
 #[cfg(not(feature = "nightly"))]
@@ -21,14 +24,12 @@ pub use self::fallback::{AtomicF64, AtomicI64, AtomicU64};
 mod nightly;
 #[cfg(feature = "nightly")]
 pub use self::nightly::{AtomicF64, AtomicI64, AtomicU64};
-use std::cmp::*;
-use std::ops::*;
 
 /// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
 /// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
-pub trait Number
-    : Sized + AddAssign + SubAssign + PartialOrd + PartialEq + Copy + Send + Sync
-    {
+pub trait Number:
+    Sized + AddAssign + SubAssign + PartialOrd + PartialEq + Copy + Send + Sync
+{
     /// `std::convert::From<i64> for f64` is not implemented, so that we need to implement our own.
     fn from_i64(v: i64) -> Self;
 
@@ -85,8 +86,8 @@ pub trait Atomic: Send + Sync {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::f64::{self, EPSILON};
     use std::f64::consts::PI;
+    use std::f64::{self, EPSILON};
 
     #[test]
     fn test_atomic_f64() {

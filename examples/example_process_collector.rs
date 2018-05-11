@@ -15,9 +15,10 @@ extern crate prometheus;
 
 #[cfg(all(feature = "process", target_os = "linux"))]
 fn main() {
-    use prometheus::{self, Encoder};
     use std::thread;
     use std::time::Duration;
+
+    use prometheus::{self, Encoder};
 
     // A default ProcessCollector is registered automatically.
     let mut buffer = Vec::new();

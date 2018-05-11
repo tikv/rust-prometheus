@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::convert::From;
+use std::sync::Arc;
+use std::time::{Duration, Instant as StdInstant};
+
 use atomic64::{Atomic, AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
 use proto;
 use protobuf::RepeatedField;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::convert::From;
-use std::sync::Arc;
-use std::time::{Duration, Instant as StdInstant};
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -192,12 +193,12 @@ impl HistogramCore {
         }
 
         Ok(HistogramCore {
-            desc: desc,
+            desc,
             label_pairs: pairs,
             sum: AtomicF64::new(0.0),
             count: AtomicU64::new(0),
             upper_bounds: buckets,
-            counts: counts,
+            counts,
         })
     }
 
@@ -237,7 +238,8 @@ impl HistogramCore {
 
 enum Instant {
     Monotonic(StdInstant),
-    #[cfg(all(feature = "nightly", target_os = "linux"))] MonotonicCoarse(timespec),
+    #[cfg(all(feature = "nightly", target_os = "linux"))]
+    MonotonicCoarse(timespec),
 }
 
 impl Instant {
@@ -285,8 +287,8 @@ use self::coarse::*;
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 mod coarse {
-    use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
     pub use libc::timespec;
+    use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
 
     pub const NANOS_PER_MILLI: i64 = 1_000_000;
     pub const MILLIS_PER_SEC: i64 = 1_000;
@@ -314,7 +316,7 @@ pub struct HistogramTimer {
 impl HistogramTimer {
     fn new(histogram: Histogram) -> HistogramTimer {
         HistogramTimer {
-            histogram: histogram,
+            histogram,
             start: Instant::now(),
         }
     }
@@ -601,8 +603,8 @@ impl LocalHistogramCore {
         let counts = vec![0; histogram.core.counts.len()];
 
         LocalHistogramCore {
-            histogram: histogram,
-            counts: counts,
+            histogram,
+            counts,
             count: 0,
             sum: 0.0,
         }
