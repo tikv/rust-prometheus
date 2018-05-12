@@ -33,7 +33,7 @@ name = "benches"
 path = "benches/benches.rs"
 
 [dependencies]
-protobuf = "1.4"
+protobuf = "=1.4.0"
 quick-error = "0.2"
 clippy = {version = "^0", optional = true}
 fnv = "1.0"
