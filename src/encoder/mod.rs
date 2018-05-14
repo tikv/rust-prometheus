@@ -11,12 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use errors::{Error, Result};
-use proto::MetricFamily;
 use std::io::Write;
 
-mod text;
+use errors::{Error, Result};
+use proto::MetricFamily;
+
 mod pb;
+mod text;
 
 pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
 pub use self::text::{TextEncoder, TEXT_FORMAT};

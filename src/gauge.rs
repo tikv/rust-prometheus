@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::marker::PhantomData;
+use std::sync::Arc;
+
 use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
 use errors::Result;
 use metrics::{Collector, Metric, Opts};
 use proto;
-use std::marker::PhantomData;
-use std::sync::Arc;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 

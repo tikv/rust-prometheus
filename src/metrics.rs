@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cmp::{Eq, Ord, Ordering, PartialOrd};
+use std::collections::HashMap;
+
 use desc::{Desc, Describer};
 use errors::Result;
 use proto::{self, LabelPair};
-use std::cmp::{Eq, Ord, Ordering, PartialOrd};
-use std::collections::HashMap;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 

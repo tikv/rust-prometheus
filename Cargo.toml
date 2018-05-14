@@ -59,3 +59,6 @@ hyper = {version = "0.9", default-features = false}
 
 [build-dependencies]
 protoc-rust = "1.6"
+
+[workspace]
+members = ["static-metric"]
