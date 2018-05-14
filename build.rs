@@ -6,9 +6,7 @@ fn main() {
             out_dir: "proto",
             input: &["proto/metrics.proto"],
             includes: &["proto"],
-            customize: protoc_rust::Customize {
-                ..Default::default()
-            },
-        }).expect("protoc");
+            ..Default::default()
+        }).unwrap();
     }
 }
