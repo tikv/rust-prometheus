@@ -38,7 +38,7 @@ The crate has a pre-generated protobuf binding file for `protobuf` v1.6, if you 
 ```toml
 [dependencies.prometheus]
 git = "https://github.com/pingcap/rust-prometheus.git"
-features = ["gen]
+features = ["gen"]
 ```
 
 ## Example
