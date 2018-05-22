@@ -34,7 +34,7 @@ name = "benches"
 path = "benches/benches.rs"
 
 [dependencies]
-protobuf = "1.6"
+protobuf = "1.7"
 quick-error = "0.2"
 clippy = {version = "^0", optional = true}
 fnv = "1.0"
@@ -58,7 +58,7 @@ getopts = "0.2"
 hyper = {version = "0.9", default-features = false}
 
 [build-dependencies]
-protoc-rust = "1.6"
+protoc-rust = "1.7"
 
 [workspace]
 members = ["static-metric"]
