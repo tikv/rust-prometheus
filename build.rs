@@ -1,8 +1,8 @@
-extern crate protoc_rust;
+extern crate protobuf_codegen_pure;
 
 fn main() {
     if cfg!(feature = "gen") {
-        protoc_rust::run(protoc_rust::Args {
+        protobuf_codegen_pure::run(protobuf_codegen_pure::Args {
             out_dir: "proto",
             input: &["proto/metrics.proto"],
             includes: &["proto"],
