@@ -11,8 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use prometheus::{Counter, CounterVec, IntCounter, Opts};
+#![feature(test)]
+
+extern crate prometheus;
+extern crate test;
+
 use std::collections::HashMap;
+
+use prometheus::{Counter, CounterVec, IntCounter, Opts};
 use test::Bencher;
 
 #[bench]
