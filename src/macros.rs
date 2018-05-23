@@ -158,7 +158,7 @@ macro_rules! __register_counter {
     }};
 }
 
-/// Create a [`Counter`](::Counter) and registerss to default registry.
+/// Create a [`Counter`](::Counter) and registers to default registry.
 ///
 /// # Examples
 ///
