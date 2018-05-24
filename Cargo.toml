@@ -10,14 +10,6 @@ repository = "https://github.com/pingcap/rust-prometheus"
 homepage = "https://github.com/pingcap/rust-prometheus"
 documentation = "https://docs.rs/prometheus"
 
-include = [
-    "LICENSE",
-    "Cargo.toml",
-    "src/**/*.rs",
-    "proto/**/*.rs",
-    "benches/**/*.rs",
-]
-
 [badges]
 travis-ci = { repository = "pingcap/rust-prometheus" }
 
@@ -28,10 +20,6 @@ nightly = ["libc", "spin/unstable"]
 push = ["hyper", "libc"]
 process = ["libc", "procinfo"]
 gen = ["protobuf-codegen-pure"]
-
-[[bench]]
-name = "benches"
-path = "benches/benches.rs"
 
 [dependencies]
 protobuf = "2.0"

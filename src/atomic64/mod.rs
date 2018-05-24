@@ -119,25 +119,3 @@ mod test {
         assert_eq!(au64.get(), 123);
     }
 }
-
-#[cfg(all(test, bench))]
-mod bench {
-    use super::*;
-    use test::Bencher;
-
-    #[bench]
-    fn bench_atomic_f64(b: &mut Bencher) {
-        let val = AtomicF64::new(0.0);
-        b.iter(|| {
-            val.inc_by(12.0);
-        });
-    }
-
-    #[bench]
-    fn bench_atomic_i64(b: &mut Bencher) {
-        let val = AtomicI64::new(0);
-        b.iter(|| {
-            val.inc_by(12);
-        });
-    }
-}

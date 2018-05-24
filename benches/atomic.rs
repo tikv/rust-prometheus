@@ -1,4 +1,4 @@
-// Copyright 2016 PingCAP, Inc.
+// Copyright 2018 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,29 @@
 // limitations under the License.
 
 #![feature(test)]
+#![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
-extern crate prometheus;
+extern crate spin;
 extern crate test;
 
-mod counter;
-mod gauge;
-mod histogram;
+#[path = "../src/atomic64/mod.rs"]
+mod atomic64;
+
+use atomic64::*;
+use test::Bencher;
+
+#[bench]
+fn bench_atomic_f64(b: &mut Bencher) {
+    let val = AtomicF64::new(0.0);
+    b.iter(|| {
+        val.inc_by(12.0);
+    });
+}
+
+#[bench]
+fn bench_atomic_i64(b: &mut Bencher) {
+    let val = AtomicI64::new(0);
+    b.iter(|| {
+        val.inc_by(12);
+    });
+}
