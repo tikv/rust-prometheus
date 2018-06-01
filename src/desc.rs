@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use errors::{Error, Result};
-use fnv::FnvHasher;
-use metrics::SEPARATOR_BYTE;
-use proto::LabelPair;
 use std::collections::{BTreeSet, HashMap};
 use std::hash::Hasher;
+
+use fnv::FnvHasher;
+
+use errors::{Error, Result};
+use metrics::SEPARATOR_BYTE;
+use proto::LabelPair;
 
 // TODO: use `char::is_ascii` instead once it landed in the stable rust.
 // Refer to https://github.com/rust-lang/rust/blob/
@@ -112,9 +114,9 @@ impl Desc {
     ) -> Result<Desc> {
         let mut desc = Desc {
             fq_name: fq_name.clone(),
-            help: help,
+            help,
             const_label_pairs: Vec::with_capacity(const_labels.len()),
-            variable_labels: variable_labels,
+            variable_labels,
             id: 0,
             dim_hash: 0,
         };

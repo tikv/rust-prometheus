@@ -1,6 +1,6 @@
 [package]
 name = "prometheus"
-version = "0.4.0"
+version = "0.4.1"
 license = "Apache-2.0"
 keywords = ["prometheus", "metrics"]
 authors = ["overvenus@gmail.com", "siddontang@gmail.com", "vistaswx@gmail.com"]
@@ -33,7 +33,7 @@ name = "benches"
 path = "benches/benches.rs"
 
 [dependencies]
-protobuf = "1.4"
+protobuf = "=1.4.0"
 quick-error = "0.2"
 clippy = {version = "^0", optional = true}
 fnv = "1.0"

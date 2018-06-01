@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use protobuf::RepeatedField;
+
 use atomic64::{Atomic, Number};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
-use protobuf::RepeatedField;
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for [`Counter`](::Counter) and [`Gauge`](::Gauge).
@@ -49,7 +50,7 @@ pub struct Value<P: Atomic> {
 impl<P: Atomic> Value<P> {
     pub fn new<D: Describer>(
         describer: &D,
-        value_type: ValueType,
+        val_type: ValueType,
         val: P::T,
         label_values: &[&str],
     ) -> Result<Self> {
@@ -64,10 +65,10 @@ impl<P: Atomic> Value<P> {
         let label_pairs = make_label_pairs(&desc, label_values);
 
         Ok(Self {
-            desc: desc,
+            desc,
             val: P::new(val),
-            val_type: value_type,
-            label_pairs: label_pairs,
+            val_type,
+            label_pairs,
         })
     }
 

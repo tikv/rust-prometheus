@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use desc::{Desc, Describer};
-use errors::{Error, Result};
-use fnv::FnvHasher;
-use metrics::{Collector, Metric};
-use proto::{MetricFamily, MetricType};
-use protobuf::RepeatedField;
-use spin::RwLock;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use std::sync::Arc;
+
+use fnv::FnvHasher;
+use protobuf::RepeatedField;
+use spin::RwLock;
+
+use desc::{Desc, Describer};
+use errors::{Error, Result};
+use metrics::{Collector, Metric};
+use proto::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -190,10 +192,10 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         let desc = opts.describe()?;
         let v = MetricVecCore {
             children: RwLock::new(HashMap::new()),
-            desc: desc,
-            metric_type: metric_type,
-            new_metric: new_metric,
-            opts: opts,
+            desc,
+            metric_type,
+            new_metric,
+            opts,
         };
 
         Ok(MetricVec { v: Arc::new(v) })

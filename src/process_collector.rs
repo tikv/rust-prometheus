@@ -15,19 +15,22 @@
 //!
 //! This module only supports **Linux** platform.
 
+use std::fs;
+use std::io::Read;
+use std::sync::Mutex;
+
+use libc;
+use procinfo::pid as pid_info;
+
 use counter::Counter;
 use desc::Desc;
 use errors::{Error, Result};
 use gauge::Gauge;
-use libc;
+use metrics::{Collector, Opts};
+use proto;
+
 /// The `pid_t` data type represents process IDs.
 pub use libc::pid_t;
-use metrics::{Collector, Opts};
-use procinfo::pid as pid_info;
-use proto;
-use std::fs;
-use std::io::Read;
-use std::sync::Mutex;
 
 // Six metrics per ProcessCollector.
 const MERTICS_NUMBER: usize = 6;
@@ -247,9 +250,9 @@ lazy_static! {
     static ref BOOT_TIME: Option<f64> = {
         let mut buffer = String::new();
         fs::File::open("/proc/stat")
-            .and_then(|mut f| f.read_to_string(&mut buffer)).ok().and_then(|_| {
-               find_statistic(&buffer, BOOT_TIME_PATTERN).ok()
-            })
+            .and_then(|mut f| f.read_to_string(&mut buffer))
+            .ok()
+            .and_then(|_| find_statistic(&buffer, BOOT_TIME_PATTERN).ok())
     };
 }
 
