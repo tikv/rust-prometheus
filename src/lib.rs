@@ -15,7 +15,6 @@
 The Rust client library for [Prometheus](https://prometheus.io/).
 */
 
-#![cfg_attr(all(test, bench), feature(test))]
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
 #![cfg_attr(not(feature = "dev"), allow(unknown_lints))]
@@ -38,8 +37,6 @@ extern crate protobuf;
 #[macro_use]
 extern crate quick_error;
 extern crate spin;
-#[cfg(all(test, bench))]
-extern crate test;
 
 mod encoder;
 mod errors;

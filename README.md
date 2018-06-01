@@ -31,6 +31,16 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
     features = ["nightly"]
     ```
 
+### Note
+
+The crate has a pre-generated protobuf binding file for `protobuf` v2.0, if you need use the latest version of `protobuf`, you can generate the binding file on building with the `gen` feature.
+
+```toml
+[dependencies.prometheus]
+git = "https://github.com/pingcap/rust-prometheus.git"
+features = ["gen"]
+```
+
 ## Example
 
 ```rust
