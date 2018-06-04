@@ -11,9 +11,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
+
+use proc_macro2::Span;
+use syn::buffer::Cursor;
 use syn::punctuated::Punctuated;
-use syn::synom::Synom;
-use syn::{Expr, ExprLit, Ident, Lit, LitStr, Visibility};
+use syn::synom::{PResult, Synom};
+use syn::*;
+
+/// Matches `label_enum` keyword.
+struct LabelEnum {
+    pub span: Span,
+}
+
+impl Synom for LabelEnum {
+    fn parse(tokens: Cursor) -> PResult<Self> {
+        if let Some((term, rest)) = tokens.term() {
+            if term.as_str() == "label_enum" {
+                return Ok((LabelEnum { span: term.span() }, rest));
+            }
+        }
+        parse_error()
+    }
+
+    fn description() -> Option<&'static str> {
+        Some("label_enum")
+    }
+}
 
 /// Matches `... => { ... name: value_expr ... }`
 #[derive(Debug)]
@@ -70,7 +94,7 @@ impl From<MetricValueDefFull> for MetricValueDef {
 
 impl From<MetricValueDefShort> for MetricValueDef {
     fn from(e: MetricValueDefShort) -> MetricValueDef {
-        let value_lit = Lit::from(LitStr::new(e.value.as_ref(), e.value.span));
+        let value_lit = Lit::from(LitStr::new(e.value.as_ref(), e.value.span()));
         MetricValueDef {
             name: e.value,
             value: Expr::from(ExprLit {
@@ -81,23 +105,101 @@ impl From<MetricValueDefShort> for MetricValueDef {
     }
 }
 
-/// Matches `label_key => { value_definition, value_definition, ... }`
+/// Matches `{ value, value, ... }`
+#[derive(Debug)]
+struct MetricValueList {
+    pub values: Vec<MetricValueDef>,
+}
+
+impl Synom for MetricValueList {
+    named!(parse -> Self, do_parse!(
+        body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty) >>
+        (MetricValueList {
+            values: body.1.into_iter().collect(),
+        })
+    ));
+}
+
+/// Matches `label_enum Foo { value_definition, value_definition, ... }`
+#[derive(Debug)]
+pub struct MetricEnumDef {
+    pub enum_name: Ident,
+    values: MetricValueList,
+}
+
+impl Synom for MetricEnumDef {
+    named!(parse -> Self, do_parse!(
+        syn!(LabelEnum) >>
+        enum_name: syn!(Ident) >>
+        values: syn!(MetricValueList) >>
+        (MetricEnumDef {
+            enum_name,
+            values,
+        })
+    ));
+}
+
+impl MetricEnumDef {
+    pub fn get_values(&self) -> &Vec<MetricValueDef> {
+        &self.values.values
+    }
+}
+
+#[derive(Debug)]
+enum MetricLabelValuesOrEnum {
+    Values(MetricValueList),
+    Enum(Ident),
+}
+
+impl MetricLabelValuesOrEnum {
+    fn get_values<'a>(
+        &'a self,
+        enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
+    ) -> &'a Vec<MetricValueDef> {
+        match *self {
+            MetricLabelValuesOrEnum::Values(ref v) => &v.values,
+            MetricLabelValuesOrEnum::Enum(ref e) => {
+                let enum_definition = enum_definitions.get(e);
+                if enum_definition.is_none() {
+                    panic!("label enum {} is undefined", e)
+                }
+                &enum_definition.unwrap().get_values()
+            }
+        }
+    }
+}
+
+/// Matches `label_key => { value_definition, value_definition, ... }` or
+///         `label_key => enum_name`
 #[derive(Debug)]
 pub struct MetricLabelDef {
     pub label_key: LitStr,
-    pub values: Vec<MetricValueDef>,
+    values_or_enum: MetricLabelValuesOrEnum,
 }
 
 impl Synom for MetricLabelDef {
     named!(parse -> Self, do_parse!(
         label: syn!(LitStr) >>
         punct!(=>) >>
-        body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty) >>
+        values_or_enum: alt!(
+            syn!(MetricValueList) => { |values| MetricLabelValuesOrEnum::Values(values) }
+            |
+            syn!(Ident) => { |ident| MetricLabelValuesOrEnum::Enum(ident) }
+        ) >>
         (MetricLabelDef {
             label_key: label,
-            values: body.1.into_iter().collect(),
+            values_or_enum,
         })
     ));
+}
+
+impl MetricLabelDef {
+    pub fn get_values<'a>(
+        &'a self,
+        enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
+    ) -> &'a Vec<MetricValueDef> {
+        self.values_or_enum.get_values(enum_definitions)
+    }
 }
 
 /// Matches `(pub) struct Foo: Counter { a => { ... }, b => { ... }, ... }`
@@ -127,13 +229,23 @@ impl Synom for MetricDef {
 }
 
 #[derive(Debug)]
+pub enum StaticMetricMacroBodyItem {
+    Metric(MetricDef),
+    Enum(MetricEnumDef),
+}
+
+#[derive(Debug)]
 pub struct StaticMetricMacroBody {
-    pub metrics: Vec<MetricDef>,
+    pub items: Vec<StaticMetricMacroBodyItem>,
 }
 
 impl Synom for StaticMetricMacroBody {
     named!(parse -> Self, do_parse!(
-        metrics: many0!(syn!(MetricDef)) >>
-        (StaticMetricMacroBody { metrics })
+        items: many0!(alt!(
+            syn!(MetricDef) => { |m| StaticMetricMacroBodyItem::Metric(m) }
+            |
+            syn!(MetricEnumDef) => { |e| StaticMetricMacroBodyItem::Enum(e) }
+        )) >>
+        (StaticMetricMacroBody { items })
     ));
 }

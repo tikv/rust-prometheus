@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use quote::Tokens;
@@ -28,21 +29,34 @@ lazy_static! {
 pub struct TokensBuilder;
 
 impl TokensBuilder {
-    pub fn build(macro_body: &StaticMetricMacroBody) -> Tokens {
+    pub fn build(macro_body: StaticMetricMacroBody) -> Tokens {
+        let mut enums_definitions = HashMap::new();
         let mut tokens = Tokens::new();
-        for m in macro_body.metrics.iter() {
-            tokens.append_all(Self::build_static_metric(m));
+        for item in macro_body.items.into_iter() {
+            match item {
+                StaticMetricMacroBodyItem::Metric(m) => {
+                    // If this is a metric definition, append tokens.
+                    tokens.append_all(Self::build_static_metric(&m, &enums_definitions));
+                }
+                StaticMetricMacroBodyItem::Enum(e) => {
+                    // If this is an enum definition, add to the collection.
+                    enums_definitions.insert(e.enum_name.clone(), e);
+                }
+            }
         }
         tokens
     }
 
-    fn build_static_metric(metric: &MetricDef) -> Tokens {
+    fn build_static_metric(
+        metric: &MetricDef,
+        enum_definitions: &HashMap<Ident, MetricEnumDef>,
+    ) -> Tokens {
         let label_struct: Vec<_> = metric
             .labels
             .iter()
             .enumerate()
             .map(|(i, _)| {
-                let builder_context = MetricBuilderContext::new(metric, i);
+                let builder_context = MetricBuilderContext::new(metric, enum_definitions, i);
                 let code_struct = builder_context.build_struct();
                 let code_impl = builder_context.build_impl();
                 quote!{
@@ -82,6 +96,7 @@ impl TokensBuilder {
 
 struct MetricBuilderContext<'a> {
     metric: &'a MetricDef,
+    enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
     label: &'a MetricLabelDef,
     label_index: usize,
     is_last_label: bool,
@@ -92,10 +107,15 @@ struct MetricBuilderContext<'a> {
 }
 
 impl<'a> MetricBuilderContext<'a> {
-    fn new(metric: &'a MetricDef, label_index: usize) -> MetricBuilderContext<'a> {
+    fn new(
+        metric: &'a MetricDef,
+        enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
+        label_index: usize,
+    ) -> MetricBuilderContext<'a> {
         let is_last_label = label_index == metric.labels.len() - 1;
         MetricBuilderContext {
             metric,
+            enum_definitions,
             label: &metric.labels[label_index],
             label_index,
             is_last_label,
@@ -114,7 +134,11 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_struct(&self) -> Tokens {
         let struct_name = &self.struct_name;
 
-        let field_names: Vec<_> = self.label.values.iter().map(|v| &v.name).collect();
+        let field_names: Vec<_> = self.label
+            .get_values(self.enum_definitions)
+            .iter()
+            .map(|v| &v.name)
+            .collect();
         let member_types: Vec<_> = field_names.iter().map(|_| &self.member_type).collect();
 
         quote!{
@@ -165,7 +189,7 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_impl_from_body(&self, prev_labels_ident: Vec<Ident>) -> Tokens {
         let member_type = &self.member_type;
         let bodies: Vec<_> = self.label
-            .values
+            .get_values(self.enum_definitions)
             .iter()
             .map(|value| {
                 let name = &value.name;
@@ -211,8 +235,9 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_get(&self) -> Tokens {
         let member_type = &self.member_type;
-        let values_str: Vec<_> = self.label.values.iter().map(|v| &v.value).collect();
-        let names_ident: Vec<_> = self.label.values.iter().map(|v| &v.name).collect();
+        let values = self.label.get_values(self.enum_definitions);
+        let values_str: Vec<_> = values.iter().map(|v| &v.value).collect();
+        let names_ident: Vec<_> = values.iter().map(|v| &v.name).collect();
         quote!{
             pub fn get(&self, value: &str) -> Option<&#member_type> {
                 match value {
