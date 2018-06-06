@@ -73,5 +73,5 @@ pub fn register_static_histogram_vec(input: TokenStream) -> TokenStream {
 /// Procedural macro handler for `register_static_xxx_vec!`.
 fn register_static_vec(register_type: &str, input: TokenStream) -> TokenStream {
     let invoking: RegisterMethodInvoking = syn::parse(input).unwrap();
-    invoking.into_macro(register_type).into()
+    invoking.into_tokens(register_type).into()
 }

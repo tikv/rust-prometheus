@@ -43,7 +43,7 @@ impl Synom for RegisterMethodInvoking {
 }
 
 impl RegisterMethodInvoking {
-    pub fn into_macro(self, register_type: &str) -> Tokens {
+    pub fn into_tokens(self, register_type: &str) -> Tokens {
         let register_macro_name = Ident::from(format!("register_{}_vec", register_type));
         let (static_struct_name, metric_name, metric_desc, metric_labels) = (
             self.static_struct_name,
