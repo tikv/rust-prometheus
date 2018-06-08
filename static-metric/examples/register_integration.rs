@@ -26,6 +26,7 @@ extern crate lazy_static;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
+use prometheus::exponential_buckets;
 use prometheus_static_metric::*;
 
 make_static_metric! {
@@ -41,6 +42,14 @@ make_static_metric! {
             bar,
         },
     }
+    pub struct HttpRequestDuration: Histogram {
+        "method" => {
+            post,
+            get,
+            put,
+            delete,
+        }
+    }
 }
 
 lazy_static! {
@@ -50,6 +59,13 @@ lazy_static! {
         "Total number of HTTP requests.",
         &["method", "product"]
     ).unwrap();
+    pub static ref HTTP_DURATION: HttpRequestDuration = register_static_histogram_vec!(
+        HttpRequestDuration,
+        "http_request_duration",
+        "Duration of each HTTP request.",
+        &["method"],
+        exponential_buckets(0.0005, 2.0, 20).unwrap()
+    ).unwrap();
 }
 
 fn main() {
@@ -57,4 +73,7 @@ fn main() {
     HTTP_COUNTER.delete.bar.inc_by(4.0);
     assert_eq!(HTTP_COUNTER.post.bar.get(), 0.0);
     assert_eq!(HTTP_COUNTER.delete.bar.get(), 4.0);
+
+    HTTP_DURATION.post.observe(0.5);
+    HTTP_DURATION.post.observe(1.0);
 }

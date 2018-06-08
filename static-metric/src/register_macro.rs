@@ -12,32 +12,24 @@
 // limitations under the License.
 
 use quote::Tokens;
+use syn::punctuated::Punctuated;
 use syn::synom::Synom;
 use syn::*;
 
-/// Matches `register_static_xxx_vec!(static_struct_name, metric_name, metric_desc, metric_labels)`
+/// Matches `register_static_xxx_vec!(static_struct_name, name, desc, labels, ...)`.
 pub struct RegisterMethodInvoking {
     static_struct_name: Ident,
-    metric_name: Expr,
-    metric_desc: Expr,
-    metric_labels: Expr,
+    arguments: Vec<Expr>,
 }
 
 impl Synom for RegisterMethodInvoking {
     named!(parse -> Self, do_parse!(
         static_struct_name: syn!(Ident) >>
         punct!(,) >>
-        metric_name: syn!(Expr) >>
-        punct!(,) >>
-        metric_desc: syn!(Expr) >>
-        punct!(,) >>
-        metric_labels: syn!(Expr) >>
-        option!(punct!(,)) >>
+        arguments: call!(Punctuated::<Expr, Token![,]>::parse_terminated_nonempty) >>
         (RegisterMethodInvoking {
             static_struct_name,
-            metric_name,
-            metric_desc,
-            metric_labels,
+            arguments: arguments.into_iter().collect(),
         })
     ));
 }
@@ -45,19 +37,10 @@ impl Synom for RegisterMethodInvoking {
 impl RegisterMethodInvoking {
     pub fn into_tokens(self, register_type: &str) -> Tokens {
         let register_macro_name = Ident::from(format!("register_{}_vec", register_type));
-        let (static_struct_name, metric_name, metric_desc, metric_labels) = (
-            self.static_struct_name,
-            self.metric_name,
-            self.metric_desc,
-            self.metric_labels,
-        );
+        let (static_struct_name, arguments) = (self.static_struct_name, self.arguments);
         quote!{
             {
-                let metric_result = #register_macro_name!(
-                    #metric_name,
-                    #metric_desc,
-                    #metric_labels
-                );
+                let metric_result = #register_macro_name!(#(#arguments),*);
                 metric_result.map(|m| #static_struct_name::from(&m))
             }
         }
