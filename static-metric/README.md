@@ -85,3 +85,5 @@ fn main() {
     assert_eq!(vec.with_label_values(&["delete", "bar"]).get(), 4.0);
 }
 ```
+
+Please take a look at [examples](./examples) directory for more.

@@ -22,5 +22,6 @@ examples:
 	cargo build --example metric_enum
 	cargo build --example with_lazy_static
 	cargo build --example advanced
+	cargo build --example register_integration
 
 .PHONY: all
