@@ -1,6 +1,6 @@
 [package]
 name = "prometheus-static-metric"
-version = "0.1.1"
+version = "0.1.2"
 license = "Apache-2.0"
 authors = ["me@breeswish.org"]
 description = "Static metric helper utilities for rust-prometheus."
@@ -23,7 +23,7 @@ quote = "0.5"
 lazy_static = "1.0"
 
 [dev-dependencies]
-prometheus = "0.4"
+prometheus = "^0"
 
 [features]
 default = []

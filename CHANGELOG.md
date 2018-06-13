@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Change: Update to use protobuf 2.0.
+
 ## 0.4.1
 
 - Change: `(Local)(Int)Counter.inc_by` only panics in debug build if the given value is < 0 (#168).

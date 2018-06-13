@@ -69,6 +69,14 @@ println!("{}", String::from_utf8(buffer).unwrap());
 
 [More Examples](./examples)
 
+## Advanced
+
+### Static Metric
+
+Static metric helps you make metric vectors faster.
+
+See [static-metric](./static-metric) directory for details.
+
 ## Thanks
 
 + [brian-brazil](https://github.com/brian-brazil)
