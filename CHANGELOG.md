@@ -2,7 +2,7 @@
 
 ## 0.4.2
 
-- Change: Update protobuf dependency.
+- Change: Update to use protobuf 2.0.
 
 ## 0.4.1
 
