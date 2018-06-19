@@ -108,9 +108,9 @@ impl TokensBuilder {
 
             #[allow(dead_code)]
             mod #scope_name {
-                use std::collections::HashMap;
-                use prometheus::#metric_type;
-                use prometheus::#metric_vec_type;
+                use ::std::collections::HashMap;
+                use ::prometheus::#metric_type;
+                use ::prometheus::#metric_vec_type;
 
                 #[allow(unused_imports)]
                 use super::*;
@@ -125,12 +125,12 @@ impl TokensBuilder {
     fn build_label_enum(label_enum: &MetricEnumDef) -> Tokens {
         let visibility = &label_enum.visibility;
         let enum_name = &label_enum.enum_name;
-        let enum_values = label_enum.get_values().iter().map(|value| value.name);
+        let enum_item_names = label_enum.definitions.get_names();
         quote!{
             #[allow(dead_code)]
             #[allow(non_camel_case_types)]
             #visibility enum #enum_name {
-                #(#enum_values),*
+                #(#enum_item_names),*
             }
         }
     }
@@ -176,11 +176,9 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_struct(&self) -> Tokens {
         let struct_name = &self.struct_name;
 
-        let field_names: Vec<_> = self.label
-            .get_values(self.enum_definitions)
-            .iter()
-            .map(|v| &v.name)
-            .collect();
+        let field_names = self.label
+            .get_value_def_list(self.enum_definitions)
+            .get_names();
         let member_types: Vec<_> = field_names.iter().map(|_| &self.member_type).collect();
 
         quote!{
@@ -233,7 +231,8 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_impl_from_body(&self, prev_labels_ident: Vec<Ident>) -> Tokens {
         let member_type = &self.member_type;
         let bodies: Vec<_> = self.label
-            .get_values(self.enum_definitions)
+            .get_value_def_list(self.enum_definitions)
+            .get()
             .iter()
             .map(|value| {
                 let name = &value.name;
@@ -280,22 +279,20 @@ impl<'a> MetricBuilderContext<'a> {
     /// `fn get()` is only available when label is defined by `label_enum`.
     fn build_impl_get(&self) -> Tokens {
         let enum_ident = self.label.get_enum_ident();
-        if let Some(ident) = enum_ident {
+        if let Some(e) = enum_ident {
             let member_type = &self.member_type;
-            let values = self.label.get_values(self.enum_definitions);
-            let enum_fields: Vec<_> = values
-                .iter()
-                .map(|v| {
-                    let name = &v.name;
-                    quote!{#ident::#name}
-                })
-                .collect();
-            let metric_fields: Vec<_> = values.iter().map(|v| &v.name).collect();
+            let match_patterns = self.enum_definitions
+                .get(e)
+                .unwrap()
+                .build_fields_with_path();
+            let fields = self.label
+                .get_value_def_list(self.enum_definitions)
+                .get_names();
             quote!{
-                pub fn get(&self, value: #ident) -> &#member_type {
+                pub fn get(&self, value: #e) -> &#member_type {
                     match value {
                         #(
-                            #enum_fields => &self.#metric_fields,
+                            #match_patterns => &self.#fields,
                         )*
                     }
                 }
@@ -307,14 +304,14 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_try_get(&self) -> Tokens {
         let member_type = &self.member_type;
-        let values = self.label.get_values(self.enum_definitions);
-        let values_str: Vec<_> = values.iter().map(|v| &v.value).collect();
-        let names_ident: Vec<_> = values.iter().map(|v| &v.name).collect();
+        let value_def_list = self.label.get_value_def_list(self.enum_definitions);
+        let names = value_def_list.get_names();
+        let values = value_def_list.get_values();
         quote!{
             pub fn try_get(&self, value: &str) -> Option<&#member_type> {
                 match value {
                     #(
-                        #values_str => Some(&self.#names_ident),
+                        #values => Some(&self.#names),
                     )*
                     _ => None,
                 }
