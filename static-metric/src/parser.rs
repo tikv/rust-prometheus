@@ -120,19 +120,22 @@ impl Synom for MetricValueList {
     ));
 }
 
-/// Matches `label_enum Foo { value_definition, value_definition, ... }`
+/// Matches `(pub) label_enum Foo { value_definition, value_definition, ... }`
 #[derive(Debug)]
 pub struct MetricEnumDef {
+    pub visibility: Visibility,
     pub enum_name: Ident,
     values: MetricValueList,
 }
 
 impl Synom for MetricEnumDef {
     named!(parse -> Self, do_parse!(
+        visibility: syn!(Visibility) >>
         syn!(LabelEnum) >>
         enum_name: syn!(Ident) >>
         values: syn!(MetricValueList) >>
         (MetricEnumDef {
+            visibility,
             enum_name,
             values,
         })
@@ -158,13 +161,7 @@ impl MetricLabelValuesOrEnum {
     ) -> &'a Vec<MetricValueDef> {
         match *self {
             MetricLabelValuesOrEnum::Values(ref v) => &v.values,
-            MetricLabelValuesOrEnum::Enum(ref e) => {
-                let enum_definition = enum_definitions.get(e);
-                if enum_definition.is_none() {
-                    panic!("label enum {} is undefined", e)
-                }
-                &enum_definition.unwrap().get_values()
-            }
+            MetricLabelValuesOrEnum::Enum(ref e) => &enum_definitions.get(e).unwrap().get_values(),
         }
     }
 }
@@ -199,6 +196,14 @@ impl MetricLabelDef {
         enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
     ) -> &'a Vec<MetricValueDef> {
         self.values_or_enum.get_values(enum_definitions)
+    }
+
+    /// Get the enum identifier if label is defined using enums.
+    pub fn get_enum_ident<'a>(&'a self) -> Option<&'a Ident> {
+        match &self.values_or_enum {
+            MetricLabelValuesOrEnum::Values(_) => None,
+            MetricLabelValuesOrEnum::Enum(ref ident) => Some(ident),
+        }
     }
 }
 
