@@ -126,11 +126,31 @@ impl TokensBuilder {
         let visibility = &label_enum.visibility;
         let enum_name = &label_enum.enum_name;
         let enum_item_names = label_enum.definitions.get_names();
+        let enum_item_values = label_enum.definitions.get_values();
+        let match_patterns = label_enum.build_fields_with_path();
+
         quote!{
             #[allow(dead_code)]
             #[allow(non_camel_case_types)]
+            #[derive(Clone, Copy, PartialEq)]
             #visibility enum #enum_name {
                 #(#enum_item_names),*
+            }
+
+            impl ::std::fmt::Debug for #enum_name {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    match self {
+                        #(
+                            #match_patterns => write!(f, #enum_item_values),
+                        )*
+                    }
+                }
+            }
+
+            impl ::std::fmt::Display for #enum_name {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    ::std::fmt::Debug::fmt(self, f)
+                }
             }
         }
     }
