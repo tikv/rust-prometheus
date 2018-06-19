@@ -39,18 +39,18 @@ impl Synom for LabelEnum {
     }
 }
 
-/// Matches `... => { ... name: value_expr ... }`
+/// Matches `... => { ... name: value_string_literal ... }`
 #[derive(Debug)]
 struct MetricValueDefFull {
     name: Ident,
-    value: Expr,
+    value: LitStr,
 }
 
 impl Synom for MetricValueDefFull {
     named!(parse -> Self, do_parse!(
         name: syn!(Ident) >>
         punct!(:) >>
-        value: syn!(Expr) >>
+        value: syn!(LitStr) >>
         (MetricValueDefFull { name, value })
     ));
 }
@@ -68,11 +68,11 @@ impl Synom for MetricValueDefShort {
     ));
 }
 
-/// Matches either `... => { ... name: value_expr ... }` or `... => { ... value ... }`
+/// Matches either `... => { ... name: value_string_literal ... }` or `... => { ... value ... }`
 #[derive(Debug)]
 pub struct MetricValueDef {
     pub name: Ident,
-    pub value: Expr,
+    pub value: LitStr,
 }
 
 impl Synom for MetricValueDef {
@@ -94,13 +94,9 @@ impl From<MetricValueDefFull> for MetricValueDef {
 
 impl From<MetricValueDefShort> for MetricValueDef {
     fn from(e: MetricValueDefShort) -> MetricValueDef {
-        let value_lit = Lit::from(LitStr::new(e.value.as_ref(), e.value.span()));
         MetricValueDef {
             name: e.value,
-            value: Expr::from(ExprLit {
-                attrs: vec![],
-                lit: value_lit,
-            }),
+            value: LitStr::new(e.value.as_ref(), e.value.span()),
         }
     }
 }
@@ -125,7 +121,7 @@ impl MetricValueDefList {
         self.0.iter().map(|v| &v.name).collect()
     }
 
-    pub fn get_values<'a>(&'a self) -> Vec<&'a Expr> {
+    pub fn get_values<'a>(&'a self) -> Vec<&'a LitStr> {
         self.0.iter().map(|v| &v.value).collect()
     }
 }
