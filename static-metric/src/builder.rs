@@ -137,13 +137,19 @@ impl TokensBuilder {
                 #(#enum_item_names),*
             }
 
-            impl ::std::fmt::Debug for #enum_name {
-                fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            impl #enum_name {
+                pub fn get_str(&self) -> &'static str {
                     match self {
                         #(
-                            #match_patterns => write!(f, #enum_item_values),
+                            #match_patterns => #enum_item_values,
                         )*
                     }
+                }
+            }
+
+            impl ::std::fmt::Debug for #enum_name {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    write!(f, "{}", self.get_str())
                 }
             }
 

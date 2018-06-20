@@ -33,10 +33,13 @@ make_static_metric! {
 
 #[test]
 fn test_format() {
+    assert_eq!("post", Methods::post.get_str());
     assert_eq!("post", format!("{}", Methods::post));
     assert_eq!("post", format!("{:?}", Methods::post));
+    assert_eq!("delete", Methods::delete.get_str());
     assert_eq!("delete", format!("{}", Methods::delete));
     assert_eq!("delete", format!("{:?}", Methods::delete));
+    assert_eq!("post_name", MethodsWithName::post.get_str());
     assert_eq!("post_name", format!("{}", MethodsWithName::post));
     assert_eq!("post_name", format!("{:?}", MethodsWithName::post));
 }
