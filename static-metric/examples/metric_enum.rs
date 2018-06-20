@@ -26,14 +26,14 @@ use prometheus::{CounterVec, IntCounterVec, Opts};
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {
-    label_enum Methods {
+    pub label_enum Methods {
         post,
         get,
         put,
         delete,
     }
 
-    label_enum Products {
+    pub label_enum Products {
         foo,
         bar,
     }
@@ -61,6 +61,10 @@ fn main() {
     assert_eq!(static_counter_vec.post.bar.get(), 0.0);
     assert_eq!(vec.with_label_values(&["post", "foo"]).get(), 1.0);
     assert_eq!(vec.with_label_values(&["delete", "bar"]).get(), 4.0);
+
+    // metric enums will expose an enum for type-safe `get()`.
+    static_counter_vec.get(Methods::post).foo.inc();
+    assert_eq!(static_counter_vec.post.foo.get(), 2.0);
 
     let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["error", "error_method"]).unwrap();
     let static_counter_vec = MyAnotherStaticCounterVec::from(&vec);
