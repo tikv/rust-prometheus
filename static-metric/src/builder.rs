@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use quote::Tokens;
-use syn::Ident;
+use syn::{Ident, Visibility};
 
 use super::parser::*;
 use super::util;
@@ -35,11 +35,13 @@ impl TokensBuilder {
         for item in macro_body.items.into_iter() {
             match item {
                 StaticMetricMacroBodyItem::Metric(m) => {
-                    // If this is a metric definition, append tokens.
-                    tokens.append_all(Self::build_static_metric(&m, &enums_definitions));
+                    // If this is a metric definition, expand to a `struct`.
+                    tokens.append_all(Self::build_metric_struct(&m, &enums_definitions));
                 }
                 StaticMetricMacroBodyItem::Enum(e) => {
-                    // If this is an enum definition, add to the collection.
+                    // If this is a label enum definition, expand to an `enum` and
+                    // add to the collection.
+                    tokens.append_all(Self::build_label_enum(&e));
                     enums_definitions.insert(e.enum_name.clone(), e);
                 }
             }
@@ -47,10 +49,37 @@ impl TokensBuilder {
         tokens
     }
 
-    fn build_static_metric(
+    fn build_metric_struct(
         metric: &MetricDef,
         enum_definitions: &HashMap<Ident, MetricEnumDef>,
     ) -> Tokens {
+        // Check `label_enum` references.
+        for label in &metric.labels {
+            let enum_ident = label.get_enum_ident();
+            if let Some(e) = enum_ident {
+                // If metric is using a `label_enum`, it must exist before the metric definition.
+                let enum_def = enum_definitions.get(e);
+                if enum_def.is_none() {
+                    panic!("Label enum `{}` is undefined.", e)
+                }
+
+                // If metric has `pub` visibility, then `label_enum` should also be `pub`.
+                // TODO: Support other visibility, like `pub(xx)`.
+                if let Visibility::Public(_) = metric.visibility {
+                    if let Visibility::Public(_) = enum_def.unwrap().visibility {
+                        // `pub` is ok.
+                    } else {
+                        // others are unexpected.
+                        panic!(
+                            "Label enum `{}` does not have enough visibility because it is \
+                             used in metric `{}` which has `pub` visibility.",
+                            e, metric.struct_name
+                        );
+                    }
+                }
+            }
+        }
+
         let label_struct: Vec<_> = metric
             .labels
             .iter()
@@ -79,9 +108,9 @@ impl TokensBuilder {
 
             #[allow(dead_code)]
             mod #scope_name {
-                use std::collections::HashMap;
-                use prometheus::#metric_type;
-                use prometheus::#metric_vec_type;
+                use ::std::collections::HashMap;
+                use ::prometheus::#metric_type;
+                use ::prometheus::#metric_vec_type;
 
                 #[allow(unused_imports)]
                 use super::*;
@@ -89,6 +118,39 @@ impl TokensBuilder {
                 #(
                     #label_struct
                 )*
+            }
+        }
+    }
+
+    fn build_label_enum(label_enum: &MetricEnumDef) -> Tokens {
+        let visibility = &label_enum.visibility;
+        let enum_name = &label_enum.enum_name;
+        let enum_item_names = label_enum.definitions.get_names();
+        let enum_item_values = label_enum.definitions.get_values();
+        let match_patterns = label_enum.build_fields_with_path();
+
+        quote!{
+            #[allow(dead_code)]
+            #[allow(non_camel_case_types)]
+            #[derive(Clone, Copy, PartialEq)]
+            #visibility enum #enum_name {
+                #(#enum_item_names),*
+            }
+
+            impl ::std::fmt::Debug for #enum_name {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    match self {
+                        #(
+                            #match_patterns => write!(f, #enum_item_values),
+                        )*
+                    }
+                }
+            }
+
+            impl ::std::fmt::Display for #enum_name {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    ::std::fmt::Debug::fmt(self, f)
+                }
             }
         }
     }
@@ -134,11 +196,9 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_struct(&self) -> Tokens {
         let struct_name = &self.struct_name;
 
-        let field_names: Vec<_> = self.label
-            .get_values(self.enum_definitions)
-            .iter()
-            .map(|v| &v.name)
-            .collect();
+        let field_names = self.label
+            .get_value_def_list(self.enum_definitions)
+            .get_names();
         let member_types: Vec<_> = field_names.iter().map(|_| &self.member_type).collect();
 
         quote!{
@@ -154,11 +214,13 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_impl(&self) -> Tokens {
         let struct_name = &self.struct_name;
         let impl_from = self.build_impl_from();
-        let impl_get_by_label = self.build_impl_get();
+        let impl_get = self.build_impl_get();
+        let impl_try_get = self.build_impl_try_get();
         quote!{
             impl #struct_name {
                 #impl_from
-                #impl_get_by_label
+                #impl_get
+                #impl_try_get
             }
         }
     }
@@ -189,7 +251,8 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_impl_from_body(&self, prev_labels_ident: Vec<Ident>) -> Tokens {
         let member_type = &self.member_type;
         let bodies: Vec<_> = self.label
-            .get_values(self.enum_definitions)
+            .get_value_def_list(self.enum_definitions)
+            .get()
             .iter()
             .map(|value| {
                 let name = &value.name;
@@ -233,16 +296,42 @@ impl<'a> MetricBuilderContext<'a> {
         }
     }
 
+    /// `fn get()` is only available when label is defined by `label_enum`.
     fn build_impl_get(&self) -> Tokens {
+        let enum_ident = self.label.get_enum_ident();
+        if let Some(e) = enum_ident {
+            let member_type = &self.member_type;
+            let match_patterns = self.enum_definitions
+                .get(e)
+                .unwrap()
+                .build_fields_with_path();
+            let fields = self.label
+                .get_value_def_list(self.enum_definitions)
+                .get_names();
+            quote!{
+                pub fn get(&self, value: #e) -> &#member_type {
+                    match value {
+                        #(
+                            #match_patterns => &self.#fields,
+                        )*
+                    }
+                }
+            }
+        } else {
+            Tokens::new()
+        }
+    }
+
+    fn build_impl_try_get(&self) -> Tokens {
         let member_type = &self.member_type;
-        let values = self.label.get_values(self.enum_definitions);
-        let values_str: Vec<_> = values.iter().map(|v| &v.value).collect();
-        let names_ident: Vec<_> = values.iter().map(|v| &v.name).collect();
+        let value_def_list = self.label.get_value_def_list(self.enum_definitions);
+        let names = value_def_list.get_names();
+        let values = value_def_list.get_values();
         quote!{
-            pub fn get(&self, value: &str) -> Option<&#member_type> {
+            pub fn try_get(&self, value: &str) -> Option<&#member_type> {
                 match value {
                     #(
-                        #values_str => Some(&self.#names_ident),
+                        #values => Some(&self.#names),
                     )*
                     _ => None,
                 }

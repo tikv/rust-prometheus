@@ -70,9 +70,9 @@ fn main() {
     // Note: You cannot specify values other than the definition in `get()` because
     // it is purely static.
     HTTP_COUNTER
-        .get("delete")
+        .try_get("delete")
         .unwrap()
-        .get("HTTP/1")
+        .try_get("HTTP/1")
         .unwrap()
         .foo
         .inc_by(7);

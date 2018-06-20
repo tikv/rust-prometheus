@@ -39,18 +39,18 @@ impl Synom for LabelEnum {
     }
 }
 
-/// Matches `... => { ... name: value_expr ... }`
+/// Matches `... => { ... name: value_string_literal ... }`
 #[derive(Debug)]
 struct MetricValueDefFull {
     name: Ident,
-    value: Expr,
+    value: LitStr,
 }
 
 impl Synom for MetricValueDefFull {
     named!(parse -> Self, do_parse!(
         name: syn!(Ident) >>
         punct!(:) >>
-        value: syn!(Expr) >>
+        value: syn!(LitStr) >>
         (MetricValueDefFull { name, value })
     ));
 }
@@ -68,11 +68,11 @@ impl Synom for MetricValueDefShort {
     ));
 }
 
-/// Matches either `... => { ... name: value_expr ... }` or `... => { ... value ... }`
+/// Matches either `... => { ... name: value_string_literal ... }` or `... => { ... value ... }`
 #[derive(Debug)]
 pub struct MetricValueDef {
     pub name: Ident,
-    pub value: Expr,
+    pub value: LitStr,
 }
 
 impl Synom for MetricValueDef {
@@ -94,111 +94,133 @@ impl From<MetricValueDefFull> for MetricValueDef {
 
 impl From<MetricValueDefShort> for MetricValueDef {
     fn from(e: MetricValueDefShort) -> MetricValueDef {
-        let value_lit = Lit::from(LitStr::new(e.value.as_ref(), e.value.span()));
         MetricValueDef {
             name: e.value,
-            value: Expr::from(ExprLit {
-                attrs: vec![],
-                lit: value_lit,
-            }),
+            value: LitStr::new(e.value.as_ref(), e.value.span()),
         }
     }
 }
 
-/// Matches `{ value, value, ... }`
+/// Matches `{ value_def, value_def, ... }`
 #[derive(Debug)]
-struct MetricValueList {
-    pub values: Vec<MetricValueDef>,
-}
+pub struct MetricValueDefList(Vec<MetricValueDef>);
 
-impl Synom for MetricValueList {
+impl Synom for MetricValueDefList {
     named!(parse -> Self, do_parse!(
         body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty) >>
-        (MetricValueList {
-            values: body.1.into_iter().collect(),
-        })
+        (MetricValueDefList(body.1.into_iter().collect()))
     ));
 }
 
-/// Matches `label_enum Foo { value_definition, value_definition, ... }`
+impl MetricValueDefList {
+    pub fn get(&self) -> &Vec<MetricValueDef> {
+        &self.0
+    }
+
+    pub fn get_names<'a>(&'a self) -> Vec<&'a Ident> {
+        self.0.iter().map(|v| &v.name).collect()
+    }
+
+    pub fn get_values<'a>(&'a self) -> Vec<&'a LitStr> {
+        self.0.iter().map(|v| &v.value).collect()
+    }
+}
+
+/// Matches `(pub) label_enum Foo { value_def, value_def, ... }`
 #[derive(Debug)]
 pub struct MetricEnumDef {
+    pub visibility: Visibility,
     pub enum_name: Ident,
-    values: MetricValueList,
+    pub definitions: MetricValueDefList,
 }
 
 impl Synom for MetricEnumDef {
     named!(parse -> Self, do_parse!(
+        visibility: syn!(Visibility) >>
         syn!(LabelEnum) >>
         enum_name: syn!(Ident) >>
-        values: syn!(MetricValueList) >>
+        definitions: syn!(MetricValueDefList) >>
         (MetricEnumDef {
+            visibility,
             enum_name,
-            values,
+            definitions,
         })
     ));
 }
 
 impl MetricEnumDef {
-    pub fn get_values(&self) -> &Vec<MetricValueDef> {
-        &self.values.values
+    /// Builds `enum_name::enum_item`.
+    pub fn build_fields_with_path(&self) -> Vec<Path> {
+        self.definitions
+            .get()
+            .iter()
+            .map(|v| {
+                let mut segments = Punctuated::new();
+                segments.push(PathSegment {
+                    ident: self.enum_name.clone(),
+                    arguments: PathArguments::None,
+                });
+                segments.push(PathSegment {
+                    ident: v.name.clone(),
+                    arguments: PathArguments::None,
+                });
+                Path {
+                    leading_colon: None,
+                    segments,
+                }
+            })
+            .collect()
     }
 }
 
 #[derive(Debug)]
-enum MetricLabelValuesOrEnum {
-    Values(MetricValueList),
-    Enum(Ident),
+enum MetricLabelArm {
+    ValueDefinitionList(MetricValueDefList),
+    EnumReference(Ident),
 }
 
-impl MetricLabelValuesOrEnum {
-    fn get_values<'a>(
-        &'a self,
-        enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
-    ) -> &'a Vec<MetricValueDef> {
-        match *self {
-            MetricLabelValuesOrEnum::Values(ref v) => &v.values,
-            MetricLabelValuesOrEnum::Enum(ref e) => {
-                let enum_definition = enum_definitions.get(e);
-                if enum_definition.is_none() {
-                    panic!("label enum {} is undefined", e)
-                }
-                &enum_definition.unwrap().get_values()
-            }
-        }
-    }
-}
-
-/// Matches `label_key => { value_definition, value_definition, ... }` or
+/// Matches `label_key => { value_def, value_def, ... }` or
 ///         `label_key => enum_name`
 #[derive(Debug)]
 pub struct MetricLabelDef {
     pub label_key: LitStr,
-    values_or_enum: MetricLabelValuesOrEnum,
+    arm: MetricLabelArm,
 }
 
 impl Synom for MetricLabelDef {
     named!(parse -> Self, do_parse!(
         label: syn!(LitStr) >>
         punct!(=>) >>
-        values_or_enum: alt!(
-            syn!(MetricValueList) => { |values| MetricLabelValuesOrEnum::Values(values) }
+        arm: alt!(
+            syn!(MetricValueDefList) => { |values| MetricLabelArm::ValueDefinitionList(values) }
             |
-            syn!(Ident) => { |ident| MetricLabelValuesOrEnum::Enum(ident) }
+            syn!(Ident) => { |ident| MetricLabelArm::EnumReference(ident) }
         ) >>
         (MetricLabelDef {
             label_key: label,
-            values_or_enum,
+            arm,
         })
     ));
 }
 
 impl MetricLabelDef {
-    pub fn get_values<'a>(
+    /// Get (or lookup if label is defined using enums) the value definition list.
+    pub fn get_value_def_list<'a>(
         &'a self,
         enum_definitions: &'a HashMap<Ident, MetricEnumDef>,
-    ) -> &'a Vec<MetricValueDef> {
-        self.values_or_enum.get_values(enum_definitions)
+    ) -> &'a MetricValueDefList {
+        match &self.arm {
+            MetricLabelArm::ValueDefinitionList(ref v) => v,
+            MetricLabelArm::EnumReference(ref e) => &enum_definitions.get(e).unwrap().definitions,
+        }
+    }
+
+    /// Get the enum identifier if label is defined using enums.
+    pub fn get_enum_ident<'a>(&'a self) -> Option<&'a Ident> {
+        match &self.arm {
+            MetricLabelArm::ValueDefinitionList(_) => None,
+            MetricLabelArm::EnumReference(ref e) => Some(e),
+        }
     }
 }
 
