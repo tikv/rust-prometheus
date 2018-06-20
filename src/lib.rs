@@ -15,11 +15,9 @@
 The Rust client library for [Prometheus](https://prometheus.io/).
 */
 
-#![cfg_attr(feature = "dev", feature(plugin))]
-#![cfg_attr(feature = "dev", plugin(clippy))]
-#![cfg_attr(not(feature = "dev"), allow(unknown_lints))]
-#![cfg_attr(feature = "dev", allow(needless_pass_by_value))]
-#![cfg_attr(feature = "dev", allow(new_without_default_derive))]
+#![allow(unknown_lints)]
+#![allow(needless_pass_by_value)]
+#![allow(new_without_default_derive)]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
 #[macro_use]
