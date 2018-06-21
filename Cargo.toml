@@ -15,7 +15,6 @@ travis-ci = { repository = "pingcap/rust-prometheus" }
 
 [features]
 default = []
-dev = []
 nightly = ["libc", "spin/unstable"]
 push = ["hyper", "libc"]
 process = ["libc", "procinfo"]

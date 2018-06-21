@@ -8,14 +8,13 @@ build:
 test:
 	cargo test --features="${ENABLE_FEATURES}" -- --nocapture
 
-dev: format
-	cargo test --features="${ENABLE_FEATURES} dev" -- --nocapture
+dev: format test
 
 bench: format
 	cargo bench --features=${ENABLE_FEATURES} -- --nocapture
 
 format:
-	@cargo fmt --all -- --write-mode diff >/dev/null || cargo fmt --all
+	@cargo fmt --all -- --check >/dev/null || cargo fmt --all
 
 clean:
 	cargo clean

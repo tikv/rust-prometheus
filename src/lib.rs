@@ -15,9 +15,7 @@
 The Rust client library for [Prometheus](https://prometheus.io/).
 */
 
-#![allow(unknown_lints)]
-#![allow(needless_pass_by_value)]
-#![allow(new_without_default_derive)]
+#![allow(needless_pass_by_value, new_without_default_derive, unknown_lints)]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
 #[macro_use]
