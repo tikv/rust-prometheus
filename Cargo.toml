@@ -15,7 +15,6 @@ travis-ci = { repository = "pingcap/rust-prometheus" }
 
 [features]
 default = []
-dev = ["clippy"]
 nightly = ["libc", "spin/unstable"]
 push = ["hyper", "libc"]
 process = ["libc", "procinfo"]
@@ -24,7 +23,6 @@ gen = ["protobuf-codegen-pure"]
 [dependencies]
 protobuf = "2.0"
 quick-error = "0.2"
-clippy = {version = "^0", optional = true}
 fnv = "1.0"
 lazy_static = "0.2"
 libc = {version = "0.2", optional = true}

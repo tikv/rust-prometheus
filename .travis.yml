@@ -25,20 +25,17 @@ env:
 matrix:
   fast_finish: true
   include:
-  - env: LINT="dev"
+  - env: CLIPPY='yes'
     rust: nightly
   allow_failures:
-  - env: LINT="dev"
+  - env: CLIPPY='yes'
 
 script:
   # Test common features.
   - cargo test --features="$FEATURES"
   - |
-    if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
-        # Enable dev for clippy linting.
-        cargo test --features="$FEATURES $LINT";
-        # Lint nightly feature.
-        cargo test --features="$FEATURES $LINT nightly";
+    if [ $CLIPPY = 'yes' ]; then
+        cargo install clippy && cargo clippy --all-features -- -D warnings;
     fi
   - |
     if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
