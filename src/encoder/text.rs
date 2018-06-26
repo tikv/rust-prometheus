@@ -45,12 +45,12 @@ impl Encoder for TextEncoder {
             let name = mf.get_name();
             let help = mf.get_help();
             if !help.is_empty() {
-                write!(writer, "# HELP {} {}\n", name, escape_string(help, false))?;
+                writeln!(writer, "# HELP {} {}", name, escape_string(help, false))?;
             }
 
             let metric_type = mf.get_field_type();
             let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-            write!(writer, "# TYPE {} {}\n", name, lowercase_type)?;
+            writeln!(writer, "# TYPE {} {}", name, lowercase_type)?;
 
             for m in mf.get_metric() {
                 match metric_type {
