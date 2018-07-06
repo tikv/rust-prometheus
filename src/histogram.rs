@@ -324,7 +324,7 @@ impl HistogramTimer {
     #[cfg(feature = "nightly")]
     fn new_coarse(histogram: Histogram) -> HistogramTimer {
         HistogramTimer {
-            histogram: histogram,
+            histogram,
             start: Instant::now_coarse(),
         }
     }

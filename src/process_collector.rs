@@ -104,14 +104,14 @@ impl ProcessCollector {
         descs.extend(start_time.desc().into_iter().cloned());
 
         ProcessCollector {
-            pid: pid,
-            descs: descs,
+            pid,
+            descs,
             cpu_total: Mutex::new(cpu_total),
-            open_fds: open_fds,
-            max_fds: max_fds,
-            vsize: vsize,
-            rss: rss,
-            start_time: start_time,
+            open_fds,
+            max_fds,
+            vsize,
+            rss,
+            start_time,
         }
     }
 
