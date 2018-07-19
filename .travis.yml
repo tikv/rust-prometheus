@@ -35,7 +35,7 @@ script:
   - cargo test --features="$FEATURES"
   - |
     if [ $CLIPPY = 'yes' ]; then
-        cargo install clippy && cargo clippy --all-features -- -D warnings;
+        rustup component add clippy-preview && cargo clippy --all-features -- -D warnings;
     fi
   - |
     if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
