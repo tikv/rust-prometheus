@@ -22,7 +22,7 @@ The Rust client library for [Prometheus](https://prometheus.io/).
 extern crate cfg_if;
 extern crate fnv;
 #[cfg(feature = "push")]
-extern crate hyper;
+extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
 #[cfg(any(feature = "nightly", feature = "push", feature = "process"))]

@@ -16,7 +16,7 @@ travis-ci = { repository = "pingcap/rust-prometheus" }
 [features]
 default = []
 nightly = ["libc", "spin/unstable"]
-push = ["hyper", "libc"]
+push = ["reqwest", "libc"]
 process = ["libc", "procinfo"]
 gen = ["protobuf-codegen-pure"]
 
@@ -28,16 +28,10 @@ lazy_static = "0.2"
 libc = {version = "0.2", optional = true}
 cfg-if = "0.1"
 spin = {version = "0.4", default-features = false}
+reqwest = {version = "0.8.6", optional = true}
 
 [target.'cfg(target_os = "linux")'.dependencies]
 procinfo = {version = "0.3", optional = true}
-
-[dependencies.hyper]
-version = "0.9"
-# disable hyper ssl
-#  refer to https://github.com/hyperium/hyper/issues/903#issuecomment-242798266
-default-features = false
-optional = true
 
 [dev-dependencies]
 getopts = "0.2"

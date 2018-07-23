@@ -17,11 +17,8 @@ use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
-use hyper::client::Client;
-use hyper::client::pool::Config;
-use hyper::header::ContentType;
-use hyper::method::Method;
-use hyper::status::StatusCode;
+use reqwest::{Body, Client, Method, Request, StatusCode, Url};
+use reqwest::header::{ContentType};
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
@@ -29,18 +26,13 @@ use metrics::Collector;
 use proto;
 use registry::Registry;
 
-const HYPER_MAX_IDLE: usize = 1;
-const HYPER_TIMEOUT_SEC: u64 = 10;
+const REQWEST_TIMEOUT_SEC: Duration = Duration::from_secs(10);
 
 lazy_static! {
-    static ref HTTP_CLIENT: Client = {
-        let mut client = Client::with_pool_config(Config {
-            max_idle: HYPER_MAX_IDLE,
-        });
-        client.set_read_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
-        client.set_write_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
-        client
-    };
+    static ref HTTP_CLIENT: Client = Client::builder()
+        .timeout(REQWEST_TIMEOUT_SEC)
+        .build()
+        .unwrap();
 }
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
@@ -150,17 +142,18 @@ fn push<S: BuildHasher>(
         let _ = encoder.encode(&[mf], &mut buf);
     }
 
-    let request = HTTP_CLIENT
-        .request(Method::from_str(method).unwrap(), &push_url)
-        .header(ContentType(encoder.format_type().parse().unwrap()))
-        .body(buf.as_slice());
+    let mut request = Request::new(Method::from_str(method).unwrap(), Url::from_str(&push_url).unwrap());
+    request.headers_mut().set(ContentType(encoder.format_type().parse().unwrap()));
+    *request.body_mut() = Some(Body::from(buf));
 
-    let response = request.send().map_err(|e| Error::Msg(format!("{}", e)))?;
-    match response.status {
+    let response = HTTP_CLIENT.execute(request)
+        .map_err(|e| Error::Msg(format!("{}", e)))?;
+
+    match response.status() {
         StatusCode::Accepted => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
-            response.status, push_url
+            response.status(), push_url
         ))),
     }
 }
