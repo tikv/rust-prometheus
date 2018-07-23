@@ -17,8 +17,8 @@ use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
+use reqwest::header::{Authorization, Basic, ContentType};
 use reqwest::{Body, Client, Method, Request, StatusCode, Url};
-use reqwest::header::{Basic, ContentType};
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
@@ -54,19 +54,10 @@ pub fn push_metrics<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     mfs: Vec<proto::MetricFamily>,
+    basic_auth: Option<(String, String)>,
 ) -> Result<()> {
-    push(job, grouping, url, mfs, "PUT", None)
+    push(job, grouping, url, mfs, "PUT", basic_auth)
 }
-pub fn push_metrics_auth<S: BuildHasher>(
-    job: &str,
-    grouping: HashMap<String, String, S>,
-    url: &str,
-    mfs: Vec<proto::MetricFamily>,
-    basic_auth: (String, String)
-) -> Result<()> {
-    push(job, grouping, url, mfs, "PUT", Some(basic_auth))
-}
-
 
 /// `push_add_metrics` works like `push_metrics`, but only previously pushed
 /// metrics with the same name (and the same job and other grouping labels) will
@@ -76,20 +67,10 @@ pub fn push_add_metrics<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     mfs: Vec<proto::MetricFamily>,
+    basic_auth: Option<(String, String)>,
 ) -> Result<()> {
-    push(job, grouping, url, mfs, "POST", None)
+    push(job, grouping, url, mfs, "POST", basic_auth)
 }
-
-pub fn push_add_metrics_auth<S: BuildHasher>(
-    job: &str,
-    grouping: HashMap<String, String, S>,
-    url: &str,
-    mfs: Vec<proto::MetricFamily>,
-    basic_auth: (String, String)
-) -> Result<()> {
-    push(job, grouping, url, mfs, "POST", Some(basic_auth))
-}
-
 
 const LABEL_NAME_JOB: &str = "job";
 
@@ -99,7 +80,7 @@ fn push<S: BuildHasher>(
     url: &str,
     mfs: Vec<proto::MetricFamily>,
     method: &str,
-    basic_auth: Option<(String, String)>
+    basic_auth: Option<(String, String)>,
 ) -> Result<()> {
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -164,26 +145,33 @@ fn push<S: BuildHasher>(
         let _ = encoder.encode(&[mf], &mut buf);
     }
 
-    let mut request = Request::new(Method::from_str(method).unwrap(), Url::from_str(&push_url).unwrap());
-    request.headers_mut().set(ContentType(encoder.format_type().parse().unwrap()));
+    let mut request = Request::new(
+        Method::from_str(method).unwrap(),
+        Url::from_str(&push_url).unwrap(),
+    );
+    request
+        .headers_mut()
+        .set(ContentType(encoder.format_type().parse().unwrap()));
 
     match basic_auth {
-        Some((username, password)) => request.headerS_mut().set(Basic {
-            username: "123".to_owned(),
-            password: Some("e34".to_owned())
-        })
-
+        Some((username, password)) => request.headers_mut().set(Authorization(Basic {
+            username: username,
+            password: Some(password),
+        })),
+        _ => (),
     }
     *request.body_mut() = Some(Body::from(buf));
 
-    let response = HTTP_CLIENT.execute(request)
+    let response = HTTP_CLIENT
+        .execute(request)
         .map_err(|e| Error::Msg(format!("{}", e)))?;
 
     match response.status() {
         StatusCode::Accepted => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
-            response.status(), push_url
+            response.status(),
+            push_url
         ))),
     }
 }
@@ -194,7 +182,7 @@ fn push_from_collector<S: BuildHasher>(
     url: &str,
     collectors: Vec<Box<Collector>>,
     method: &str,
-    basic_auth: Option<(String, String)>
+    basic_auth: Option<(String, String)>,
 ) -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
@@ -212,20 +200,10 @@ pub fn push_collector<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     collectors: Vec<Box<Collector>>,
+    basic_auth: Option<(String, String)>,
 ) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "PUT", None)
+    push_from_collector(job, grouping, url, collectors, "PUT", basic_auth)
 }
-
-pub fn push_collector_auth<S: BuildHasher>(
-    job: &str,
-    grouping: HashMap<String, String, S>,
-    url: &str,
-    collectors: Vec<Box<Collector>>,
-    basic_auth: (String, Stirng)
-) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "PUT", Some(basic_auth))
-}
-
 
 /// `push_add_collector` works like `push_add_metrics`, it collects from the
 /// provided collectors. It is a convenient way to push only a few metrics.
@@ -234,18 +212,9 @@ pub fn push_add_collector<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     collectors: Vec<Box<Collector>>,
+    basic_auth: Option<(String, String)>,
 ) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "POST", None)
-}
-
-pub fn push_add_collector_auth<S: BuildHasher>(
-    job: &str,
-    grouping: HashMap<String, String, S>,
-    url: &str,
-    collectors: Vec<Box<Collector>>,
-    basic_auth: (String, String)
-) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "POST", Some(basic_auth))
+    push_from_collector(job, grouping, url, collectors, "POST", basic_auth)
 }
 
 const DEFAULT_GROUP_LABEL_PAIR: (&str, &str) = ("instance", "unknown");
@@ -319,7 +288,7 @@ mod tests {
             m.set_label(RepeatedField::from_vec(vec![l]));
             let mut mf = proto::MetricFamily::new();
             mf.set_metric(RepeatedField::from_vec(vec![m]));
-            let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf]);
+            let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(res.unwrap_err().description().contains(case.1));
         }
     }

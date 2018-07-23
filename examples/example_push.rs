@@ -70,6 +70,7 @@ fn main() {
             labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
             &address,
             metric_familys,
+            None,
         ).unwrap();
     }
 
