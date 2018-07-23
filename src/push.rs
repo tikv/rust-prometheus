@@ -18,7 +18,7 @@ use std::str::{self, FromStr};
 use std::time::Duration;
 
 use reqwest::{Body, Client, Method, Request, StatusCode, Url};
-use reqwest::header::{ContentType};
+use reqwest::header::{Basic, ContentType};
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
@@ -55,8 +55,18 @@ pub fn push_metrics<S: BuildHasher>(
     url: &str,
     mfs: Vec<proto::MetricFamily>,
 ) -> Result<()> {
-    push(job, grouping, url, mfs, "PUT")
+    push(job, grouping, url, mfs, "PUT", None)
 }
+pub fn push_metrics_auth<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+    basic_auth: (String, String)
+) -> Result<()> {
+    push(job, grouping, url, mfs, "PUT", Some(basic_auth))
+}
+
 
 /// `push_add_metrics` works like `push_metrics`, but only previously pushed
 /// metrics with the same name (and the same job and other grouping labels) will
@@ -67,8 +77,19 @@ pub fn push_add_metrics<S: BuildHasher>(
     url: &str,
     mfs: Vec<proto::MetricFamily>,
 ) -> Result<()> {
-    push(job, grouping, url, mfs, "POST")
+    push(job, grouping, url, mfs, "POST", None)
 }
+
+pub fn push_add_metrics_auth<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+    basic_auth: (String, String)
+) -> Result<()> {
+    push(job, grouping, url, mfs, "POST", Some(basic_auth))
+}
+
 
 const LABEL_NAME_JOB: &str = "job";
 
@@ -78,6 +99,7 @@ fn push<S: BuildHasher>(
     url: &str,
     mfs: Vec<proto::MetricFamily>,
     method: &str,
+    basic_auth: Option<(String, String)>
 ) -> Result<()> {
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -144,6 +166,14 @@ fn push<S: BuildHasher>(
 
     let mut request = Request::new(Method::from_str(method).unwrap(), Url::from_str(&push_url).unwrap());
     request.headers_mut().set(ContentType(encoder.format_type().parse().unwrap()));
+
+    match basic_auth {
+        Some((username, password)) => request.headerS_mut().set(Basic {
+            username: "123".to_owned(),
+            password: Some("e34".to_owned())
+        })
+
+    }
     *request.body_mut() = Some(Body::from(buf));
 
     let response = HTTP_CLIENT.execute(request)
@@ -164,6 +194,7 @@ fn push_from_collector<S: BuildHasher>(
     url: &str,
     collectors: Vec<Box<Collector>>,
     method: &str,
+    basic_auth: Option<(String, String)>
 ) -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
@@ -171,7 +202,7 @@ fn push_from_collector<S: BuildHasher>(
     }
 
     let mfs = registry.gather();
-    push(job, grouping, url, mfs, method)
+    push(job, grouping, url, mfs, method, basic_auth)
 }
 
 /// `push_collector` push metrics collected from the provided collectors. It is
@@ -182,8 +213,19 @@ pub fn push_collector<S: BuildHasher>(
     url: &str,
     collectors: Vec<Box<Collector>>,
 ) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "PUT")
+    push_from_collector(job, grouping, url, collectors, "PUT", None)
 }
+
+pub fn push_collector_auth<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    collectors: Vec<Box<Collector>>,
+    basic_auth: (String, Stirng)
+) -> Result<()> {
+    push_from_collector(job, grouping, url, collectors, "PUT", Some(basic_auth))
+}
+
 
 /// `push_add_collector` works like `push_add_metrics`, it collects from the
 /// provided collectors. It is a convenient way to push only a few metrics.
@@ -193,7 +235,17 @@ pub fn push_add_collector<S: BuildHasher>(
     url: &str,
     collectors: Vec<Box<Collector>>,
 ) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "POST")
+    push_from_collector(job, grouping, url, collectors, "POST", None)
+}
+
+pub fn push_add_collector_auth<S: BuildHasher>(
+    job: &str,
+    grouping: HashMap<String, String, S>,
+    url: &str,
+    collectors: Vec<Box<Collector>>,
+    basic_auth: (String, String)
+) -> Result<()> {
+    push_from_collector(job, grouping, url, collectors, "POST", Some(basic_auth))
 }
 
 const DEFAULT_GROUP_LABEL_PAIR: (&str, &str) = ("instance", "unknown");
