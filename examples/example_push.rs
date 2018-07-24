@@ -24,6 +24,7 @@ use std::thread;
 use std::time;
 
 use getopts::Options;
+use prometheus::BasicAuthentication;
 use prometheus::{Counter, Histogram};
 
 lazy_static! {
@@ -70,7 +71,10 @@ fn main() {
             labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
             &address,
             metric_familys,
-            None,
+            Some(BasicAuthentication {
+                username: "user".to_owned(),
+                password: Some("pass".to_owned()),
+            }),
         ).unwrap();
     }
 

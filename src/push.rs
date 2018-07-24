@@ -35,6 +35,11 @@ lazy_static! {
         .unwrap();
 }
 
+pub struct BasicAuthentication {
+    pub username: String,
+    pub password: Option<String>,
+}
+
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
 /// url, using the provided job name and the (optional) further grouping labels
 /// (the grouping map may be nil). See the Pushgateway documentation for
@@ -54,7 +59,7 @@ pub fn push_metrics<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     mfs: Vec<proto::MetricFamily>,
-    basic_auth: Option<(String, String)>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push(job, grouping, url, mfs, "PUT", basic_auth)
 }
@@ -67,7 +72,7 @@ pub fn push_add_metrics<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     mfs: Vec<proto::MetricFamily>,
-    basic_auth: Option<(String, String)>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push(job, grouping, url, mfs, "POST", basic_auth)
 }
@@ -80,7 +85,7 @@ fn push<S: BuildHasher>(
     url: &str,
     mfs: Vec<proto::MetricFamily>,
     method: &str,
-    basic_auth: Option<(String, String)>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -154,10 +159,9 @@ fn push<S: BuildHasher>(
         .set(ContentType(encoder.format_type().parse().unwrap()));
 
     match basic_auth {
-        Some((username, password)) => request.headers_mut().set(Authorization(Basic {
-            username: username,
-            password: Some(password),
-        })),
+        Some(BasicAuthentication { username, password }) => request
+            .headers_mut()
+            .set(Authorization(Basic { username, password })),
         _ => (),
     }
     *request.body_mut() = Some(Body::from(buf));
@@ -182,7 +186,7 @@ fn push_from_collector<S: BuildHasher>(
     url: &str,
     collectors: Vec<Box<Collector>>,
     method: &str,
-    basic_auth: Option<(String, String)>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
@@ -200,7 +204,7 @@ pub fn push_collector<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     collectors: Vec<Box<Collector>>,
-    basic_auth: Option<(String, String)>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "PUT", basic_auth)
 }
@@ -212,7 +216,7 @@ pub fn push_add_collector<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     collectors: Vec<Box<Collector>>,
-    basic_auth: Option<(String, String)>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "POST", basic_auth)
 }
