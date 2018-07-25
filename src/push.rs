@@ -35,9 +35,14 @@ lazy_static! {
         .unwrap();
 }
 
+/// `BasicAuthentication` holder for supporting `push` to Pushgateway endpoints
+/// using Basic access authentication.
+/// Can be passed to any `push_metrics` method.
 pub struct BasicAuthentication {
+    /// The Basic Authentication username (possibly empty string).
     pub username: String,
-    pub password: Option<String>,
+    /// The Basic Authentication password (possibly empty string).
+    pub password: String,
 }
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
@@ -159,9 +164,10 @@ fn push<S: BuildHasher>(
         .set(ContentType(encoder.format_type().parse().unwrap()));
 
     if let Some(BasicAuthentication { username, password }) = basic_auth {
-        request
-            .headers_mut()
-            .set(Authorization(Basic { username, password }))
+        request.headers_mut().set(Authorization(Basic {
+            username,
+            password: Some(password),
+        }))
     }
 
     *request.body_mut() = Some(Body::from(buf));

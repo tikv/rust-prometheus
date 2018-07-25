@@ -72,7 +72,7 @@ fn main() {
             metric_familys,
             Some(prometheus::BasicAuthentication {
                 username: "user".to_owned(),
-                password: Some("pass".to_owned()),
+                password: "pass".to_owned(),
             }),
         ).unwrap();
     }
