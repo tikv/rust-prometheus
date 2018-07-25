@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.3
+## 0.5.0
 
 - Change: Added TLS and BasicAuthentication support to `push` client.
 
