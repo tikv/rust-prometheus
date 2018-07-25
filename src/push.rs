@@ -158,12 +158,12 @@ fn push<S: BuildHasher>(
         .headers_mut()
         .set(ContentType(encoder.format_type().parse().unwrap()));
 
-    match basic_auth {
-        Some(BasicAuthentication { username, password }) => request
+    if let Some(BasicAuthentication { username, password }) = basic_auth {
+        request
             .headers_mut()
-            .set(Authorization(Basic { username, password })),
-        _ => (),
+            .set(Authorization(Basic { username, password }))
     }
+
     *request.body_mut() = Some(Body::from(buf));
 
     let response = HTTP_CLIENT
