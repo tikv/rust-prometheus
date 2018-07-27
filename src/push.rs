@@ -17,11 +17,8 @@ use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
-use hyper::client::Client;
-use hyper::client::pool::Config;
-use hyper::header::ContentType;
-use hyper::method::Method;
-use hyper::status::StatusCode;
+use reqwest::header::{Authorization, Basic, ContentType};
+use reqwest::{Body, Client, Method, Request, StatusCode, Url};
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
@@ -29,18 +26,23 @@ use metrics::Collector;
 use proto;
 use registry::Registry;
 
-const HYPER_MAX_IDLE: usize = 1;
-const HYPER_TIMEOUT_SEC: u64 = 10;
+const REQWEST_TIMEOUT_SEC: Duration = Duration::from_secs(10);
 
 lazy_static! {
-    static ref HTTP_CLIENT: Client = {
-        let mut client = Client::with_pool_config(Config {
-            max_idle: HYPER_MAX_IDLE,
-        });
-        client.set_read_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
-        client.set_write_timeout(Some(Duration::from_secs(HYPER_TIMEOUT_SEC)));
-        client
-    };
+    static ref HTTP_CLIENT: Client = Client::builder()
+        .timeout(REQWEST_TIMEOUT_SEC)
+        .build()
+        .unwrap();
+}
+
+/// `BasicAuthentication` holder for supporting `push` to Pushgateway endpoints
+/// using Basic access authentication.
+/// Can be passed to any `push_metrics` method.
+pub struct BasicAuthentication {
+    /// The Basic Authentication username (possibly empty string).
+    pub username: String,
+    /// The Basic Authentication password (possibly empty string).
+    pub password: String,
 }
 
 /// `push_metrics` pushes all gathered metrics to the Pushgateway specified by
@@ -62,8 +64,9 @@ pub fn push_metrics<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     mfs: Vec<proto::MetricFamily>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
-    push(job, grouping, url, mfs, "PUT")
+    push(job, grouping, url, mfs, "PUT", basic_auth)
 }
 
 /// `push_add_metrics` works like `push_metrics`, but only previously pushed
@@ -74,8 +77,9 @@ pub fn push_add_metrics<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     mfs: Vec<proto::MetricFamily>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
-    push(job, grouping, url, mfs, "POST")
+    push(job, grouping, url, mfs, "POST", basic_auth)
 }
 
 const LABEL_NAME_JOB: &str = "job";
@@ -86,6 +90,7 @@ fn push<S: BuildHasher>(
     url: &str,
     mfs: Vec<proto::MetricFamily>,
     method: &str,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     // Suppress clippy warning needless_pass_by_value.
     let grouping = grouping;
@@ -150,17 +155,33 @@ fn push<S: BuildHasher>(
         let _ = encoder.encode(&[mf], &mut buf);
     }
 
-    let request = HTTP_CLIENT
-        .request(Method::from_str(method).unwrap(), &push_url)
-        .header(ContentType(encoder.format_type().parse().unwrap()))
-        .body(buf.as_slice());
+    let mut request = Request::new(
+        Method::from_str(method).unwrap(),
+        Url::from_str(&push_url).unwrap(),
+    );
+    request
+        .headers_mut()
+        .set(ContentType(encoder.format_type().parse().unwrap()));
 
-    let response = request.send().map_err(|e| Error::Msg(format!("{}", e)))?;
-    match response.status {
+    if let Some(BasicAuthentication { username, password }) = basic_auth {
+        request.headers_mut().set(Authorization(Basic {
+            username,
+            password: Some(password),
+        }))
+    }
+
+    *request.body_mut() = Some(Body::from(buf));
+
+    let response = HTTP_CLIENT
+        .execute(request)
+        .map_err(|e| Error::Msg(format!("{}", e)))?;
+
+    match response.status() {
         StatusCode::Accepted => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
-            response.status, push_url
+            response.status(),
+            push_url
         ))),
     }
 }
@@ -171,6 +192,7 @@ fn push_from_collector<S: BuildHasher>(
     url: &str,
     collectors: Vec<Box<Collector>>,
     method: &str,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
@@ -178,7 +200,7 @@ fn push_from_collector<S: BuildHasher>(
     }
 
     let mfs = registry.gather();
-    push(job, grouping, url, mfs, method)
+    push(job, grouping, url, mfs, method, basic_auth)
 }
 
 /// `push_collector` push metrics collected from the provided collectors. It is
@@ -188,8 +210,9 @@ pub fn push_collector<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     collectors: Vec<Box<Collector>>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "PUT")
+    push_from_collector(job, grouping, url, collectors, "PUT", basic_auth)
 }
 
 /// `push_add_collector` works like `push_add_metrics`, it collects from the
@@ -199,8 +222,9 @@ pub fn push_add_collector<S: BuildHasher>(
     grouping: HashMap<String, String, S>,
     url: &str,
     collectors: Vec<Box<Collector>>,
+    basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
-    push_from_collector(job, grouping, url, collectors, "POST")
+    push_from_collector(job, grouping, url, collectors, "POST", basic_auth)
 }
 
 const DEFAULT_GROUP_LABEL_PAIR: (&str, &str) = ("instance", "unknown");
@@ -274,7 +298,7 @@ mod tests {
             m.set_label(RepeatedField::from_vec(vec![l]));
             let mut mf = proto::MetricFamily::new();
             mf.set_metric(RepeatedField::from_vec(vec![m]));
-            let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf]);
+            let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(res.unwrap_err().description().contains(case.1));
         }
     }

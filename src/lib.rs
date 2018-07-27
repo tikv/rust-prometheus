@@ -22,7 +22,7 @@ The Rust client library for [Prometheus](https://prometheus.io/).
 extern crate cfg_if;
 extern crate fnv;
 #[cfg(feature = "push")]
-extern crate hyper;
+extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
 #[cfg(any(feature = "nightly", feature = "push", feature = "process"))]
@@ -77,8 +77,9 @@ pub mod core {
     */
 
     pub use super::atomic64::*;
-    pub use super::counter::{GenericCounter, GenericCounterVec, GenericLocalCounter,
-                             GenericLocalCounterVec};
+    pub use super::counter::{
+        GenericCounter, GenericCounterVec, GenericLocalCounter, GenericLocalCounterVec,
+    };
     pub use super::desc::{Desc, Describer};
     pub use super::gauge::{GenericGauge, GenericGaugeVec};
     pub use super::metrics::{Collector, Metric, Opts};
@@ -87,16 +88,18 @@ pub mod core {
 
 pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
 pub use self::encoder::Encoder;
-pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
+pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::errors::{Error, Result};
 pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::DEFAULT_BUCKETS;
-pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
 pub use self::histogram::{exponential_buckets, linear_buckets};
+pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
 pub use self::metrics::Opts;
 #[cfg(feature = "push")]
-pub use self::push::{hostname_grouping_key, push_add_collector, push_add_metrics, push_collector,
-                     push_metrics};
+pub use self::push::{
+    hostname_grouping_key, push_add_collector, push_add_metrics, push_collector, push_metrics,
+    BasicAuthentication,
+};
 pub use self::registry::Registry;
 pub use self::registry::{gather, register, unregister};

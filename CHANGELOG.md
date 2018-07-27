@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- Change: Added TLS and BasicAuthentication support to `push` client.
+
 ## 0.4.2
 
 - Change: Update to use protobuf 2.0.
