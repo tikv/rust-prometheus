@@ -24,8 +24,8 @@ fn main() {
     let mut buffer = Vec::new();
     let encoder = prometheus::TextEncoder::new();
     for _ in 0..5 {
-        let metric_familys = prometheus::gather();
-        encoder.encode(&metric_familys, &mut buffer).unwrap();
+        let metric_families = prometheus::gather();
+        encoder.encode(&metric_families, &mut buffer).unwrap();
 
         // Output to the standard output.
         println!("{}", String::from_utf8(buffer.clone()).unwrap());

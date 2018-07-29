@@ -95,8 +95,8 @@ fn main() {
     let mut buffer = Vec::<u8>::new();
     let encoder = TextEncoder::new();
     for _ in 0..5 {
-        let metric_familys = r.gather();
-        encoder.encode(&metric_familys, &mut buffer).unwrap();
+        let metric_families = r.gather();
+        encoder.encode(&metric_families, &mut buffer).unwrap();
 
         // Output to the standard output.
         println!("{}", String::from_utf8(buffer.clone()).unwrap());
