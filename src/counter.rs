@@ -25,6 +25,7 @@ use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
 /// The underlying implementation for [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
+#[derive(Debug)]
 pub struct GenericCounter<P: Atomic> {
     v: Arc<Value<P>>,
 }
