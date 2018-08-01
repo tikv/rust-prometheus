@@ -25,7 +25,7 @@ use metrics::Collector;
 use proto;
 
 struct RegistryCore {
-    pub colloctors_by_id: HashMap<u64, Box<Collector>>,
+    pub collectors_by_id: HashMap<u64, Box<Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
     pub desc_ids: HashSet<u64>,
 }
@@ -78,7 +78,7 @@ impl RegistryCore {
             }
         }
 
-        match self.colloctors_by_id.entry(collector_id) {
+        match self.collectors_by_id.entry(collector_id) {
             HEntry::Vacant(vc) => {
                 self.desc_ids.extend(desc_id_set);
                 vc.insert(c);
@@ -98,7 +98,7 @@ impl RegistryCore {
             }
         }
 
-        if self.colloctors_by_id.remove(&collector_id).is_none() {
+        if self.collectors_by_id.remove(&collector_id).is_none() {
             return Err(Error::Msg(format!(
                 "collector {:?} is not registered",
                 c.desc()
@@ -113,7 +113,7 @@ impl RegistryCore {
     fn gather(&self) -> Vec<proto::MetricFamily> {
         let mut mf_by_name = BTreeMap::new();
 
-        for c in self.colloctors_by_id.values() {
+        for c in self.collectors_by_id.values() {
             let mfs = c.collect();
             for mut mf in mfs {
                 // Prune empty MetricFamilies.
@@ -191,7 +191,7 @@ pub struct Registry {
 impl Default for Registry {
     fn default() -> Registry {
         let r = RegistryCore {
-            colloctors_by_id: HashMap::new(),
+            collectors_by_id: HashMap::new(),
             dim_hashes_by_name: HashMap::new(),
             desc_ids: HashSet::new(),
         };
@@ -307,8 +307,8 @@ mod tests {
 
         let r1 = r.clone();
         let handler = thread::spawn(move || {
-            let metric_familys = r1.gather();
-            assert_eq!(metric_familys.len(), 1);
+            let metric_families = r1.gather();
+            assert_eq!(metric_families.len(), 1);
         });
 
         assert!(handler.join().is_ok());

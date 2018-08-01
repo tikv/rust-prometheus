@@ -51,9 +51,9 @@ fn main() {
             HTTP_COUNTER.inc();
             let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
 
-            let metric_familys = prometheus::gather();
+            let metric_families = prometheus::gather();
             let mut buffer = vec![];
-            encoder.encode(&metric_familys, &mut buffer).unwrap();
+            encoder.encode(&metric_families, &mut buffer).unwrap();
             res.headers_mut()
                 .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
             res.send(&buffer).unwrap();
