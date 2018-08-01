@@ -21,6 +21,7 @@ use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for [`Counter`](::Counter) and [`Gauge`](::Gauge).
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ValueType {
     Counter,
     Gauge,
@@ -40,6 +41,7 @@ impl ValueType {
 /// Its effective type is determined by `ValueType`. This is a low-level
 /// building block used by the library to back the implementations of
 /// [`Counter`](::Counter) and [`Gauge`](::Gauge).
+#[derive(Debug)]
 pub struct Value<P: Atomic> {
     pub desc: Desc,
     pub val: P,
