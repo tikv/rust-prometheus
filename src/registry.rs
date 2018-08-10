@@ -105,6 +105,10 @@ impl RegistryCore {
             )));
         }
 
+        for id in id_set {
+            self.desc_ids.remove(&id);
+        }
+
         // dim_hashes_by_name is left untouched as those must be consistent
         // throughout the lifetime of a program.
         Ok(())
@@ -316,6 +320,7 @@ mod tests {
         assert!(r.register(Box::new(counter.clone())).is_err());
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
+        assert!(r.register(Box::new(counter.clone())).is_ok());
 
         let counter_vec =
             CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
@@ -333,6 +338,7 @@ mod tests {
 
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
+        assert!(register(Box::new(counter.clone())).is_ok());
     }
 
     #[test]
