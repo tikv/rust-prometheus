@@ -132,11 +132,13 @@ fn test_try_get_with_field_value() {
         vec!["get_name", "bar_name"]
     );
     assert_eq!(
-        get_labels(&metric
-            .try_get("get_name")
-            .unwrap()
-            .try_get("bar_name")
-            .unwrap()),
+        get_labels(
+            &metric
+                .try_get("get_name")
+                .unwrap()
+                .try_get("bar_name")
+                .unwrap()
+        ),
         vec!["get_name", "bar_name"]
     );
     assert!(metric.try_get("get").is_none());

@@ -19,7 +19,8 @@ extern crate prometheus;
 use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
 lazy_static! {
-    static ref A_INT_COUNTER: IntCounter = register_int_counter!("A_int_counter", "foobar").unwrap();
+    static ref A_INT_COUNTER: IntCounter =
+        register_int_counter!("A_int_counter", "foobar").unwrap();
     static ref A_INT_COUNTER_VEC: IntCounterVec =
         register_int_counter_vec!("A_int_counter_vec", "foobar", &["a", "b"]).unwrap();
     static ref A_INT_GAUGE: IntGauge = register_int_gauge!("A_int_gauge", "foobar").unwrap();

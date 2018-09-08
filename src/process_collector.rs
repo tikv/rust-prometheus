@@ -209,7 +209,8 @@ fn find_statistic(all: &str, pat: &str) -> Result<f64> {
     if let Some(idx) = all.find(pat) {
         let mut iter = (all[idx + pat.len()..]).split_whitespace();
         if let Some(v) = iter.next() {
-            return v.parse()
+            return v
+                .parse()
                 .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
         }
     }
