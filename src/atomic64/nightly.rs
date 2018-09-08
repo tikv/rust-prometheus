@@ -55,7 +55,8 @@ impl Atomic for AtomicF64 {
         loop {
             let current = self.inner.load(Ordering::Acquire);
             let new = u64_to_f64(current) + delta;
-            let swapped = self.inner
+            let swapped = self
+                .inner
                 .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
             if swapped == current {
                 return;

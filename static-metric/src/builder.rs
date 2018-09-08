@@ -202,7 +202,8 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_struct(&self) -> Tokens {
         let struct_name = &self.struct_name;
 
-        let field_names = self.label
+        let field_names = self
+            .label
             .get_value_def_list(self.enum_definitions)
             .get_names();
         let member_types: Vec<_> = field_names.iter().map(|_| &self.member_type).collect();
@@ -256,7 +257,8 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_from_body(&self, prev_labels_ident: Vec<Ident>) -> Tokens {
         let member_type = &self.member_type;
-        let bodies: Vec<_> = self.label
+        let bodies: Vec<_> = self
+            .label
             .get_value_def_list(self.enum_definitions)
             .get()
             .iter()
@@ -307,11 +309,13 @@ impl<'a> MetricBuilderContext<'a> {
         let enum_ident = self.label.get_enum_ident();
         if let Some(e) = enum_ident {
             let member_type = &self.member_type;
-            let match_patterns = self.enum_definitions
+            let match_patterns = self
+                .enum_definitions
                 .get(e)
                 .unwrap()
                 .build_fields_with_path();
-            let fields = self.label
+            let fields = self
+                .label
                 .get_value_def_list(self.enum_definitions)
                 .get_names();
             quote!{
