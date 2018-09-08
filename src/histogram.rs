@@ -308,6 +308,7 @@ mod coarse {
 /// observe.
 ///
 /// NOTICE: A timer can be observed only once (automatically or manually).
+#[must_use]
 pub struct HistogramTimer {
     histogram: Histogram,
     start: Instant,
@@ -574,6 +575,7 @@ impl Clone for LocalHistogram {
 }
 
 /// An unsync [`HistogramTimer`](::HistogramTimer).
+#[must_use]
 pub struct LocalHistogramTimer {
     local: LocalHistogram,
     start: Instant,
