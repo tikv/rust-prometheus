@@ -16,7 +16,8 @@ extern crate prometheus;
 use std::thread;
 use std::time::Duration;
 
-use prometheus::{Counter, CounterVec, Encoder, Gauge, GaugeVec, Opts, Registry, TextEncoder};
+use prometheus::prelude::*;
+use prometheus::{Counter, CounterVec, Gauge, GaugeVec, Opts, Registry, TextEncoder};
 
 fn main() {
     let r = Registry::new();
@@ -24,48 +25,46 @@ fn main() {
     let counter_opts = Opts::new("test_counter", "test counter help")
         .const_label("a", "1")
         .const_label("b", "2");
-    let counter = Counter::with_opts(counter_opts).unwrap();
-    let counter_vec_opts = Opts::new("test_counter_vec", "test counter vector help")
-        .const_label("a", "1")
-        .const_label("b", "2");
-    let counter_vec = CounterVec::new(counter_vec_opts, &["c", "d"]).unwrap();
-
-    r.register(Box::new(counter.clone())).unwrap();
-    r.register(Box::new(counter_vec.clone())).unwrap();
+    let counter = Counter::from_opts(counter_opts).unwrap().register(&r);
+    let counter_vec_opts =
+        Opts::new_with_label("test_counter_vec", "test counter vector help", ["c", "d"])
+            .const_label("a", "1")
+            .const_label("b", "2");
+    let counter_vec = CounterVec::from_opts(counter_vec_opts)
+        .unwrap()
+        .register(&r);
 
     let gauge_opts = Opts::new("test_gauge", "test gauge help")
         .const_label("a", "1")
         .const_label("b", "2");
-    let gauge = Gauge::with_opts(gauge_opts).unwrap();
-    let gauge_vec_opts = Opts::new("test_gauge_vec", "test gauge vector help")
-        .const_label("a", "1")
-        .const_label("b", "2");
-    let gauge_vec = GaugeVec::new(gauge_vec_opts, &["c", "d"]).unwrap();
-
-    r.register(Box::new(gauge.clone())).unwrap();
-    r.register(Box::new(gauge_vec.clone())).unwrap();
+    let gauge = Gauge::from_opts(gauge_opts).unwrap().register(&r);
+    let gauge_vec_opts =
+        Opts::new_with_label("test_gauge_vec", "test gauge vector help", ["c", "d"])
+            .const_label("a", "1")
+            .const_label("b", "2");
+    let gauge_vec = GaugeVec::from_opts(gauge_vec_opts).unwrap().register(&r);
 
     counter.inc();
     assert_eq!(counter.get() as u64, 1);
     counter.inc_by(42.0);
     assert_eq!(counter.get() as u64, 43);
 
-    counter_vec.with_label_values(&["3", "4"]).inc();
-    assert_eq!(counter_vec.with_label_values(&["3", "4"]).get() as u64, 1);
+    counter_vec.with_label_values(["3", "4"]).inc();
+    assert_eq!(counter_vec.with_label_values(["3", "4"]).get() as u64, 1);
 
-    counter_vec.with_label_values(&["3", "4"]).inc_by(42.0);
-    assert_eq!(counter_vec.with_label_values(&["3", "4"]).get() as u64, 43);
+    counter_vec.with_label_values(["3", "4"]).inc_by(42.0);
+    assert_eq!(counter_vec.with_label_values(["3", "4"]).get() as u64, 43);
 
     gauge.inc();
     assert_eq!(gauge.get() as u64, 1);
     gauge.add(42.0);
     assert_eq!(gauge.get() as u64, 43);
 
-    gauge_vec.with_label_values(&["3", "4"]).inc();
-    assert_eq!(gauge_vec.with_label_values(&["3", "4"]).get() as u64, 1);
+    gauge_vec.with_label_values(["3", "4"]).inc();
+    assert_eq!(gauge_vec.with_label_values(["3", "4"]).get() as u64, 1);
 
-    gauge_vec.with_label_values(&["3", "4"]).set(42.0);
-    assert_eq!(gauge_vec.with_label_values(&["3", "4"]).get() as u64, 42);
+    gauge_vec.with_label_values(["3", "4"]).set(42.0);
+    assert_eq!(gauge_vec.with_label_values(["3", "4"]).get() as u64, 42);
 
     let c2 = counter.clone();
     let cv2 = counter_vec.clone();
@@ -75,9 +74,9 @@ fn main() {
         for _ in 0..10 {
             thread::sleep(Duration::from_millis(500));
             c2.inc();
-            cv2.with_label_values(&["3", "4"]).inc();
+            cv2.with_label_values(["3", "4"]).inc();
             g2.inc();
-            gv2.with_label_values(&["3", "4"]).inc();
+            gv2.with_label_values(["3", "4"]).inc();
         }
     });
 
@@ -85,9 +84,9 @@ fn main() {
         for _ in 0..5 {
             thread::sleep(Duration::from_secs(1));
             counter.inc();
-            counter_vec.with_label_values(&["3", "4"]).inc();
+            counter_vec.with_label_values(["3", "4"]).inc();
             gauge.dec();
-            gauge_vec.with_label_values(&["3", "4"]).set(42.0);
+            gauge_vec.with_label_values(["3", "4"]).set(42.0);
         }
     });
 

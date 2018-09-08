@@ -39,6 +39,6 @@ fn main() {
 fn main() {
     println!(
         r#"Please enable feature "process", try:
-    cargo run --features="process" --example example_process_collector"#
+    cargo run --features="process" --example process_collector"#
     );
 }

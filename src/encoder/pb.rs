@@ -54,20 +54,19 @@ impl Encoder for ProtobufEncoder {
 mod tests {
     use counter::CounterVec;
     use encoder::Encoder;
-    use metrics::Opts;
+    use metrics::Collector;
     use registry;
 
     // TODO: add more tests.
     #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn test_protobuf_encoder() {
-        let cv = CounterVec::new(Opts::new("test_counter_vec", "help information"),
-                                 &["labelname"])
-            .unwrap();
         let reg = registry::Registry::new();
-        reg.register(Box::new(cv.clone())).unwrap();
+        let cv = CounterVec::from_opts(("test_counter_vec", "help information", ["labelname"]))
+            .unwrap()
+            .register(&reg);
 
-        cv.get_metric_with_label_values(&["2230"]).unwrap().inc();
+        cv.get_metric_with_label_values(["2230"]).unwrap().inc();
         let mf = reg.gather();
         let mut writer = Vec::<u8>::new();
         let encoder = super::ProtobufEncoder::new();

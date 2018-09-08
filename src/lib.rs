@@ -37,13 +37,11 @@ extern crate protobuf;
 extern crate quick_error;
 extern crate spin;
 
-mod encoder;
-mod errors;
-#[macro_use]
-mod macros;
 mod atomic64;
 mod counter;
 mod desc;
+mod encoder;
+mod errors;
 mod gauge;
 mod histogram;
 mod metrics;
@@ -85,12 +83,18 @@ pub mod core {
     };
     pub use super::desc::{Desc, Describer};
     pub use super::gauge::{GenericGauge, GenericGaugeVec};
-    pub use super::metrics::{Collector, Metric, Opts};
+    pub use super::metrics::{Collector, Labels, Metric, Opts};
     pub use super::vec::{MetricVec, MetricVecBuilder};
 }
 
+pub mod prelude {
+    // Rename these traits so that when user is importing via `prelude::*`, it will be
+    // less likely to cause name conflict.
+    pub use super::encoder::Encoder as MetricFamilyEncoder;
+    pub use super::metrics::{Collector as MetricCollector, Labels as MetricLabels};
+}
+
 pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
-pub use self::encoder::Encoder;
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::errors::{Error, Result};
@@ -105,4 +109,8 @@ pub use self::push::{
     BasicAuthentication,
 };
 pub use self::registry::Registry;
-pub use self::registry::{gather, register, unregister};
+pub use self::registry::{gather, register, try_register, try_unregister, unregister};
+
+trait AssertSend: Send {}
+
+trait AssertSync: Sync {}

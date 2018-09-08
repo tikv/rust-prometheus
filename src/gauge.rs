@@ -18,7 +18,7 @@ use std::sync::Arc;
 use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
 use errors::Result;
-use metrics::{Collector, Metric, Opts};
+use metrics::{Collector, Labels, Metric, Opts};
 use proto;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
@@ -27,6 +27,10 @@ use vec::{MetricVec, MetricVecBuilder};
 pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
+
+impl<P: Atomic> super::AssertSend for GenericGauge<P> {}
+
+impl<P: Atomic> super::AssertSync for GenericGauge<P> {}
 
 /// A [`Metric`](::core::Metric) represents a single numerical value that can arbitrarily go up
 /// and down.
@@ -48,15 +52,18 @@ impl<P: Atomic> GenericGauge<P> {
     /// Create a [`GenericGauge`](::core::GenericGauge) with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
-        Self::with_opts(opts)
+        Self::from_opts(opts)
     }
 
     /// Create a [`GenericGauge`](::core::GenericGauge) with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+    pub fn from_opts<O: Into<Opts<[&'static str; 0]>>>(opts: O) -> Result<Self> {
+        Self::with_opts_and_label_values::<_, &'static str>(&opts.into(), &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn with_opts_and_label_values<L: Labels, S: AsRef<str>>(
+        opts: &Opts<L>,
+        label_values: &[S],
+    ) -> Result<Self> {
         let v = Value::new(opts, ValueType::Gauge, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -116,55 +123,66 @@ impl<P: Atomic> Metric for GenericGauge<P> {
     }
 }
 
-pub struct GaugeVecBuilder<P: Atomic> {
-    _phantom: PhantomData<P>,
+pub struct GaugeVecBuilder<P: Atomic, L: Labels> {
+    _phantom_p: PhantomData<P>,
+    _phantom_l: PhantomData<L>,
 }
 
-impl<P: Atomic> GaugeVecBuilder<P> {
+impl<P: Atomic, L: Labels> super::AssertSend for GaugeVecBuilder<P, L> {}
+
+impl<P: Atomic, L: Labels> super::AssertSync for GaugeVecBuilder<P, L> {}
+
+impl<P: Atomic, L: Labels> GaugeVecBuilder<P, L> {
     pub fn new() -> Self {
         Self {
-            _phantom: PhantomData,
+            _phantom_p: PhantomData,
+            _phantom_l: PhantomData,
         }
     }
 }
 
-impl<P: Atomic> Clone for GaugeVecBuilder<P> {
+impl<P: Atomic, L: Labels> Clone for GaugeVecBuilder<P, L> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
 
-impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
+impl<P: Atomic, L: Labels> MetricVecBuilder for GaugeVecBuilder<P, L> {
     type M = GenericGauge<P>;
-    type P = Opts;
+    type P = Opts<L>;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+    fn build<S: AsRef<str>>(&self, opts: &Self::P, vals: &[S]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }
 
 /// The underlying implementation for [`GaugeVec`](::GaugeVec) and [`IntGaugeVec`](::IntGaugeVec).
-pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
+pub type GenericGaugeVec<P, L> = MetricVec<L, GaugeVecBuilder<P, L>>;
+
+impl<P: Atomic, L: Labels> super::AssertSend for GenericGaugeVec<P, L> {}
+
+impl<P: Atomic, L: Labels> super::AssertSync for GenericGaugeVec<P, L> {}
 
 /// A [`Collector`](::core::Collector) that bundles a set of [`Gauge`](::Gauge)s that all share
 /// the same [`Desc`](::core::Desc), but have different values for their variable labels. This is
 /// used if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of operations queued, partitioned by user and operation type).
-pub type GaugeVec = GenericGaugeVec<AtomicF64>;
+pub type GaugeVec<L> = GenericGaugeVec<AtomicF64, L>;
 
 /// The integer version of [`GaugeVec`](::GaugeVec). Provides better performance if metric values
 /// are all integers.
-pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
+pub type IntGaugeVec<L> = GenericGaugeVec<AtomicI64, L>;
 
-impl<P: Atomic> GenericGaugeVec<P> {
+impl<P: Atomic, L: Labels> GenericGaugeVec<P, L> {
     /// Create a new [`GenericGaugeVec`](::core::GenericGaugeVec) based on the provided
     /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must
     /// be provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
-        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let opts = opts.variable_labels(variable_names);
-        let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder::new(), opts)?;
-
+    pub fn from_opts<O: Into<Opts<L>>>(opts: O) -> Result<Self> {
+        let metric_vec = MetricVec::create(
+            proto::MetricType::GAUGE,
+            GaugeVecBuilder::new(),
+            opts.into(),
+        )?;
         Ok(metric_vec as Self)
     }
 }
@@ -180,7 +198,7 @@ mod tests {
         let opts = Opts::new("test", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let gauge = Gauge::with_opts(opts).unwrap();
+        let gauge = Gauge::from_opts(opts).unwrap();
         gauge.inc();
         assert_eq!(gauge.get() as u64, 1);
         gauge.add(42.0);
@@ -203,10 +221,8 @@ mod tests {
 
     #[test]
     fn test_gauge_vec_with_labels() {
-        let vec = GaugeVec::new(
-            Opts::new("test_gauge_vec", "test gauge vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec =
+            GaugeVec::from_opts(("test_gauge_vec", "test gauge vec help", ["l1", "l2"])).unwrap();
 
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
@@ -225,23 +241,20 @@ mod tests {
 
     #[test]
     fn test_gauge_vec_with_label_values() {
-        let vec = GaugeVec::new(
-            Opts::new("test_gauge_vec", "test gauge vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec =
+            GaugeVec::from_opts(("test_gauge_vec", "test gauge vec help", ["l1", "l2"])).unwrap();
 
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
-        vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+        assert!(vec.remove_label_values(["v1", "v2"]).is_err());
+        vec.with_label_values(["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(["v1", "v2"]).is_ok());
 
-        vec.with_label_values(&["v1", "v2"]).inc();
-        vec.with_label_values(&["v1", "v2"]).dec();
-        vec.with_label_values(&["v1", "v2"]).add(42.0);
-        vec.with_label_values(&["v1", "v2"]).sub(42.0);
-        vec.with_label_values(&["v1", "v2"]).set(42.0);
+        vec.with_label_values(["v1", "v2"]).inc();
+        vec.with_label_values(["v1", "v2"]).dec();
+        vec.with_label_values(["v1", "v2"]).add(42.0);
+        vec.with_label_values(["v1", "v2"]).sub(42.0);
+        vec.with_label_values(["v1", "v2"]).set(42.0);
 
-        assert!(vec.remove_label_values(&["v1"]).is_err());
-        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+        assert!(vec.remove_label_values(["v1", "v3"]).is_err());
     }
 
 }

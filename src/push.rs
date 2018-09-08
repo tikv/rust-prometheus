@@ -195,8 +195,8 @@ fn push_from_collector<S: BuildHasher>(
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     let registry = Registry::new();
-    for bc in collectors {
-        registry.register(bc)?;
+    for collector in collectors {
+        registry.try_register(collector)?;
     }
 
     let mfs = registry.gather();
@@ -240,6 +240,8 @@ const DEFAULT_GROUP_LABEL_PAIR: (&str, &str) = ("instance", "unknown");
 pub fn hostname_grouping_key() -> HashMap<String, String> {
     use libc;
 
+    let mut output = HashMap::new();
+
     // Host names are limited to 255 bytes.
     //   ref: http://pubs.opengroup.org/onlinepubs/7908799/xns/gethostname.html
     let max_len = 256;
@@ -252,20 +254,32 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
     } {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
-            labels!{
-                DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => str::from_utf8(&name[..last_char])
-                                            .unwrap_or(DEFAULT_GROUP_LABEL_PAIR.1).to_owned(),
-            }
+            output.insert(
+                DEFAULT_GROUP_LABEL_PAIR.0.to_owned(),
+                str::from_utf8(&name[..last_char])
+                    .unwrap_or(DEFAULT_GROUP_LABEL_PAIR.1)
+                    .to_owned(),
+            );
         }
         _ => {
-            labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+            output.insert(
+                DEFAULT_GROUP_LABEL_PAIR.0.to_owned(),
+                DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),
+            );
         }
     }
+
+    output
 }
 
 #[cfg(target_os = "windows")]
 pub fn hostname_grouping_key() -> HashMap<String, String> {
-    labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+    let mut output = HashMap::new();
+    output.insert(
+        DEFAULT_GROUP_LABEL_PAIR.0.to_owned(),
+        DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),
+    );
+    output
 }
 
 #[cfg(test)]

@@ -210,6 +210,8 @@ impl Desc {
 }
 
 /// An interface for describing the immutable meta-data of a [`Metric`](::core::Metric).
+///
+/// It is implemented by options, i.e. [`Opts`](::Opts) and [`HistogramOpts`](::HistogramOpts).
 pub trait Describer {
     /// `describe` returns a [`Desc`](::core::Desc).
     fn describe(&self) -> Result<Desc>;

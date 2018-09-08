@@ -14,12 +14,101 @@
 
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
 use std::collections::HashMap;
+use std::fmt::Debug;
+use std::slice::Iter;
 
 use desc::{Desc, Describer};
 use errors::Result;
 use proto::{self, LabelPair};
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
+
+pub trait Labels: Debug + Clone + Send + Sync {
+    type Item: AsRef<str> + Debug + Clone + Send + Sync;
+    type Owned: AsRef<[String]> + Debug + Clone + Send + Sync;
+
+    fn as_slice(&self) -> &[Self::Item];
+
+    fn to_owned(&self) -> Self::Owned;
+
+    fn iter(&self) -> Iter<Self::Item> {
+        self.as_slice().iter()
+    }
+}
+
+impl<T: AsRef<str> + Debug + Clone + Send + Sync> Labels for [T; 0] {
+    type Item = T;
+    type Owned = [String; 0];
+
+    fn as_slice(&self) -> &[T] {
+        self.as_ref()
+    }
+
+    fn to_owned(&self) -> [String; 0] {
+        []
+    }
+}
+
+impl<T: AsRef<str> + Debug + Clone + Send + Sync> Labels for [T; 1] {
+    type Item = T;
+    type Owned = [String; 1];
+
+    fn as_slice(&self) -> &[T] {
+        self.as_ref()
+    }
+
+    fn to_owned(&self) -> [String; 1] {
+        [self[0].as_ref().to_owned()]
+    }
+}
+
+impl<T: AsRef<str> + Debug + Clone + Send + Sync> Labels for [T; 2] {
+    type Item = T;
+    type Owned = [String; 2];
+
+    fn as_slice(&self) -> &[T] {
+        self.as_ref()
+    }
+
+    fn to_owned(&self) -> [String; 2] {
+        [self[0].as_ref().to_owned(), self[1].as_ref().to_owned()]
+    }
+}
+
+impl<T: AsRef<str> + Debug + Clone + Send + Sync> Labels for [T; 3] {
+    type Item = T;
+    type Owned = [String; 3];
+
+    fn as_slice(&self) -> &[T] {
+        self.as_ref()
+    }
+
+    fn to_owned(&self) -> [String; 3] {
+        [
+            self[0].as_ref().to_owned(),
+            self[1].as_ref().to_owned(),
+            self[2].as_ref().to_owned(),
+        ]
+    }
+}
+
+impl<T: AsRef<str> + Debug + Clone + Send + Sync> Labels for [T; 4] {
+    type Item = T;
+    type Owned = [String; 4];
+
+    fn as_slice(&self) -> &[T] {
+        self.as_ref()
+    }
+
+    fn to_owned(&self) -> [String; 4] {
+        [
+            self[0].as_ref().to_owned(),
+            self[1].as_ref().to_owned(),
+            self[2].as_ref().to_owned(),
+            self[3].as_ref().to_owned(),
+        ]
+    }
+}
 
 /// An interface for collecting metrics.
 pub trait Collector: Sync + Send {
@@ -28,6 +117,86 @@ pub trait Collector: Sync + Send {
 
     /// Collect metrics.
     fn collect(&self) -> Vec<proto::MetricFamily>;
+
+    /// Alias of [`Registry::try_register`]. Register the collector to a registry.
+    fn try_register(self, registry: &super::Registry) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry.try_register(Box::new(self.clone())).map(|_| self)
+    }
+
+    /// Alias of [`Registry::register`]. Register the collector to a registry.
+    /// Panics if there are errors.
+    fn register(self, registry: &super::Registry) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry
+            .try_register(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
+
+    /// Alias of [`try_register`]. Register the collector to the default registry.
+    fn try_register_default(self) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_register(Box::new(self.clone())).map(|_| self)
+    }
+
+    /// Alias of [`register`]. Register the collector to the default registry.
+    /// Panics if there are errors.
+    fn register_default(self) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_register(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
+
+    /// Alias for [`Registry::try_unregister`]. Unregister the collector from a registry.
+    fn try_unregister(self, registry: &super::Registry) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry
+            .try_unregister(Box::new(self.clone()))
+            .map(|_| self)
+    }
+
+    /// Alias for [`Registry::try_unregister`]. Unregister the collector from a registry.
+    /// Panics if there are errors.
+    fn unregister(self, registry: &super::Registry) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry
+            .try_unregister(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
+
+    /// Alias for [`try_unregister`]. Unregister the collector from the default registry.
+    fn try_unregister_default(self) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_unregister(Box::new(self.clone())).map(|_| self)
+    }
+
+    /// Alias for [`try_unregister`]. Unregister the collector from the default registry.
+    /// Panics if there are errors.
+    fn unregister_default(self) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_unregister(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
 }
 
 /// An interface models a single sample value with its meta data being exported to Prometheus.
@@ -38,7 +207,7 @@ pub trait Metric: Sync + Send + Clone {
 
 /// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.
 #[derive(Debug, Clone)]
-pub struct Opts {
+pub struct Opts<L: Labels> {
     /// namespace, subsystem, and name are components of the fully-qualified
     /// name of the [`Metric`](::core::Metric) (created by joining these components with
     /// "_"). Only Name is mandatory, the others merely help structuring the
@@ -80,19 +249,44 @@ pub struct Opts {
     ///
     /// Note that variable_labels is used in `MetricVec`. To create a single
     /// metric must leave it empty.
-    pub variable_labels: Vec<String>,
+    pub variable_labels: L::Owned,
 }
 
-impl Opts {
-    /// `new` creates the Opts with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
+impl Opts<[&'static str; 0]> {
+    /// Creates a [`Opts`](::Opts).
+    pub fn new<A, B>(name: A, help: B) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
+        Opts::new_with_label(name, help, [])
+    }
+}
+
+impl<A, B> From<(A, B)> for Opts<[&'static str; 0]>
+where
+    A: Into<String>,
+    B: Into<String>,
+{
+    fn from(options: (A, B)) -> Self {
+        Opts::new(options.0, options.1)
+    }
+}
+
+impl<L: Labels> Opts<L> {
+    /// Creates a [`Opts`](::Opts) with labels.
+    pub fn new_with_label<A, B>(name: A, help: B, variable_labels: L) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         Opts {
             namespace: "".to_owned(),
             subsystem: "".to_owned(),
             name: name.into(),
             help: help.into(),
             const_labels: HashMap::new(),
-            variable_labels: Vec::new(),
+            variable_labels: variable_labels.to_owned(),
         }
     }
 
@@ -115,20 +309,18 @@ impl Opts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<A, B>(mut self, name: A, value: B) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         self.const_labels.insert(name.into(), value.into());
         self
     }
 
     /// `variable_labels` sets the variable labels.
-    pub fn variable_labels(mut self, variable_labels: Vec<String>) -> Self {
-        self.variable_labels = variable_labels;
-        self
-    }
-
-    /// `variable_label` adds a variable label.
-    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
-        self.variable_labels.push(name.into());
+    pub fn variable_labels(mut self, variable_labels: L) -> Self {
+        self.variable_labels = variable_labels.to_owned();
         self
     }
 
@@ -138,12 +330,23 @@ impl Opts {
     }
 }
 
-impl Describer for Opts {
+impl<A, B, L> From<(A, B, L)> for Opts<L>
+where
+    A: Into<String>,
+    B: Into<String>,
+    L: Labels,
+{
+    fn from(options: (A, B, L)) -> Self {
+        Opts::new_with_label(options.0, options.1, options.2)
+    }
+}
+
+impl<L: Labels> Describer for Opts<L> {
     fn describe(&self) -> Result<Desc> {
         Desc::new(
             self.fq_name(),
             self.help.clone(),
-            self.variable_labels.clone(),
+            self.variable_labels.as_ref().to_vec(),
             self.const_labels.clone(),
         )
     }

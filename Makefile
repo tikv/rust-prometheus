@@ -20,10 +20,7 @@ clean:
 	cargo clean
 
 examples:
-	cargo build --example example_embed
-	cargo build --example example_hyper
-	cargo build --features="push" --example example_push
-	cargo build --features="process" --example example_process_collector
+	cargo build --all-features --examples
 
 gen_proto:
 	@ which protoc >/dev/null || { echo "Please install protoc first"; exit 1; }

@@ -15,13 +15,14 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::{Duration, Instant as StdInstant};
 
 use atomic64::{Atomic, AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
-use metrics::{Collector, Metric, Opts};
+use metrics::{Collector, Labels, Metric, Opts};
 use proto;
 use protobuf::RepeatedField;
 use value::make_label_pairs;
@@ -79,8 +80,8 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
 #[derive(Clone)]
-pub struct HistogramOpts {
-    pub common_opts: Opts,
+pub struct HistogramOpts<L: Labels> {
+    pub common_opts: Opts<L>,
 
     // Defines the buckets into which observations are counted. Each
     // element in the slice is the upper inclusive bound of a bucket. The
@@ -90,11 +91,46 @@ pub struct HistogramOpts {
     pub buckets: Vec<f64>,
 }
 
-impl HistogramOpts {
-    /// Create a [`HistogramOpts`](::HistogramOpts) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
+impl HistogramOpts<[&'static str; 0]> {
+    /// Creates a [`HistogramOpts`](::HistogramOpts).
+    pub fn new<A, B>(name: A, help: B) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
+        HistogramOpts::new_with_label(name, help, [])
+    }
+}
+
+impl<A, B> From<(A, B)> for HistogramOpts<[&'static str; 0]>
+where
+    A: Into<String>,
+    B: Into<String>,
+{
+    fn from(options: (A, B)) -> Self {
+        HistogramOpts::new(options.0, options.1)
+    }
+}
+
+impl<A, B> From<(A, B, Vec<f64>)> for HistogramOpts<[&'static str; 0]>
+where
+    A: Into<String>,
+    B: Into<String>,
+{
+    fn from(options: (A, B, Vec<f64>)) -> Self {
+        HistogramOpts::new(options.0, options.1).buckets(options.2)
+    }
+}
+
+impl<L: Labels> HistogramOpts<L> {
+    /// Create a [`HistogramOpts`](::HistogramOpts) with labels.
+    pub fn new_with_label<A, B>(name: A, help: B, variable_labels: L) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         HistogramOpts {
-            common_opts: Opts::new(name, help),
+            common_opts: Opts::new_with_label(name, help, variable_labels),
             buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
         }
     }
@@ -118,20 +154,18 @@ impl HistogramOpts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<A, B>(mut self, name: A, value: B) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         self.common_opts = self.common_opts.const_label(name, value);
         self
     }
 
     /// `variable_labels` sets the variable labels.
-    pub fn variable_labels(mut self, variable_labels: Vec<String>) -> Self {
+    pub fn variable_labels(mut self, variable_labels: L) -> Self {
         self.common_opts = self.common_opts.variable_labels(variable_labels);
-        self
-    }
-
-    /// `variable_label` adds a variable label.
-    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
-        self.common_opts = self.common_opts.variable_label(name);
         self
     }
 
@@ -147,14 +181,36 @@ impl HistogramOpts {
     }
 }
 
-impl Describer for HistogramOpts {
+impl<A, B, L> From<(A, B, L)> for HistogramOpts<L>
+where
+    A: Into<String>,
+    B: Into<String>,
+    L: Labels,
+{
+    fn from(options: (A, B, L)) -> Self {
+        HistogramOpts::new_with_label(options.0, options.1, options.2)
+    }
+}
+
+impl<A, B, L> From<(A, B, L, Vec<f64>)> for HistogramOpts<L>
+where
+    A: Into<String>,
+    B: Into<String>,
+    L: Labels,
+{
+    fn from(options: (A, B, L, Vec<f64>)) -> Self {
+        HistogramOpts::new_with_label(options.0, options.1, options.2).buckets(options.3)
+    }
+}
+
+impl<L: Labels> Describer for HistogramOpts<L> {
     fn describe(&self) -> Result<Desc> {
         self.common_opts.describe()
     }
 }
 
-impl From<Opts> for HistogramOpts {
-    fn from(opts: Opts) -> HistogramOpts {
+impl<L: Labels> From<Opts<L>> for HistogramOpts<L> {
+    fn from(opts: Opts<L>) -> HistogramOpts<L> {
         HistogramOpts {
             common_opts: opts,
             buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
@@ -174,7 +230,10 @@ pub struct HistogramCore {
 }
 
 impl HistogramCore {
-    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore> {
+    pub fn new<L: Labels, S: AsRef<str>>(
+        opts: &HistogramOpts<L>,
+        label_values: &[S],
+    ) -> Result<HistogramCore> {
         let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
@@ -366,18 +425,31 @@ pub struct Histogram {
     core: Arc<HistogramCore>,
 }
 
+impl super::AssertSend for Histogram {}
+
+impl super::AssertSync for Histogram {}
+
 impl Histogram {
-    /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
-    pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(&opts, &[])
+    /// Create a [`Histogram`](::Histogram) with the `name` and `help` arguments.
+    pub fn new<A, B>(name: A, help: B) -> Result<Self>
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
+        let opts = HistogramOpts::new(name, help);
+        Self::from_opts(opts)
     }
 
-    fn with_opts_and_label_values(
-        opts: &HistogramOpts,
-        label_values: &[&str],
-    ) -> Result<Histogram> {
-        let core = HistogramCore::new(opts, label_values)?;
+    /// Create a [`Histogram`](::Histogram) with the `opts` options.
+    pub fn from_opts<O: Into<HistogramOpts<[&'static str; 0]>>>(opts: O) -> Result<Self> {
+        Self::with_opts_and_label_values::<_, &'static str>(&opts.into(), &[])
+    }
 
+    fn with_opts_and_label_values<L: Labels, S: AsRef<str>>(
+        opts: &HistogramOpts<L>,
+        label_values: &[S],
+    ) -> Result<Self> {
+        let core = HistogramCore::new(opts, label_values)?;
         Ok(Histogram {
             core: Arc::new(core),
         })
@@ -436,14 +508,33 @@ impl Collector for Histogram {
     }
 }
 
-#[derive(Clone)]
-pub struct HistogramVecBuilder {}
+pub struct HistogramVecBuilder<L: Labels> {
+    _phantom: PhantomData<L>,
+}
 
-impl MetricVecBuilder for HistogramVecBuilder {
+impl<L: Labels> super::AssertSend for HistogramVecBuilder<L> {}
+
+impl<L: Labels> super::AssertSync for HistogramVecBuilder<L> {}
+
+impl<L: Labels> HistogramVecBuilder<L> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<L: Labels> Clone for HistogramVecBuilder<L> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<L: Labels> MetricVecBuilder for HistogramVecBuilder<L> {
     type M = Histogram;
-    type P = HistogramOpts;
+    type P = HistogramOpts<L>;
 
-    fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
+    fn build<S: AsRef<str>>(&self, opts: &Self::P, vals: &[S]) -> Result<Histogram> {
         Histogram::with_opts_and_label_values(opts, vals)
     }
 }
@@ -452,23 +543,27 @@ impl MetricVecBuilder for HistogramVecBuilder {
 /// same [`Desc`](::core::Desc), but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
-pub type HistogramVec = MetricVec<HistogramVecBuilder>;
+pub type HistogramVec<L> = MetricVec<L, HistogramVecBuilder<L>>;
 
-impl HistogramVec {
+impl<L: Labels> super::AssertSend for HistogramVec<L> {}
+
+impl<L: Labels> super::AssertSync for HistogramVec<L> {}
+
+impl<L: Labels> HistogramVec<L> {
     /// Create a new [`HistogramVec`](::HistogramVec) based on the provided
     /// [`HistogramOpts`](::HistogramOpts) and partitioned by the given label names. At least
     /// one label name must be provided.
-    pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
-        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let opts = opts.variable_labels(variable_names);
-        let metric_vec =
-            MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
-
-        Ok(metric_vec as HistogramVec)
+    pub fn from_opts<O: Into<HistogramOpts<L>>>(opts: O) -> Result<Self> {
+        let metric_vec = MetricVec::create(
+            proto::MetricType::HISTOGRAM,
+            HistogramVecBuilder::new(),
+            opts.into(),
+        )?;
+        Ok(metric_vec as Self)
     }
 
     /// Return a `LocalHistogramVec` for single thread usage.
-    pub fn local(&self) -> LocalHistogramVec {
+    pub fn local(&self) -> LocalHistogramVec<L> {
         let vec = self.clone();
         LocalHistogramVec::new(vec)
     }
@@ -709,21 +804,21 @@ impl Drop for LocalHistogram {
 }
 
 /// An unsync [`HistogramVec`](::HistogramVec).
-pub struct LocalHistogramVec {
-    vec: HistogramVec,
+pub struct LocalHistogramVec<L: Labels> {
+    vec: HistogramVec<L>,
     local: HashMap<u64, LocalHistogram>,
 }
 
-impl LocalHistogramVec {
-    fn new(vec: HistogramVec) -> LocalHistogramVec {
+impl<L: Labels> LocalHistogramVec<L> {
+    fn new(vec: HistogramVec<L>) -> Self {
         let local = HashMap::with_capacity(vec.v.children.read().len());
         LocalHistogramVec { vec, local }
     }
 
     /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
-        let hash = self.vec.v.hash_label_values(vals).unwrap();
+    pub fn with_label_values<'a>(&'a mut self, vals: L) -> &'a LocalHistogram {
+        let hash = self.vec.v.hash_label_values(&vals);
         let vec = &self.vec;
         self.local
             .entry(hash)
@@ -732,8 +827,8 @@ impl LocalHistogramVec {
 
     /// Remove a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::remove_label_values](::core::MetricVec::remove_label_values).
-    pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
-        let hash = self.vec.v.hash_label_values(vals)?;
+    pub fn remove_label_values(&mut self, vals: L) -> Result<()> {
+        let hash = self.vec.v.hash_label_values(&vals);
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
@@ -746,8 +841,8 @@ impl LocalHistogramVec {
     }
 }
 
-impl Clone for LocalHistogramVec {
-    fn clone(&self) -> LocalHistogramVec {
+impl<L: Labels> Clone for LocalHistogramVec<L> {
+    fn clone(&self) -> LocalHistogramVec<L> {
         LocalHistogramVec::new(self.vec.clone())
     }
 }
@@ -767,7 +862,7 @@ mod tests {
         let opts = HistogramOpts::new("test1", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         histogram.observe(1.0);
 
         let timer = histogram.start_timer();
@@ -794,7 +889,7 @@ mod tests {
 
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test2", "test help").buckets(buckets.clone());
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         let mut mfs = histogram.collect();
         assert_eq!(mfs.len(), 1);
 
@@ -811,7 +906,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     fn test_histogram_coarse_timer() {
         let opts = HistogramOpts::new("test1", "test help");
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
 
         let timer = histogram.start_coarse_timer();
         thread::sleep(Duration::from_millis(100));
@@ -916,34 +1011,34 @@ mod tests {
 
     #[test]
     fn test_histogram_vec_with_label_values() {
-        let vec = HistogramVec::new(
-            HistogramOpts::new("test_histogram_vec", "test histogram vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec = HistogramVec::from_opts((
+            "test_histogram_vec",
+            "test histogram vec help",
+            ["l1", "l2"],
+        )).unwrap();
 
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
-        vec.with_label_values(&["v1", "v2"]).observe(1.0);
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+        assert!(vec.remove_label_values(["v1", "v2"]).is_err());
+        vec.with_label_values(["v1", "v2"]).observe(1.0);
+        assert!(vec.remove_label_values(["v1", "v2"]).is_ok());
 
-        assert!(vec.remove_label_values(&["v1"]).is_err());
-        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+        assert!(vec.remove_label_values(["v1", "v3"]).is_err());
     }
 
     #[test]
     fn test_histogram_vec_with_opts_buckets() {
-        let labels = ["l1", "l2"];
         let buckets = vec![1.0, 2.0, 3.0];
-        let vec = HistogramVec::new(
-            HistogramOpts::new("test_histogram_vec", "test histogram vec help")
-                .buckets(buckets.clone()),
-            &labels,
-        ).unwrap();
+        let vec = HistogramVec::from_opts((
+            "test_histogram_vec",
+            "test histogram vec help",
+            ["l1", "l2"],
+            buckets.clone(),
+        )).unwrap();
 
-        let histogram = vec.with_label_values(&["v1", "v2"]);
+        let histogram = vec.with_label_values(["v1", "v2"]);
         histogram.observe(1.0);
 
         let m = histogram.metric();
-        assert_eq!(m.get_label().len(), labels.len());
+        assert_eq!(m.get_label().len(), 2);
 
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 1);
@@ -956,7 +1051,7 @@ mod tests {
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test_histogram_local", "test histogram local help")
             .buckets(buckets.clone());
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         let local = histogram.local();
 
         let check = |count, sum| {
@@ -984,14 +1079,15 @@ mod tests {
 
     #[test]
     fn test_histogram_vec_local() {
-        let vec = HistogramVec::new(
-            HistogramOpts::new("test_histogram_vec_local", "test histogram vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec = HistogramVec::from_opts((
+            "test_histogram_vec_local",
+            "test histogram vec help",
+            ["l1", "l2"],
+        )).unwrap();
         let mut local_vec = vec.local();
 
-        vec.remove_label_values(&["v1", "v2"]).unwrap_err();
-        local_vec.remove_label_values(&["v1", "v2"]).unwrap_err();
+        vec.remove_label_values(["v1", "v2"]).unwrap_err();
+        local_vec.remove_label_values(["v1", "v2"]).unwrap_err();
 
         let check = |count, sum| {
             let ms = vec.collect()[0].take_metric();
@@ -1002,7 +1098,7 @@ mod tests {
 
         {
             // Flush LocalHistogram
-            let h = local_vec.with_label_values(&["v1", "v2"]);
+            let h = local_vec.with_label_values(["v1", "v2"]);
             h.observe(1.0);
             h.flush();
             check(1, 1.0);
@@ -1010,16 +1106,16 @@ mod tests {
 
         {
             // Flush LocalHistogramVec
-            local_vec.with_label_values(&["v1", "v2"]).observe(4.0);
+            local_vec.with_label_values(["v1", "v2"]).observe(4.0);
             local_vec.flush();
             check(2, 5.0);
         }
         {
             // Reset ["v1", "v2"]
-            local_vec.remove_label_values(&["v1", "v2"]).unwrap();
+            local_vec.remove_label_values(["v1", "v2"]).unwrap();
 
             // Flush on drop
-            local_vec.with_label_values(&["v1", "v2"]).observe(2.0);
+            local_vec.with_label_values(["v1", "v2"]).observe(2.0);
             drop(local_vec);
             check(1, 2.0);
         }

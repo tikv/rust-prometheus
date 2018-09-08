@@ -19,7 +19,7 @@ use std::sync::Arc;
 use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
 use errors::Result;
-use metrics::{Collector, Metric, Opts};
+use metrics::{Collector, Labels, Metric, Opts};
 use proto;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
@@ -29,6 +29,10 @@ use vec::{MetricVec, MetricVecBuilder};
 pub struct GenericCounter<P: Atomic> {
     v: Arc<Value<P>>,
 }
+
+impl<P: Atomic> super::AssertSend for GenericCounter<P> {}
+
+impl<P: Atomic> super::AssertSync for GenericCounter<P> {}
 
 /// A [`Metric`](::core::Metric) represents a single numerical value that only ever goes up.
 pub type Counter = GenericCounter<AtomicF64>;
@@ -47,17 +51,24 @@ impl<P: Atomic> Clone for GenericCounter<P> {
 
 impl<P: Atomic> GenericCounter<P> {
     /// Create a [`GenericCounter`](::core::GenericCounter) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
+    pub fn new<A, B>(name: A, help: B) -> Result<Self>
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         let opts = Opts::new(name, help);
-        Self::with_opts(opts)
+        Self::from_opts(opts)
     }
 
     /// Create a [`GenericCounter`](::core::GenericCounter) with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+    pub fn from_opts<O: Into<Opts<[&'static str; 0]>>>(opts: O) -> Result<Self> {
+        Self::with_opts_and_label_values::<_, &'static str>(&opts.into(), &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn with_opts_and_label_values<L: Labels, S: AsRef<str>>(
+        opts: &Opts<L>,
+        label_values: &[S],
+    ) -> Result<Self> {
         let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -107,62 +118,73 @@ impl<P: Atomic> Metric for GenericCounter<P> {
     }
 }
 
-pub struct CounterVecBuilder<P: Atomic> {
-    _phantom: PhantomData<P>,
+pub struct CounterVecBuilder<P: Atomic, L: Labels> {
+    _phantom_p: PhantomData<P>,
+    _phantom_l: PhantomData<L>,
 }
 
-impl<P: Atomic> CounterVecBuilder<P> {
+impl<P: Atomic, L: Labels> super::AssertSend for CounterVecBuilder<P, L> {}
+
+impl<P: Atomic, L: Labels> super::AssertSync for CounterVecBuilder<P, L> {}
+
+impl<P: Atomic, L: Labels> CounterVecBuilder<P, L> {
     pub fn new() -> Self {
         Self {
-            _phantom: PhantomData,
+            _phantom_p: PhantomData,
+            _phantom_l: PhantomData,
         }
     }
 }
 
-impl<P: Atomic> Clone for CounterVecBuilder<P> {
+impl<P: Atomic, L: Labels> Clone for CounterVecBuilder<P, L> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
 
-impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
+impl<P: Atomic, L: Labels> MetricVecBuilder for CounterVecBuilder<P, L> {
     type M = GenericCounter<P>;
-    type P = Opts;
+    type P = Opts<L>;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+    fn build<S: AsRef<str>>(&self, opts: &Self::P, vals: &[S]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }
 
 /// The underlying implementation for [`CounterVec`](::CounterVec) and [`IntCounterVec`](::IntCounterVec).
-pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
+pub type GenericCounterVec<P, L> = MetricVec<L, CounterVecBuilder<P, L>>;
+
+impl<P: Atomic, L: Labels> super::AssertSend for GenericCounterVec<P, L> {}
+
+impl<P: Atomic, L: Labels> super::AssertSync for GenericCounterVec<P, L> {}
 
 /// A [`Collector`](::core::Collector) that bundles a set of [`Counter`](::Counter)s that all share
 /// the same [`Desc`](::core::Desc), but have different values for their variable labels. This is
 /// used if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of HTTP requests, partitioned by response code and method).
-pub type CounterVec = GenericCounterVec<AtomicF64>;
+pub type CounterVec<L> = GenericCounterVec<AtomicF64, L>;
 
 /// The integer version of [`CounterVec`](::CounterVec). Provides better performance if metric
 /// values are all integers.
-pub type IntCounterVec = GenericCounterVec<AtomicI64>;
+pub type IntCounterVec<L> = GenericCounterVec<AtomicI64, L>;
 
-impl<P: Atomic> GenericCounterVec<P> {
+impl<P: Atomic, L: Labels> GenericCounterVec<P, L> {
     /// Create a new [`GenericCounterVec`](::core::GenericCounterVec) based on the provided
     /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must be
     /// provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
-        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
-        let opts = opts.variable_labels(variable_names);
-        let metric_vec =
-            MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder::new(), opts)?;
-
+    pub fn from_opts<O: Into<Opts<L>>>(opts: O) -> Result<Self> {
+        let metric_vec = MetricVec::create(
+            proto::MetricType::COUNTER,
+            CounterVecBuilder::new(),
+            opts.into(),
+        )?;
         Ok(metric_vec as Self)
     }
 
     /// Return a [`GenericLocalCounterVec`](::core::GenericLocalCounterVec) for single thread usage.
-    pub fn local(&self) -> GenericLocalCounterVec<P> {
-        GenericLocalCounterVec::new(self.clone())
+    pub fn local(&self) -> GenericLocalCounterVec<P, L> {
+        let vec = self.clone();
+        GenericLocalCounterVec::new(vec)
     }
 }
 
@@ -230,28 +252,28 @@ impl<P: Atomic> Clone for GenericLocalCounter<P> {
 
 /// The underlying implementation for [`LocalCounterVec`](::local::LocalCounterVec)
 /// and [`LocalIntCounterVec`](::local::LocalIntCounterVec).
-pub struct GenericLocalCounterVec<P: Atomic> {
-    vec: GenericCounterVec<P>,
+pub struct GenericLocalCounterVec<P: Atomic, L: Labels> {
+    vec: GenericCounterVec<P, L>,
     local: HashMap<u64, GenericLocalCounter<P>>,
 }
 
 /// An unsync [`CounterVec`](::CounterVec).
-pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
+pub type LocalCounterVec<L> = GenericLocalCounterVec<AtomicF64, L>;
 
 /// The integer version of [`LocalCounterVec`](::local::LocalCounterVec).
 /// Provides better performance if metric values are all integers.
-pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicI64>;
+pub type LocalIntCounterVec<L> = GenericLocalCounterVec<AtomicI64, L>;
 
-impl<P: Atomic> GenericLocalCounterVec<P> {
-    fn new(vec: GenericCounterVec<P>) -> Self {
+impl<P: Atomic, L: Labels> GenericLocalCounterVec<P, L> {
+    fn new(vec: GenericCounterVec<P, L>) -> Self {
         let local = HashMap::with_capacity(vec.v.children.read().len());
         Self { vec, local }
     }
 
     /// Get a [`GenericLocalCounter`](::core::GenericLocalCounter) by label values.
     /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut GenericLocalCounter<P> {
-        let hash = self.vec.v.hash_label_values(vals).unwrap();
+    pub fn with_label_values<'a>(&'a mut self, vals: L) -> &'a mut GenericLocalCounter<P> {
+        let hash = self.vec.v.hash_label_values(&vals);
         let vec = &self.vec;
         self.local
             .entry(hash)
@@ -260,8 +282,8 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
 
     /// Remove a [`GenericLocalCounter`](::core::GenericLocalCounter) by label values.
     /// See more [MetricVec::remove_label_values](::core::MetricVec::remove_label_values).
-    pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
-        let hash = self.vec.v.hash_label_values(vals)?;
+    pub fn remove_label_values(&mut self, vals: L) -> Result<()> {
+        let hash = self.vec.v.hash_label_values(&vals);
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
@@ -274,7 +296,7 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
     }
 }
 
-impl<P: Atomic> Clone for GenericLocalCounterVec<P> {
+impl<P: Atomic, L: Labels> Clone for GenericLocalCounterVec<P, L> {
     fn clone(&self) -> Self {
         Self::new(self.vec.clone())
     }
@@ -292,7 +314,7 @@ mod tests {
         let opts = Opts::new("test", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let counter = Counter::with_opts(opts).unwrap();
+        let counter = Counter::from_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.get() as u64, 1);
         counter.inc_by(42.0);
@@ -359,10 +381,8 @@ mod tests {
 
     #[test]
     fn test_counter_vec_with_labels() {
-        let vec = CounterVec::new(
-            Opts::new("test_couter_vec", "test counter vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec = CounterVec::from_opts(("test_couter_vec", "test counter vec help", ["l1", "l2"]))
+            .unwrap();
 
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
@@ -389,123 +409,117 @@ mod tests {
 
     #[test]
     fn test_int_counter_vec() {
-        let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
+        let vec = IntCounterVec::from_opts(("foo", "bar", ["l1", "l2"])).unwrap();
 
-        vec.with_label_values(&["v1", "v3"]).inc();
-        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
+        vec.with_label_values(["v1", "v3"]).inc();
+        assert_eq!(vec.with_label_values(["v1", "v3"]).get(), 1);
 
-        vec.with_label_values(&["v1", "v2"]).inc_by(12);
-        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
+        vec.with_label_values(["v1", "v2"]).inc_by(12);
+        assert_eq!(vec.with_label_values(["v1", "v3"]).get(), 1);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 12);
 
-        vec.with_label_values(&["v4", "v2"]).inc_by(2);
-        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 1);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
-        assert_eq!(vec.with_label_values(&["v4", "v2"]).get(), 2);
+        vec.with_label_values(["v4", "v2"]).inc_by(2);
+        assert_eq!(vec.with_label_values(["v1", "v3"]).get(), 1);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 12);
+        assert_eq!(vec.with_label_values(["v4", "v2"]).get(), 2);
 
-        vec.with_label_values(&["v1", "v3"]).inc_by(5);
-        assert_eq!(vec.with_label_values(&["v1", "v3"]).get(), 6);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 12);
-        assert_eq!(vec.with_label_values(&["v4", "v2"]).get(), 2);
+        vec.with_label_values(["v1", "v3"]).inc_by(5);
+        assert_eq!(vec.with_label_values(["v1", "v3"]).get(), 6);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 12);
+        assert_eq!(vec.with_label_values(["v4", "v2"]).get(), 2);
     }
 
     #[test]
     fn test_counter_vec_with_label_values() {
-        let vec = CounterVec::new(
-            Opts::new("test_vec", "test counter vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec =
+            CounterVec::from_opts(("test_vec", "test counter vec help", ["l1", "l2"])).unwrap();
 
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
-        vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
+        assert!(vec.remove_label_values(["v1", "v2"]).is_err());
+        vec.with_label_values(["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(["v1", "v2"]).is_ok());
 
-        vec.with_label_values(&["v1", "v2"]).inc();
-        assert!(vec.remove_label_values(&["v1"]).is_err());
-        assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+        vec.with_label_values(["v1", "v2"]).inc();
+        assert!(vec.remove_label_values(["v1", "v3"]).is_err());
     }
 
     #[test]
     fn test_counter_vec_local() {
-        let vec = CounterVec::new(
-            Opts::new("test_vec_local", "test counter vec help"),
-            &["l1", "l2"],
-        ).unwrap();
+        let vec = CounterVec::from_opts(("test_vec_local", "test counter vec help", ["l1", "l2"]))
+            .unwrap();
         let mut local_vec_1 = vec.local();
         let mut local_vec_2 = local_vec_1.clone();
 
-        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
+        assert!(local_vec_1.remove_label_values(["v1", "v2"]).is_err());
 
-        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23.0);
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-
-        local_vec_1.flush();
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
+        local_vec_1.with_label_values(["v1", "v2"]).inc_by(23.0);
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 23.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
 
         local_vec_1.flush();
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
-
-        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11.0);
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 23.0) <= EPSILON);
 
         local_vec_1.flush();
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 34.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 23.0) <= EPSILON);
+
+        local_vec_1.with_label_values(["v1", "v2"]).inc_by(11.0);
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 11.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 23.0) <= EPSILON);
+
+        local_vec_1.flush();
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 34.0) <= EPSILON);
 
         // When calling `remove_label_values`, it is "flushed" immediately.
-        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_ok());
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!(local_vec_1.remove_label_values(["v1", "v2"]).is_ok());
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
 
-        local_vec_1.with_label_values(&["v1", "v2"]).inc();
-        assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
-        assert!(local_vec_1.remove_label_values(&["v1", "v3"]).is_err());
+        local_vec_1.with_label_values(["v1", "v2"]).inc();
+        assert!(local_vec_1.remove_label_values(["v1", "v3"]).is_err());
 
-        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(13.0);
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        local_vec_1.with_label_values(["v1", "v2"]).inc_by(13.0);
+        assert!((local_vec_1.with_label_values(["v1", "v2"]).get() - 14.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 0.0) <= EPSILON);
 
-        local_vec_2.with_label_values(&["v1", "v2"]).inc_by(7.0);
-        assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= EPSILON);
-
-        local_vec_1.flush();
-        local_vec_2.flush();
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
+        local_vec_2.with_label_values(["v1", "v2"]).inc_by(7.0);
+        assert!((local_vec_2.with_label_values(["v1", "v2"]).get() - 7.0) <= EPSILON);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 21.0) <= EPSILON);
+
+        local_vec_1.flush();
+        local_vec_2.flush();
+        assert!((vec.with_label_values(["v1", "v2"]).get() - 21.0) <= EPSILON);
     }
 
     #[test]
     fn test_int_counter_vec_local() {
-        let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
+        let vec = IntCounterVec::from_opts(("foo", "bar", ["l1", "l2"])).unwrap();
         let mut local_vec_1 = vec.local();
-        assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
+        assert!(local_vec_1.remove_label_values(["v1", "v2"]).is_err());
 
-        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23);
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 23);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 0);
-
-        local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+        local_vec_1.with_label_values(["v1", "v2"]).inc_by(23);
+        assert_eq!(local_vec_1.with_label_values(["v1", "v2"]).get(), 23);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 0);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
-
-        local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11);
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 11);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 23);
+        assert_eq!(local_vec_1.with_label_values(["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 23);
 
         local_vec_1.flush();
-        assert_eq!(local_vec_1.with_label_values(&["v1", "v2"]).get(), 0);
-        assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34);
+        assert_eq!(local_vec_1.with_label_values(["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 23);
+
+        local_vec_1.with_label_values(["v1", "v2"]).inc_by(11);
+        assert_eq!(local_vec_1.with_label_values(["v1", "v2"]).get(), 11);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 23);
+
+        local_vec_1.flush();
+        assert_eq!(local_vec_1.with_label_values(["v1", "v2"]).get(), 0);
+        assert_eq!(vec.with_label_values(["v1", "v2"]).get(), 34);
     }
 
     #[test]

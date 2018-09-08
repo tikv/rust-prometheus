@@ -25,7 +25,7 @@ fn bench_gauge_with_label_values(b: &mut Bencher) {
         Opts::new("benchmark_gauge", "A gauge to benchmark it."),
         &["one", "two", "three"],
     ).unwrap();
-    b.iter(|| gauge.with_label_values(&["eins", "zwei", "drei"]).inc())
+    b.iter(|| gauge.with_label_values(["eins", "zwei", "drei"]).inc())
 }
 
 #[bench]

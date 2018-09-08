@@ -252,7 +252,7 @@ mod tests {
         let counter_opts = Opts::new("test_counter", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let counter = Counter::with_opts(counter_opts).unwrap();
+        let counter = Counter::from_opts(counter_opts).unwrap();
         counter.inc();
 
         let mf = counter.collect();
@@ -270,7 +270,7 @@ test_counter{a="1",b="2"} 1
         let gauge_opts = Opts::new("test_gauge", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let gauge = Gauge::with_opts(gauge_opts).unwrap();
+        let gauge = Gauge::from_opts(gauge_opts).unwrap();
         gauge.inc();
         gauge.set(42.0);
 
@@ -289,7 +289,7 @@ test_gauge{a="1",b="2"} 42
     #[test]
     fn test_text_encoder_histogram() {
         let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1");
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         histogram.observe(0.25);
 
         let mf = histogram.collect();

@@ -50,11 +50,11 @@ pub struct Value<P: Atomic> {
 }
 
 impl<P: Atomic> Value<P> {
-    pub fn new<D: Describer>(
+    pub fn new<D: Describer, S: AsRef<str>>(
         describer: &D,
         val_type: ValueType,
         val: P::T,
-        label_values: &[&str],
+        label_values: &[S],
     ) -> Result<Self> {
         let desc = describer.describe()?;
         if desc.variable_labels.len() != label_values.len() {
@@ -135,7 +135,7 @@ impl<P: Atomic> Value<P> {
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
+pub fn make_label_pairs<S: AsRef<str>>(desc: &Desc, label_values: &[S]) -> Vec<LabelPair> {
     let total_len = desc.variable_labels.len() + desc.const_label_pairs.len();
     if total_len == 0 {
         return vec![];
@@ -146,13 +146,12 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
     }
 
     let mut label_pairs = Vec::with_capacity(total_len);
-    for (i, n) in desc.variable_labels.iter().enumerate() {
+    for (name, value) in desc.variable_labels.iter().zip(label_values.iter()) {
         let mut label_pair = LabelPair::new();
-        label_pair.set_name(n.clone());
-        label_pair.set_value(label_values[i].to_owned());
+        label_pair.set_name(name.clone());
+        label_pair.set_value(value.as_ref().to_string());
         label_pairs.push(label_pair);
     }
-
     for label_pair in &desc.const_label_pairs {
         label_pairs.push(label_pair.clone());
     }

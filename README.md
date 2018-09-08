@@ -13,7 +13,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 
     ```toml
     [dependencies]
-    prometheus = "0.4"
+    prometheus = "0.5"
     ```
 
 + Add this to your crate in `lib.rs`:
@@ -33,7 +33,8 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 
 ### Note
 
-The crate has a pre-generated protobuf binding file for `protobuf` v2.0, if you need use the latest version of `protobuf`, you can generate the binding file on building with the `gen` feature.
+The crate has a pre-generated protobuf binding file for `protobuf` v2.0, if you need use the latest version of
+`protobuf`, you can generate the binding file on building with the `gen` feature.
 
 ```toml
 [dependencies.prometheus]
@@ -43,31 +44,96 @@ features = ["gen"]
 
 ## Example
 
+### Basic
+
+[examples/readme_basic.rs](./examples/readme_basic.rs): Create a register and a counter, gather metrics into text
+format:
+
 ```rust
-use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
+extern crate prometheus;
 
-// Create a Counter.
-let counter_opts = Opts::new("test_counter", "test counter help");
-let counter = Counter::with_opts(counter_opts).unwrap();
+use prometheus::prelude::*;
+use prometheus::{Counter, Registry, TextEncoder};
 
-// Create a Registry and register Counter.
-let r = Registry::new();
-r.register(Box::new(counter.clone())).unwrap();
+fn main() {
+    // Create a Registry
+    let r = Registry::new();
 
-// Inc.
-counter.inc();
+    // Create a Counter and register to the registry.
+    let counter = Counter::new("page_views", "Number of page views")
+        .unwrap()
+        .register(&r);
 
-// Gather the metrics.
-let mut buffer = vec![];
-let encoder = TextEncoder::new();
-let metric_families = r.gather();
-encoder.encode(&metric_families, &mut buffer).unwrap();
+    // Increase counter.
+    counter.inc();
 
-// Output to the standard output.
-println!("{}", String::from_utf8(buffer).unwrap());
+    // Gather metrics.
+    let mut buffer = vec![];
+    let encoder = TextEncoder::new();
+    let metric_families = r.gather();
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+
+    // Output to the standard output.
+    println!("{}", String::from_utf8(buffer).unwrap());
+}
 ```
 
-[More Examples](./examples)
+### Vector
+
+[examples/readme_vec.rs](./examples/readme_vec.rs): Create a histogram vector, gather metrics into text format from
+default registry:
+
+```rust
+#[macro_use]
+extern crate lazy_static;
+extern crate prometheus;
+
+use prometheus::prelude::*;
+use prometheus::{HistogramVec, TextEncoder};
+
+lazy_static! {
+    // Create a static HistogramVec and register to the default registry.
+    static ref PAGE_DURATION: HistogramVec<[&'static str; 2]> = HistogramVec::from_opts((
+        "page_view_duration",
+        "Page view duration",
+        ["country", "city"],
+        prometheus::exponential_buckets(0.1, 2.0, 10).unwrap(),
+    ))
+        .unwrap()
+        .register_default();
+}
+
+fn main() {
+    PAGE_DURATION
+        .with_label_values(["US", "New York"])
+        .observe(10.5);
+    PAGE_DURATION
+        .with_label_values(["US", "Los Angeles"])
+        .observe(12.5);
+    PAGE_DURATION
+        .with_label_values(["US", "Los Angeles"])
+        .observe(5.0);
+    PAGE_DURATION
+        .with_label_values(["China", "Shanghai"])
+        .observe(5.5);
+    PAGE_DURATION
+        .with_label_values(["China", "Beijing"])
+        .observe(7.0);
+
+    // Gather metrics from default registry.
+    let mut buffer = vec![];
+    let encoder = TextEncoder::new();
+    let metric_families = prometheus::gather();
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+
+    // Output to the standard output.
+    println!("{}", String::from_utf8(buffer).unwrap());
+}
+```
+
+### More Examples
+
+Please refer to the [examples](./examples) directory.
 
 ## Advanced
 

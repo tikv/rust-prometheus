@@ -52,17 +52,14 @@ mod tests {
     use counter::CounterVec;
     use encoder::Encoder;
     use metrics::Collector;
-    use metrics::Opts;
 
     #[test]
     fn test_bad_metrics() {
         let mut writer = Vec::<u8>::new();
         let pb_encoder = ProtobufEncoder::new();
         let text_encoder = TextEncoder::new();
-        let cv = CounterVec::new(
-            Opts::new("test_counter_vec", "help information"),
-            &["labelname"],
-        ).unwrap();
+        let cv =
+            CounterVec::from_opts(("test_counter_vec", "help information", ["labelname"])).unwrap();
 
         // Empty metrics
         let mfs = cv.collect();
@@ -73,7 +70,7 @@ mod tests {
         assert_eq!(writer.len(), 0);
 
         // Add a sub metric
-        cv.with_label_values(&["foo"]).inc();
+        cv.with_label_values(["foo"]).inc();
         let mut mfs = cv.collect();
 
         // Empty name

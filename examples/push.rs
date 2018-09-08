@@ -13,28 +13,34 @@
 
 #![cfg_attr(not(feature = "push"), allow(unused_imports, dead_code))]
 
+//! Push metrics to Prometheus PushGateway
+
 extern crate getopts;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
 extern crate prometheus;
+#[macro_use]
+extern crate maplit;
 
 use std::env;
 use std::thread;
 use std::time;
 
 use getopts::Options;
+use prometheus::prelude::*;
 use prometheus::{Counter, Histogram};
 
 lazy_static! {
-    static ref PUSH_COUNTER: Counter = register_counter!(
+    static ref PUSH_COUNTER: Counter = Counter::new(
         "example_push_total",
         "Total number of prometheus client pushed."
-    ).unwrap();
-    static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
+    ).unwrap()
+        .register_default();
+    static ref PUSH_REQ_HISTOGRAM: Histogram = Histogram::new(
         "example_push_request_duration_seconds",
         "The push request latencies in seconds."
-    ).unwrap();
+    ).unwrap()
+        .register_default();
 }
 
 #[cfg(feature = "push")]
@@ -67,7 +73,7 @@ fn main() {
         let _timer = PUSH_REQ_HISTOGRAM.start_timer(); // drop as observe
         prometheus::push_metrics(
             "example_push",
-            labels!{"instance".to_owned() => "HAL-9000".to_owned(),},
+            hashmap!{"instance".to_owned() => "HAL-9000".to_owned()},
             &address,
             metric_families,
             Some(prometheus::BasicAuthentication {
@@ -84,6 +90,6 @@ fn main() {
 fn main() {
     println!(
         r#"Please enable feature "push", try:
-    cargo run --features="push" --example example_push"#
+    cargo run --features="push" --example push"#
     );
 }
