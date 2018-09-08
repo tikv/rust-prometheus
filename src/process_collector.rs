@@ -277,7 +277,7 @@ mod tests {
         }
 
         let r = registry::Registry::new();
-        let res = r.register(Box::new(pc));
+        let res = r.try_register(Box::new(pc));
         assert!(res.is_ok());
     }
 
