@@ -32,7 +32,7 @@ use vec::{MetricVec, MetricVecBuilder};
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
 pub const DEFAULT_BUCKETS: &[f64; 11] = &[
-    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0
+    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
 ];
 
 /// Used for the label that defines the upper bound of a
@@ -204,7 +204,8 @@ impl HistogramCore {
 
     pub fn observe(&self, v: f64) {
         // Try find the bucket.
-        let mut iter = self.upper_bounds
+        let mut iter = self
+            .upper_bounds
             .iter()
             .enumerate()
             .filter(|&(_, f)| v <= *f);
@@ -612,7 +613,8 @@ impl LocalHistogramCore {
 
     pub fn observe(&mut self, v: f64) {
         // Try find the bucket.
-        let mut iter = self.histogram
+        let mut iter = self
+            .histogram
             .core
             .upper_bounds
             .iter()
