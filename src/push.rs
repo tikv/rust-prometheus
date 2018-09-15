@@ -196,7 +196,7 @@ fn push_from_collector<S: BuildHasher>(
 ) -> Result<()> {
     let registry = Registry::new();
     for bc in collectors {
-        registry.register(bc)?;
+        registry.try_register(bc)?;
     }
 
     let mfs = registry.gather();

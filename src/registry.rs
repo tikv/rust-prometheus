@@ -31,7 +31,7 @@ struct RegistryCore {
 }
 
 impl RegistryCore {
-    fn register(&mut self, c: Box<Collector>) -> Result<()> {
+    fn try_register(&mut self, c: Box<Collector>) -> Result<()> {
         let mut desc_id_set = HashSet::new();
         let mut collector_id: u64 = 0;
 
@@ -88,7 +88,7 @@ impl RegistryCore {
         }
     }
 
-    fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
+    fn try_unregister(&mut self, c: Box<Collector>) -> Result<()> {
         let mut id_set = Vec::new();
         let mut collector_id = 0;
         for desc in c.desc() {
@@ -207,12 +207,12 @@ impl Default for Registry {
 }
 
 impl Registry {
-    /// `new` creates a Registry.
+    /// Create a Registry.
     pub fn new() -> Registry {
         Registry::default()
     }
 
-    /// `register` registers a new [`Collector`](::core::Collector) to be included in metrics
+    /// Register a new [`Collector`](::core::Collector) to be included in metrics
     /// collection. It returns an error if the descriptors provided by the
     /// [`Collector`](::core::Collector) are invalid or if they — in combination with descriptors of
     /// already registered Collectors — do not fulfill the consistency and
@@ -221,16 +221,28 @@ impl Registry {
     /// If the provided [`Collector`](::core::Collector) is equal to a [`Collector`](::core::Collector) already registered
     /// (which includes the case of re-registering the same [`Collector`](::core::Collector)), the
     /// AlreadyReg error returns.
-    pub fn register(&self, c: Box<Collector>) -> Result<()> {
-        self.r.write().register(c)
+    pub fn try_register(&self, c: Box<Collector>) -> Result<()> {
+        self.r.write().try_register(c)
     }
 
-    /// `unregister` unregisters the [`Collector`](::core::Collector) that equals the [`Collector`](::core::Collector) passed
+    /// Register a new [`Collector`](::core::Collector) to be included in metrics
+    //  collection. Panics if there are errors.
+    pub fn register(&self, c: Box<Collector>) {
+        self.try_register(c).unwrap()
+    }
+
+    /// Unregister the [`Collector`](::core::Collector) that equals the [`Collector`](::core::Collector) passed
     /// in as an argument.  (Two Collectors are considered equal if their
     /// Describe method yields the same set of descriptors.) The function
     /// returns error when the [`Collector`](::core::Collector) is not registered.
-    pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
-        self.r.write().unregister(c)
+    pub fn try_unregister(&self, c: Box<Collector>) -> Result<()> {
+        self.r.write().try_unregister(c)
+    }
+
+    /// Unregister the [`Collector`](::core::Collector) that equals the [`Collector`](::core::Collector) passed
+    /// in as an argument. Panics if there are errors.
+    pub fn unregister(&self, c: Box<Collector>) {
+        self.try_unregister(c).unwrap()
     }
 
     /// `gather` calls the Collect method of the registered Collectors and then
@@ -247,7 +259,7 @@ cfg_if! {
             use process_collector::ProcessCollector;
 
             let pc = ProcessCollector::for_self();
-            reg.register(Box::new(pc))
+            reg.try_register(Box::new(pc))
         }
     } else {
         fn register_default_process_collector(_: &Registry) -> Result<()> {
@@ -268,20 +280,25 @@ lazy_static! {
     };
 }
 
-/// Registers a new [`Collector`](::core::Collector) to be included in metrics collection. It
-/// returns an error if the descriptors provided by the [`Collector`](::core::Collector) are invalid or
-/// if they - in combination with descriptors of already registered Collectors -
-/// do not fulfill the consistency and uniqueness criteria described in the [`Desc`](::core::Desc)
-/// documentation.
-pub fn register(c: Box<Collector>) -> Result<()> {
+/// Registers a new [`Collector`](::core::Collector) to the default registry.
+pub fn try_register(c: Box<Collector>) -> Result<()> {
+    DEFAULT_REGISTRY.try_register(c)
+}
+
+/// Registers a new [`Collector`](::core::Collector) to the default registry, panics if
+/// there are errors.
+pub fn register(c: Box<Collector>) {
     DEFAULT_REGISTRY.register(c)
 }
 
-/// Unregisters the [`Collector`](::core::Collector) that equals the [`Collector`](::core::Collector) passed in as
-/// an argument. (Two Collectors are considered equal if their Describe method
-/// yields the same set of descriptors.) The function returns an error if a
-/// [`Collector`](::core::Collector) was not registered.
-pub fn unregister(c: Box<Collector>) -> Result<()> {
+/// Unregisters the [`Collector`](::core::Collector) from the default registry.
+pub fn try_unregister(c: Box<Collector>) -> Result<()> {
+    DEFAULT_REGISTRY.try_unregister(c)
+}
+
+/// Unregisters the [`Collector`](::core::Collector) from the default registry, panics if
+/// there are errors.
+pub fn unregister(c: Box<Collector>) {
     DEFAULT_REGISTRY.unregister(c)
 }
 
@@ -306,7 +323,7 @@ mod tests {
         let r = Registry::new();
 
         let counter = Counter::new("test", "test help").unwrap();
-        r.register(Box::new(counter.clone())).unwrap();
+        r.try_register(Box::new(counter.clone())).unwrap();
         counter.inc();
 
         let r1 = r.clone();
@@ -317,15 +334,15 @@ mod tests {
 
         assert!(handler.join().is_ok());
 
-        assert!(r.register(Box::new(counter.clone())).is_err());
-        assert!(r.unregister(Box::new(counter.clone())).is_ok());
-        assert!(r.unregister(Box::new(counter.clone())).is_err());
-        assert!(r.register(Box::new(counter.clone())).is_ok());
+        assert!(r.try_register(Box::new(counter.clone())).is_err());
+        assert!(r.try_unregister(Box::new(counter.clone())).is_ok());
+        assert!(r.try_unregister(Box::new(counter.clone())).is_err());
+        assert!(r.try_register(Box::new(counter.clone())).is_ok());
 
         let counter_vec =
             CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
 
-        r.register(Box::new(counter_vec.clone())).unwrap();
+        r.try_register(Box::new(counter_vec.clone())).unwrap();
         counter_vec.with_label_values(&["1", "2"]).inc();
     }
 
@@ -333,12 +350,12 @@ mod tests {
     fn test_default_registry() {
         let counter = Counter::new("test", "test help").unwrap();
 
-        assert!(register(Box::new(counter.clone())).is_ok());
+        assert!(try_register(Box::new(counter.clone())).is_ok());
         assert_ne!(gather().len(), 0);
 
-        assert!(unregister(Box::new(counter.clone())).is_ok());
-        assert!(unregister(Box::new(counter.clone())).is_err());
-        assert!(register(Box::new(counter.clone())).is_ok());
+        assert!(try_unregister(Box::new(counter.clone())).is_ok());
+        assert!(try_unregister(Box::new(counter.clone())).is_err());
+        assert!(try_register(Box::new(counter.clone())).is_ok());
     }
 
     #[test]
@@ -348,9 +365,9 @@ mod tests {
         let counter_a = Counter::new("test_a_counter", "test help").unwrap();
         let counter_b = Counter::new("test_b_counter", "test help").unwrap();
         let counter_2 = Counter::new("test_2_counter", "test help").unwrap();
-        r.register(Box::new(counter_b.clone())).unwrap();
-        r.register(Box::new(counter_2.clone())).unwrap();
-        r.register(Box::new(counter_a.clone())).unwrap();
+        r.try_register(Box::new(counter_b.clone())).unwrap();
+        r.try_register(Box::new(counter_2.clone())).unwrap();
+        r.try_register(Box::new(counter_a.clone())).unwrap();
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 3);
@@ -363,7 +380,7 @@ mod tests {
             .const_label("a", "1")
             .const_label("b", "2");
         let counter_vec = CounterVec::new(opts, &["cc", "c1", "a2", "c0"]).unwrap();
-        r.register(Box::new(counter_vec.clone())).unwrap();
+        r.try_register(Box::new(counter_vec.clone())).unwrap();
 
         let mut map1 = HashMap::new();
         map1.insert("cc", "12");
@@ -456,7 +473,7 @@ mod tests {
         let mc = MultipleCollector { descs, counters };
 
         let r = Registry::new();
-        r.register(Box::new(mc)).unwrap();
+        r.try_register(Box::new(mc)).unwrap();
     }
 
     #[test]
@@ -464,7 +481,7 @@ mod tests {
         let counter_vec =
             CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
         let r = Registry::new();
-        r.register(Box::new(counter_vec.clone())).unwrap();
+        r.try_register(Box::new(counter_vec.clone())).unwrap();
         assert!(r.gather().is_empty());
         counter_vec.with_label_values(&["1", "2"]).inc();
         assert!(!r.gather().is_empty());

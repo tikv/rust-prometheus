@@ -52,7 +52,7 @@ let counter = Counter::with_opts(counter_opts).unwrap();
 
 // Create a Registry and register Counter.
 let r = Registry::new();
-r.register(Box::new(counter.clone())).unwrap();
+r.try_register(Box::new(counter.clone())).unwrap();
 
 // Inc.
 counter.inc();

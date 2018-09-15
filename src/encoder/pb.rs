@@ -65,7 +65,7 @@ mod tests {
                                  &["labelname"])
             .unwrap();
         let reg = registry::Registry::new();
-        reg.register(Box::new(cv.clone())).unwrap();
+        reg.try_register(Box::new(cv.clone())).unwrap();
 
         cv.get_metric_with_label_values(&["2230"]).unwrap().inc();
         let mf = reg.gather();

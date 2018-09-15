@@ -154,7 +154,7 @@ macro_rules! histogram_opts {
 macro_rules! __register_counter {
     ($TYPE:ident, $OPTS:expr) => {{
         let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $crate::register(Box::new(counter.clone())).map(|_| counter)
+        $crate::try_register(Box::new(counter.clone())).map(|_| counter)
     }};
 }
 
@@ -203,7 +203,7 @@ macro_rules! register_int_counter {
 macro_rules! __register_counter_vec {
     ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr) => {{
         let counter_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
-        $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+        $crate::try_register(Box::new(counter_vec.clone())).map(|_| counter_vec)
     }};
 }
 
@@ -252,7 +252,7 @@ macro_rules! register_int_counter_vec {
 macro_rules! __register_gauge {
     ($TYPE:ident, $OPTS:expr) => {{
         let gauge = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $crate::register(Box::new(gauge.clone())).map(|_| gauge)
+        $crate::try_register(Box::new(gauge.clone())).map(|_| gauge)
     }};
 }
 
@@ -301,7 +301,7 @@ macro_rules! register_int_gauge {
 macro_rules! __register_gauge_vec {
     ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr) => {{
         let gauge_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
-        $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+        $crate::try_register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
     }};
 }
 
@@ -377,7 +377,7 @@ macro_rules! register_histogram {
 
     ($HOPTS:expr) => {{
         let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
-        $crate::register(Box::new(histogram.clone())).map(|_| histogram)
+        $crate::try_register(Box::new(histogram.clone())).map(|_| histogram)
     }};
 }
 
@@ -407,7 +407,7 @@ macro_rules! register_histogram {
 macro_rules! register_histogram_vec {
     ($HOPTS:expr, $LABELS_NAMES:expr) => {{
         let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
-        $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
+        $crate::try_register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
     }};
 
     ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr) => {{

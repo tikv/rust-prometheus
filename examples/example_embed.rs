@@ -30,8 +30,8 @@ fn main() {
         .const_label("b", "2");
     let counter_vec = CounterVec::new(counter_vec_opts, &["c", "d"]).unwrap();
 
-    r.register(Box::new(counter.clone())).unwrap();
-    r.register(Box::new(counter_vec.clone())).unwrap();
+    r.try_register(Box::new(counter.clone())).unwrap();
+    r.try_register(Box::new(counter_vec.clone())).unwrap();
 
     let gauge_opts = Opts::new("test_gauge", "test gauge help")
         .const_label("a", "1")
@@ -42,8 +42,8 @@ fn main() {
         .const_label("b", "2");
     let gauge_vec = GaugeVec::new(gauge_vec_opts, &["c", "d"]).unwrap();
 
-    r.register(Box::new(gauge.clone())).unwrap();
-    r.register(Box::new(gauge_vec.clone())).unwrap();
+    r.try_register(Box::new(gauge.clone())).unwrap();
+    r.try_register(Box::new(gauge_vec.clone())).unwrap();
 
     counter.inc();
     assert_eq!(counter.get() as u64, 1);
