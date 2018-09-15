@@ -47,7 +47,11 @@ impl<P: Atomic> Clone for GenericCounter<P> {
 
 impl<P: Atomic> GenericCounter<P> {
     /// Create a [`GenericCounter`](::core::GenericCounter) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
+    pub fn new<A, B>(name: A, help: B) -> Result<Self>
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         let opts = Opts::new(name, help);
         Self::with_opts(opts)
     }

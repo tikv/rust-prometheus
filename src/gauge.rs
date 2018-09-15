@@ -46,7 +46,11 @@ impl<P: Atomic> Clone for GenericGauge<P> {
 
 impl<P: Atomic> GenericGauge<P> {
     /// Create a [`GenericGauge`](::core::GenericGauge) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
+    pub fn new<A, B>(name: A, help: B) -> Result<Self>
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         let opts = Opts::new(name, help);
         Self::with_opts(opts)
     }

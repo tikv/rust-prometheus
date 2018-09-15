@@ -85,7 +85,11 @@ pub struct Opts {
 
 impl Opts {
     /// `new` creates the Opts with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
+    pub fn new<A, B>(name: A, help: B) -> Opts
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         Opts {
             namespace: "".to_owned(),
             subsystem: "".to_owned(),
@@ -115,7 +119,11 @@ impl Opts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<A, B>(mut self, name: A, value: B) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         self.const_labels.insert(name.into(), value.into());
         self
     }

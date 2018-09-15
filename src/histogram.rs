@@ -92,7 +92,11 @@ pub struct HistogramOpts {
 
 impl HistogramOpts {
     /// Create a [`HistogramOpts`](::HistogramOpts) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
+    pub fn new<A, B>(name: A, help: B) -> HistogramOpts
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         HistogramOpts {
             common_opts: Opts::new(name, help),
             buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
@@ -118,7 +122,11 @@ impl HistogramOpts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<A, B>(mut self, name: A, value: B) -> Self
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
         self.common_opts = self.common_opts.const_label(name, value);
         self
     }
@@ -368,7 +376,17 @@ pub struct Histogram {
 }
 
 impl Histogram {
-    /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
+    /// Create a [`Histogram`](::Histogram) with the `name` and `help` arguments.
+    pub fn new<A, B>(name: A, help: B) -> Result<Self>
+    where
+        A: Into<String>,
+        B: Into<String>,
+    {
+        let opts = HistogramOpts::new(name, help);
+        Self::with_opts(opts)
+    }
+
+    /// Create a [`Histogram`](::Histogram) with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
         Histogram::with_opts_and_label_values(&opts, &[])
     }
