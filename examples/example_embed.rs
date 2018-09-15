@@ -16,7 +16,8 @@ extern crate prometheus;
 use std::thread;
 use std::time::Duration;
 
-use prometheus::{Counter, CounterVec, Encoder, Gauge, GaugeVec, Opts, Registry, TextEncoder};
+use prometheus::prelude::*;
+use prometheus::{Counter, CounterVec, Gauge, GaugeVec, Opts, Registry, TextEncoder};
 
 fn main() {
     let r = Registry::new();

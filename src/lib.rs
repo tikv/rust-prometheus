@@ -84,13 +84,33 @@ pub mod core {
         GenericCounter, GenericCounterVec, GenericLocalCounter, GenericLocalCounterVec,
     };
     pub use super::desc::{Desc, Describer};
+    pub use super::encoder::Encoder;
     pub use super::gauge::{GenericGauge, GenericGaugeVec};
     pub use super::metrics::{Collector, Metric, Opts};
     pub use super::vec::{MetricVec, MetricVecBuilder};
 }
 
+pub mod prelude {
+    /*!
+
+    Useful traits prelude.
+
+    The purpose of this module is to alleviate imports of common traits by adding a glob import:
+
+    ```
+    # #![allow(unused_imports)]
+    use prometheus::prelude::*;
+    ```
+
+    */
+
+    // Rename these traits so that when user is importing via `prelude::*`, it will be
+    // less likely to cause name conflict.
+    pub use super::core::Collector as MetricCollector;
+    pub use super::core::Encoder as MetricFamilyEncoder;
+}
+
 pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
-pub use self::encoder::Encoder;
 pub use self::encoder::{ProtobufEncoder, TextEncoder};
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::errors::{Error, Result};

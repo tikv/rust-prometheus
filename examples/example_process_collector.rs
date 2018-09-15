@@ -18,7 +18,8 @@ fn main() {
     use std::thread;
     use std::time::Duration;
 
-    use prometheus::{self, Encoder};
+    use prometheus;
+    use prometheus::prelude::*;
 
     // A default ProcessCollector is registered automatically.
     let mut buffer = Vec::new();

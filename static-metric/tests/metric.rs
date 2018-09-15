@@ -16,7 +16,7 @@
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
-use prometheus::core::Collector;
+use prometheus::prelude::*;
 use prometheus::{Counter, CounterVec, Opts};
 use prometheus_static_metric::make_static_metric;
 

@@ -44,15 +44,15 @@ features = ["gen"]
 ## Example
 
 ```rust
-use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
+use prometheus::prelude::*;
+use prometheus::{Opts, Registry, Counter, TextEncoder};
 
-// Create a Counter.
-let counter_opts = Opts::new("test_counter", "test counter help");
-let counter = Counter::with_opts(counter_opts).unwrap();
-
-// Create a Registry and register Counter.
+// Create a Registry.
 let r = Registry::new();
-r.try_register(Box::new(counter.clone())).unwrap();
+
+// Create a Counter and register to the registry.
+let counter_opts = Opts::new("test_counter", "test counter help");
+let counter = Counter::with_opts(counter_opts).unwrap().register(r);
 
 // Inc.
 counter.inc();

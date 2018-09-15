@@ -28,6 +28,86 @@ pub trait Collector: Sync + Send {
 
     /// Collect metrics.
     fn collect(&self) -> Vec<proto::MetricFamily>;
+
+    /// Alias of [`Registry::try_register`]. Register the collector to a registry.
+    fn try_register(self, registry: &super::Registry) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry.try_register(Box::new(self.clone())).map(|_| self)
+    }
+
+    /// Alias of [`Registry::register`]. Register the collector to a registry.
+    /// Panics if there are errors.
+    fn register(self, registry: &super::Registry) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry
+            .try_register(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
+
+    /// Alias of [`try_register`]. Register the collector to the default registry.
+    fn try_register_default(self) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_register(Box::new(self.clone())).map(|_| self)
+    }
+
+    /// Alias of [`register`]. Register the collector to the default registry.
+    /// Panics if there are errors.
+    fn register_default(self) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_register(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
+
+    /// Alias for [`Registry::try_unregister`]. Unregister the collector from a registry.
+    fn try_unregister(self, registry: &super::Registry) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry
+            .try_unregister(Box::new(self.clone()))
+            .map(|_| self)
+    }
+
+    /// Alias for [`Registry::try_unregister`]. Unregister the collector from a registry.
+    /// Panics if there are errors.
+    fn unregister(self, registry: &super::Registry) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        registry
+            .try_unregister(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
+
+    /// Alias for [`try_unregister`]. Unregister the collector from the default registry.
+    fn try_unregister_default(self) -> Result<Self>
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_unregister(Box::new(self.clone())).map(|_| self)
+    }
+
+    /// Alias for [`try_unregister`]. Unregister the collector from the default registry.
+    /// Panics if there are errors.
+    fn unregister_default(self) -> Self
+    where
+        Self: 'static + Sized + Clone,
+    {
+        ::try_unregister(Box::new(self.clone()))
+            .map(|_| self)
+            .unwrap()
+    }
 }
 
 /// An interface models a single sample value with its meta data being exported to Prometheus.
