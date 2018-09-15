@@ -48,15 +48,15 @@ impl<P: Atomic> GenericGauge<P> {
     /// Create a [`GenericGauge`](::core::GenericGauge) with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
-        Self::with_opts(opts)
+        Self::from_opts(opts)
     }
 
     /// Create a [`GenericGauge`](::core::GenericGauge) with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+    pub fn from_opts(opts: Opts) -> Result<Self> {
+        Self::from_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn from_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Gauge, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -139,7 +139,7 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
     type P = Opts;
 
     fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
-        Self::M::with_opts_and_label_values(opts, vals)
+        Self::M::from_opts_and_label_values(opts, vals)
     }
 }
 
@@ -180,7 +180,7 @@ mod tests {
         let opts = Opts::new("test", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let gauge = Gauge::with_opts(opts).unwrap();
+        let gauge = Gauge::from_opts(opts).unwrap();
         gauge.inc();
         assert_eq!(gauge.get() as u64, 1);
         gauge.add(42.0);

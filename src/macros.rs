@@ -153,7 +153,7 @@ macro_rules! histogram_opts {
 #[doc(hidden)]
 macro_rules! __register_counter {
     ($TYPE:ident, $OPTS:expr) => {{
-        let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
+        let counter = $crate::$TYPE::from_opts($OPTS).unwrap();
         $crate::register(Box::new(counter.clone())).map(|_| counter)
     }};
 }
@@ -251,7 +251,7 @@ macro_rules! register_int_counter_vec {
 #[doc(hidden)]
 macro_rules! __register_gauge {
     ($TYPE:ident, $OPTS:expr) => {{
-        let gauge = $crate::$TYPE::with_opts($OPTS).unwrap();
+        let gauge = $crate::$TYPE::from_opts($OPTS).unwrap();
         $crate::register(Box::new(gauge.clone())).map(|_| gauge)
     }};
 }
@@ -376,7 +376,7 @@ macro_rules! register_histogram {
     };
 
     ($HOPTS:expr) => {{
-        let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
+        let histogram = $crate::Histogram::from_opts($HOPTS).unwrap();
         $crate::register(Box::new(histogram.clone())).map(|_| histogram)
     }};
 }

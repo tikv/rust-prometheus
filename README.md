@@ -48,7 +48,7 @@ use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
 
 // Create a Counter.
 let counter_opts = Opts::new("test_counter", "test counter help");
-let counter = Counter::with_opts(counter_opts).unwrap();
+let counter = Counter::from_opts(counter_opts).unwrap();
 
 // Create a Registry and register Counter.
 let r = Registry::new();

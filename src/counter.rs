@@ -49,15 +49,15 @@ impl<P: Atomic> GenericCounter<P> {
     /// Create a [`GenericCounter`](::core::GenericCounter) with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
-        Self::with_opts(opts)
+        Self::from_opts(opts)
     }
 
     /// Create a [`GenericCounter`](::core::GenericCounter) with the `opts` options.
-    pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+    pub fn from_opts(opts: Opts) -> Result<Self> {
+        Self::from_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn from_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -130,7 +130,7 @@ impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
     type P = Opts;
 
     fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
-        Self::M::with_opts_and_label_values(opts, vals)
+        Self::M::from_opts_and_label_values(opts, vals)
     }
 }
 
@@ -292,7 +292,7 @@ mod tests {
         let opts = Opts::new("test", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let counter = Counter::with_opts(opts).unwrap();
+        let counter = Counter::from_opts(opts).unwrap();
         counter.inc();
         assert_eq!(counter.get() as u64, 1);
         counter.inc_by(42.0);

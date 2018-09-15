@@ -368,12 +368,12 @@ pub struct Histogram {
 }
 
 impl Histogram {
-    /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
-    pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(&opts, &[])
+    /// Create a [`Histogram`](::Histogram) with the `opts` options.
+    pub fn from_opts(opts: HistogramOpts) -> Result<Histogram> {
+        Histogram::from_opts_and_label_values(&opts, &[])
     }
 
-    fn with_opts_and_label_values(
+    fn from_opts_and_label_values(
         opts: &HistogramOpts,
         label_values: &[&str],
     ) -> Result<Histogram> {
@@ -445,7 +445,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
     type P = HistogramOpts;
 
     fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(opts, vals)
+        Histogram::from_opts_and_label_values(opts, vals)
     }
 }
 
@@ -769,7 +769,7 @@ mod tests {
         let opts = HistogramOpts::new("test1", "test help")
             .const_label("a", "1")
             .const_label("b", "2");
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         histogram.observe(1.0);
 
         let timer = histogram.start_timer();
@@ -796,7 +796,7 @@ mod tests {
 
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test2", "test help").buckets(buckets.clone());
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         let mut mfs = histogram.collect();
         assert_eq!(mfs.len(), 1);
 
@@ -813,7 +813,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     fn test_histogram_coarse_timer() {
         let opts = HistogramOpts::new("test1", "test help");
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
 
         let timer = histogram.start_coarse_timer();
         thread::sleep(Duration::from_millis(100));
@@ -932,7 +932,7 @@ mod tests {
     }
 
     #[test]
-    fn test_histogram_vec_with_opts_buckets() {
+    fn test_histogram_vec_from_opts_buckets() {
         let labels = ["l1", "l2"];
         let buckets = vec![1.0, 2.0, 3.0];
         let vec = HistogramVec::new(
@@ -958,7 +958,7 @@ mod tests {
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test_histogram_local", "test histogram local help")
             .buckets(buckets.clone());
-        let histogram = Histogram::with_opts(opts).unwrap();
+        let histogram = Histogram::from_opts(opts).unwrap();
         let local = histogram.local();
 
         let check = |count, sum| {

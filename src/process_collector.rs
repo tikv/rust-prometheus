@@ -55,7 +55,7 @@ impl ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
 
-        let cpu_total = Counter::with_opts(
+        let cpu_total = Counter::from_opts(
             Opts::new(
                 "process_cpu_seconds_total",
                 "Total user and system CPU time spent in \
@@ -64,13 +64,13 @@ impl ProcessCollector {
         ).unwrap();
         descs.extend(cpu_total.desc().into_iter().cloned());
 
-        let open_fds = Gauge::with_opts(
+        let open_fds = Gauge::from_opts(
             Opts::new("process_open_fds", "Number of open file descriptors.")
                 .namespace(namespace.clone()),
         ).unwrap();
         descs.extend(open_fds.desc().into_iter().cloned());
 
-        let max_fds = Gauge::with_opts(
+        let max_fds = Gauge::from_opts(
             Opts::new(
                 "process_max_fds",
                 "Maximum number of open file descriptors.",
@@ -78,7 +78,7 @@ impl ProcessCollector {
         ).unwrap();
         descs.extend(max_fds.desc().into_iter().cloned());
 
-        let vsize = Gauge::with_opts(
+        let vsize = Gauge::from_opts(
             Opts::new(
                 "process_virtual_memory_bytes",
                 "Virtual memory size in bytes.",
@@ -86,7 +86,7 @@ impl ProcessCollector {
         ).unwrap();
         descs.extend(vsize.desc().into_iter().cloned());
 
-        let rss = Gauge::with_opts(
+        let rss = Gauge::from_opts(
             Opts::new(
                 "process_resident_memory_bytes",
                 "Resident memory size in bytes.",
@@ -94,7 +94,7 @@ impl ProcessCollector {
         ).unwrap();
         descs.extend(rss.desc().into_iter().cloned());
 
-        let start_time = Gauge::with_opts(
+        let start_time = Gauge::from_opts(
             Opts::new(
                 "process_start_time_seconds",
                 "Start time of the process since unix epoch \

@@ -24,7 +24,7 @@ fn main() {
     let counter_opts = Opts::new("test_counter", "test counter help")
         .const_label("a", "1")
         .const_label("b", "2");
-    let counter = Counter::with_opts(counter_opts).unwrap();
+    let counter = Counter::from_opts(counter_opts).unwrap();
     let counter_vec_opts = Opts::new("test_counter_vec", "test counter vector help")
         .const_label("a", "1")
         .const_label("b", "2");
@@ -36,7 +36,7 @@ fn main() {
     let gauge_opts = Opts::new("test_gauge", "test gauge help")
         .const_label("a", "1")
         .const_label("b", "2");
-    let gauge = Gauge::with_opts(gauge_opts).unwrap();
+    let gauge = Gauge::from_opts(gauge_opts).unwrap();
     let gauge_vec_opts = Opts::new("test_gauge_vec", "test gauge vector help")
         .const_label("a", "1")
         .const_label("b", "2");
