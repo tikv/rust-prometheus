@@ -13,11 +13,11 @@
 
 use syn::Ident;
 
-pub fn get_metric_vec_type(metric_type: &Ident) -> Ident {
+pub fn get_metric_vec_type(metric_type: Ident) -> Ident {
     Ident::from(format!("{}Vec", metric_type))
 }
 
-pub fn get_label_struct_name(struct_name: &Ident, label_index: usize) -> Ident {
+pub fn get_label_struct_name(struct_name: Ident, label_index: usize) -> Ident {
     let mut struct_name = struct_name.to_string();
     if label_index > 0 {
         struct_name.push_str(&(label_index + 1).to_string());
@@ -26,13 +26,13 @@ pub fn get_label_struct_name(struct_name: &Ident, label_index: usize) -> Ident {
 }
 
 pub fn get_member_type(
-    struct_name: &Ident,
+    struct_name: Ident,
     label_index: usize,
-    metric_type: &Ident,
+    metric_type: Ident,
     is_last_label: bool,
 ) -> Ident {
     if is_last_label {
-        metric_type.clone()
+        metric_type
     } else {
         get_label_struct_name(struct_name, label_index + 1)
     }

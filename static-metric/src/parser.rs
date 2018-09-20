@@ -105,9 +105,10 @@ impl From<MetricValueDefShort> for MetricValueDef {
 #[derive(Debug)]
 pub struct MetricValueDefList(Vec<MetricValueDef>);
 
+#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 impl Synom for MetricValueDefList {
     named!(parse -> Self, do_parse!(
-        body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty) >>
+        body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty)>>
         (MetricValueDefList(body.1.into_iter().collect()))
     ));
 }
@@ -157,11 +158,11 @@ impl MetricEnumDef {
             .map(|v| {
                 let mut segments = Punctuated::new();
                 segments.push(PathSegment {
-                    ident: self.enum_name.clone(),
+                    ident: self.enum_name,
                     arguments: PathArguments::None,
                 });
                 segments.push(PathSegment {
-                    ident: v.name.clone(),
+                    ident: v.name,
                     arguments: PathArguments::None,
                 });
                 Path {
@@ -186,6 +187,7 @@ pub struct MetricLabelDef {
     arm: MetricLabelArm,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 impl Synom for MetricLabelDef {
     named!(parse -> Self, do_parse!(
         label: syn!(LitStr) >>
@@ -215,7 +217,7 @@ impl MetricLabelDef {
     }
 
     /// Get the enum identifier if label is defined using enums.
-    pub fn get_enum_ident<'a>(&'a self) -> Option<&'a Ident> {
+    pub fn get_enum_ident(&self) -> Option<&Ident> {
         match &self.arm {
             MetricLabelArm::ValueDefinitionList(_) => None,
             MetricLabelArm::EnumReference(ref e) => Some(e),
@@ -232,6 +234,7 @@ pub struct MetricDef {
     pub labels: Vec<MetricLabelDef>,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 impl Synom for MetricDef {
     named!(parse -> Self, do_parse!(
         visibility: syn!(Visibility) >>
@@ -260,6 +263,7 @@ pub struct StaticMetricMacroBody {
     pub items: Vec<StaticMetricMacroBodyItem>,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 impl Synom for StaticMetricMacroBody {
     named!(parse -> Self, do_parse!(
         items: many0!(alt!(
