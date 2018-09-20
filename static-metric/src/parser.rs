@@ -168,8 +168,7 @@ impl MetricEnumDef {
                     leading_colon: None,
                     segments,
                 }
-            })
-            .collect()
+            }).collect()
     }
 }
 

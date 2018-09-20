@@ -92,8 +92,7 @@ impl TokensBuilder {
                     #code_struct
                     #code_impl
                 }
-            })
-            .collect();
+            }).collect();
 
         let scope_id = SCOPE_ID.fetch_add(1, Ordering::Relaxed);
         let scope_name = Ident::from(format!("prometheus_static_scope_{}", scope_id));
@@ -295,8 +294,7 @@ impl<'a> MetricBuilderContext<'a> {
                         ),
                     }
                 }
-            })
-            .collect();
+            }).collect();
         quote!{
             #(
                 #bodies
