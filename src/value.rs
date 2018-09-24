@@ -29,8 +29,8 @@ pub enum ValueType {
 
 impl ValueType {
     /// `metric_type` returns the corresponding proto metric type.
-    pub fn metric_type(&self) -> MetricType {
-        match *self {
+    pub fn metric_type(self) -> MetricType {
+        match self {
             ValueType::Counter => MetricType::COUNTER,
             ValueType::Gauge => MetricType::GAUGE,
         }

@@ -5,12 +5,6 @@ os:
  - linux
  - osx
 
-rust:
-  # TODO: pick an oldest supported release
-  - stable
-  - beta
-  - nightly
-
 addons:
   apt:
     packages:
@@ -22,21 +16,26 @@ env:
     - FEATURES="push process"
     - ARCH=i686
 
+# Must be present for matrix.
+rust:
+
 matrix:
   fast_finish: true
   include:
-  - env: CLIPPY='yes'
-    rust: nightly
+  - rust: nightly
+  - rust: beta
+  - rust: stable
+    install:
+      - rustup component add clippy-preview
+      - rustup component add rustfmt-preview
+    before_script:
+      - cargo fmt --all -- --check
+      - cargo clippy --all -- -D clippy
   allow_failures:
-  - env: CLIPPY='yes'
+  - rust: nightly
 
 script:
-  # Test common features.
   - cargo test --features="$FEATURES"
-  - |
-    if [ $CLIPPY = 'yes' ]; then
-        rustup component add clippy-preview && cargo clippy --all-features -- -D warnings;
-    fi
   - |
     if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
         # Clean up.

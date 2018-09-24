@@ -276,7 +276,7 @@ mod tests {
                 vec![name.into()],
                 HashMap::new(),
             ).err()
-                .expect(format!("expected error for {}", name).as_ref());
+            .expect(format!("expected error for {}", name).as_ref());
             match res {
                 Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid label name", name)),
                 other => panic!(other),
