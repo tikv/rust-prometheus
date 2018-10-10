@@ -112,6 +112,7 @@ This library supports four features:
     allow(needless_pass_by_value, new_without_default_derive)
 )]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
+#![deny(missing_docs)]
 
 #[macro_use]
 extern crate cfg_if;

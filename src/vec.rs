@@ -27,7 +27,9 @@ use proto::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
 pub trait MetricVecBuilder: Send + Sync + Clone {
+    /// The associated Metric collected.
     type M: Metric;
+    /// The associated describer.
     type P: Describer + Sync + Send + Clone;
 
     /// `build` builds a [`Metric`](::core::Metric) with option and corresponding label names.
