@@ -32,7 +32,7 @@ impl TokensBuilder {
     pub fn build(macro_body: StaticMetricMacroBody) -> Tokens {
         let mut enums_definitions = HashMap::new();
         let mut tokens = Tokens::new();
-        for item in macro_body.items.into_iter() {
+        for item in macro_body.items {
             match item {
                 StaticMetricMacroBodyItem::Metric(m) => {
                     // If this is a metric definition, expand to a `struct`.
@@ -42,7 +42,7 @@ impl TokensBuilder {
                     // If this is a label enum definition, expand to an `enum` and
                     // add to the collection.
                     tokens.append_all(Self::build_label_enum(&e));
-                    enums_definitions.insert(e.enum_name.clone(), e);
+                    enums_definitions.insert(e.enum_name, e);
                 }
             }
         }
@@ -92,8 +92,7 @@ impl TokensBuilder {
                     #code_struct
                     #code_impl
                 }
-            })
-            .collect();
+            }).collect();
 
         let scope_id = SCOPE_ID.fetch_add(1, Ordering::Relaxed);
         let scope_name = Ident::from(format!("prometheus_static_scope_{}", scope_id));
@@ -101,7 +100,7 @@ impl TokensBuilder {
         let visibility = &metric.visibility;
         let struct_name = &metric.struct_name;
         let metric_type = &metric.metric_type;
-        let metric_vec_type = util::get_metric_vec_type(metric_type);
+        let metric_vec_type = util::get_metric_vec_type(*metric_type);
 
         quote!{
             #visibility use self::#scope_name::#struct_name;
@@ -188,12 +187,12 @@ impl<'a> MetricBuilderContext<'a> {
             label_index,
             is_last_label,
 
-            struct_name: util::get_label_struct_name(&metric.struct_name, label_index),
-            metric_vec_type: util::get_metric_vec_type(&metric.metric_type),
+            struct_name: util::get_label_struct_name(metric.struct_name, label_index),
+            metric_vec_type: util::get_metric_vec_type(metric.metric_type),
             member_type: util::get_member_type(
-                &metric.struct_name,
+                metric.struct_name,
                 label_index,
-                &metric.metric_type,
+                metric.metric_type,
                 is_last_label,
             ),
         }
@@ -239,7 +238,7 @@ impl<'a> MetricBuilderContext<'a> {
         let prev_labels_ident: Vec<_> = (0..self.label_index)
             .map(|i| Ident::from(format!("label_{}", i)))
             .collect();
-        let body = self.build_impl_from_body(prev_labels_ident.clone());
+        let body = self.build_impl_from_body(&prev_labels_ident);
 
         quote!{
             pub fn from(
@@ -255,7 +254,7 @@ impl<'a> MetricBuilderContext<'a> {
         }
     }
 
-    fn build_impl_from_body(&self, prev_labels_ident: Vec<Ident>) -> Tokens {
+    fn build_impl_from_body(&self, prev_labels_ident: &[Ident]) -> Tokens {
         let member_type = &self.member_type;
         let bodies: Vec<_> = self
             .label
@@ -272,7 +271,6 @@ impl<'a> MetricBuilderContext<'a> {
                         .enumerate()
                         .map(|(i, _)| &self.metric.labels[i].label_key)
                         .collect();
-                    let prev_labels_ident = prev_labels_ident.clone();
                     quote!{
                         #name: m.with(&{
                             let mut coll = HashMap::new();
@@ -284,7 +282,7 @@ impl<'a> MetricBuilderContext<'a> {
                         }),
                     }
                 } else {
-                    let prev_labels_ident = prev_labels_ident.clone();
+                    let prev_labels_ident = prev_labels_ident;
                     quote!{
                         #name: #member_type::from(
                             #(
@@ -295,8 +293,7 @@ impl<'a> MetricBuilderContext<'a> {
                         ),
                     }
                 }
-            })
-            .collect();
+            }).collect();
         quote!{
             #(
                 #bodies
