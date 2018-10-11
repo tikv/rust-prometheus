@@ -80,13 +80,14 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
 /// optional and can safely be left at their zero value.
 #[derive(Clone)]
 pub struct HistogramOpts {
+    /// A container holding various options.
     pub common_opts: Opts,
 
-    // Defines the buckets into which observations are counted. Each
-    // element in the slice is the upper inclusive bound of a bucket. The
-    // values must be sorted in strictly increasing order. There is no need
-    // to add a highest bucket with +Inf bound, it will be added
-    // implicitly. The default value is DefBuckets.
+    /// Defines the buckets into which observations are counted. Each
+    /// element in the slice is the upper inclusive bound of a bucket. The
+    /// values must be sorted in strictly increasing order. There is no need
+    /// to add a highest bucket with +Inf bound, it will be added
+    /// implicitly. The default value is DefBuckets.
     pub buckets: Vec<f64>,
 }
 
