@@ -149,15 +149,6 @@ macro_rules! histogram_opts {
     }};
 }
 
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __register_counter {
-    ($TYPE:ident, $OPTS:expr) => {{
-        let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $crate::register(Box::new(counter.clone())).map(|_| counter)
-    }};
-}
-
 /// Create a [`Counter`](::Counter) and registers to default registry.
 ///
 /// # Examples
@@ -175,8 +166,13 @@ macro_rules! __register_counter {
 /// ```
 #[macro_export]
 macro_rules! register_counter {
+    (@of_type $TYPE:ident, $OPTS:expr) => {{
+        let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
+        $crate::register(Box::new(counter.clone())).map(|_| counter)
+    }};
+
     ($OPTS:expr) => {{
-        __register_counter!(Counter, $OPTS)
+        register_counter!(@of_type Counter, $OPTS)
     }};
 
     ($NAME:expr, $HELP:expr) => {{
@@ -190,7 +186,7 @@ macro_rules! register_counter {
 #[macro_export]
 macro_rules! register_int_counter {
     ($OPTS:expr) => {{
-        __register_counter!(IntCounter, $OPTS)
+        register_counter!(@of_type IntCounter, $OPTS)
     }};
 
     ($NAME:expr, $HELP:expr) => {{
