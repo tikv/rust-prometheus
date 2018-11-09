@@ -60,6 +60,5 @@ fn main() {
 
             timer.observe_duration();
             HTTP_BODY_GAUGE.set(buffer.len() as f64);
-        })
-        .unwrap();
+        }).unwrap();
 }

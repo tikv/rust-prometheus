@@ -32,7 +32,7 @@ pub trait Number:
 {
     /// `std::convert::From<i64> for f64` is not implemented, so that we need to implement our own.
     fn from_i64(v: i64) -> Self;
-
+    /// Convert to a f64.
     fn into_f64(self) -> f64;
 }
 
@@ -75,11 +75,17 @@ impl Number for f64 {
 /// An interface for atomics. Used to generically model float metrics and integer metrics, i.e.
 /// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
 pub trait Atomic: Send + Sync {
+    /// The numeric type associated with this atomic.
     type T: Number;
+    /// Create a new atomic value.
     fn new(val: Self::T) -> Self;
+    /// Set the value to the provided value.
     fn set(&self, val: Self::T);
+    /// Get the value.
     fn get(&self) -> Self::T;
+    /// Increment the value by a given amount.
     fn inc_by(&self, delta: Self::T);
+    /// Decrement the value by a given amount.
     fn dec_by(&self, delta: Self::T);
 }
 

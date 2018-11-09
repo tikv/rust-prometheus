@@ -50,8 +50,11 @@ impl<T: Number> Atomic for RwlockAtomic<T> {
     }
 }
 
+/// A fallback atomic float for stable Rust.
 pub type AtomicF64 = RwlockAtomic<f64>;
 
+/// A fallback atomic signed integer for stable Rust.
 pub type AtomicI64 = RwlockAtomic<i64>;
 
+/// A fallback atomic unsigned integer for stable Rust.
 pub type AtomicU64 = RwlockAtomic<u64>;

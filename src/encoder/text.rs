@@ -31,6 +31,7 @@ const POSITIVE_INF: &str = "+Inf";
 pub struct TextEncoder;
 
 impl TextEncoder {
+    /// Create a new text encoder.
     pub fn new() -> TextEncoder {
         TextEncoder
     }

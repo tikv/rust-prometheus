@@ -30,6 +30,7 @@ pub const PROTOBUF_FORMAT: &str = "application/vnd.google.protobuf; \
 pub struct ProtobufEncoder;
 
 impl ProtobufEncoder {
+    /// Create a new protobuf encoder.
     pub fn new() -> ProtobufEncoder {
         ProtobufEncoder
     }

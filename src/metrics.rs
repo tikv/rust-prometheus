@@ -45,7 +45,17 @@ pub struct Opts {
     /// name. Note that the fully-qualified name of the metric must be a
     /// valid Prometheus metric name.
     pub namespace: String,
+    /// namespace, subsystem, and name are components of the fully-qualified
+    /// name of the [`Metric`](::core::Metric) (created by joining these components with
+    /// "_"). Only Name is mandatory, the others merely help structuring the
+    /// name. Note that the fully-qualified name of the metric must be a
+    /// valid Prometheus metric name.
     pub subsystem: String,
+    /// namespace, subsystem, and name are components of the fully-qualified
+    /// name of the [`Metric`](::core::Metric) (created by joining these components with
+    /// "_"). Only Name is mandatory, the others merely help structuring the
+    /// name. Note that the fully-qualified name of the metric must be a
+    /// valid Prometheus metric name.
     pub name: String,
 
     /// help provides information about this metric. Mandatory!

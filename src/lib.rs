@@ -13,6 +13,98 @@
 
 /*!
 The Rust client library for [Prometheus](https://prometheus.io/).
+
+Use of this library involves a few core concepts:
+
+* A number of [`Counter`](type.Counter.html)s that represent metrics from your system.
+* A [`Registry`](struct.Registry.html) with a number of registered [`Counter`s](type.Counter.html).
+* An endpoint that calls [`gather`](fn.gather.html) which returns a
+[`MetricFamily`](proto/struct.MetricFamily.html) through an [`Encoder`](trait.Encoder.html).
+
+# Basic Example
+
+```rust
+use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
+
+// Create a Counter.
+let counter_opts = Opts::new("test_counter", "test counter help");
+let counter = Counter::with_opts(counter_opts).unwrap();
+
+// Create a Registry and register Counter.
+let r = Registry::new();
+r.register(Box::new(counter.clone())).unwrap();
+
+// Inc.
+counter.inc();
+
+// Gather the metrics.
+let mut buffer = vec![];
+let encoder = TextEncoder::new();
+let metric_families = r.gather();
+encoder.encode(&metric_families, &mut buffer).unwrap();
+
+// Output to the standard output.
+println!("{}", String::from_utf8(buffer).unwrap());
+```
+
+# Static Metrics
+
+This crate supports staticly built metrics. You can use it with
+[`lazy_static`](https://docs.rs/lazy_static/1.1.0/lazy_static/) to quickly build up and collect
+some metrics.
+
+```rust
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate prometheus;
+use prometheus::{self, IntCounter, TextEncoder, Encoder};
+
+lazy_static! {
+    static ref HIGH_FIVE_COUNTER: IntCounter =
+        register_int_counter!("highfives", "Number of high fives recieved").unwrap();
+}
+
+HIGH_FIVE_COUNTER.inc();
+assert_eq!(HIGH_FIVE_COUNTER.get(), 1);
+```
+
+By default, this registers with a default registry. To make a report, you can call
+[`gather`](fn.gather.html). This will return a family of metrics you can then feed through an
+[`Encoder`](trait.Encoder.html) and report to Promethus.
+
+```
+# #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate prometheus;
+# use prometheus::IntCounter;
+use prometheus::{self, TextEncoder, Encoder};
+
+// Register & measure some metrics.
+# lazy_static! {
+#     static ref HIGH_FIVE_COUNTER: IntCounter =
+#        register_int_counter!("highfives", "Number of high fives recieved").unwrap();
+# }
+# HIGH_FIVE_COUNTER.inc();
+
+let mut buffer = Vec::new();
+let encoder = TextEncoder::new();
+
+// Gather the metrics.
+let metric_families = prometheus::gather();
+// Encode them to send.
+encoder.encode(&metric_families, &mut buffer).unwrap();
+
+let output = String::from_utf8(buffer.clone()).unwrap();
+const EXPECTED_OUTPUT: &'static str = "# HELP highfives Number of high fives recieved\n# TYPE highfives counter\nhighfives 1\n";
+assert!(output.starts_with(EXPECTED_OUTPUT));
+```
+
+# Features
+
+This library supports four features:
+
+* `nightly`: Enable nightly only features.
+* `push`: Enable push support.
+* `process`: For collecting process info.
+
 */
 
 #![cfg_attr(
@@ -20,6 +112,7 @@ The Rust client library for [Prometheus](https://prometheus.io/).
     allow(needless_pass_by_value, new_without_default_derive)
 )]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
+#![deny(missing_docs)]
 
 #[macro_use]
 extern crate cfg_if;
