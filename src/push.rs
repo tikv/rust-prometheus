@@ -17,8 +17,8 @@ use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
-use reqwest::header::{Authorization, Basic, ContentType};
-use reqwest::{Body, Client, Method, Request, StatusCode, Url};
+use reqwest::header::CONTENT_TYPE;
+use reqwest::{Client, Method, StatusCode, Url};
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
@@ -155,29 +155,21 @@ fn push<S: BuildHasher>(
         let _ = encoder.encode(&[mf], &mut buf);
     }
 
-    let mut request = Request::new(
+    let mut builder = HTTP_CLIENT.request(
         Method::from_str(method).unwrap(),
-        Url::from_str(&push_url).unwrap(),
-    );
-    request
-        .headers_mut()
-        .set(ContentType(encoder.format_type().parse().unwrap()));
+        Url::from_str(&push_url).unwrap()
+    )
+    .header(CONTENT_TYPE, encoder.format_type())
+    .body(buf);
 
     if let Some(BasicAuthentication { username, password }) = basic_auth {
-        request.headers_mut().set(Authorization(Basic {
-            username,
-            password: Some(password),
-        }))
+        builder = builder.basic_auth(username, Some(password));
     }
 
-    *request.body_mut() = Some(Body::from(buf));
-
-    let response = HTTP_CLIENT
-        .execute(request)
-        .map_err(|e| Error::Msg(format!("{}", e)))?;
+    let response = builder.send().map_err(|e| Error::Msg(format!("{}", e)))?;
 
     match response.status() {
-        StatusCode::Accepted => Ok(()),
+        StatusCode::ACCEPTED => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
             response.status(),
