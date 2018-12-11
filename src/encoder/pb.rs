@@ -59,7 +59,7 @@ mod tests {
     use registry;
 
     // TODO: add more tests.
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     #[test]
     fn test_protobuf_encoder() {
         let cv = CounterVec::new(Opts::new("test_counter_vec", "help information"),
