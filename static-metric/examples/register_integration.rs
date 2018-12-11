@@ -58,14 +58,16 @@ lazy_static! {
         "http_requests",
         "Total number of HTTP requests.",
         &["method", "product"]
-    ).unwrap();
+    )
+    .unwrap();
     pub static ref HTTP_DURATION: HttpRequestDuration = register_static_histogram_vec!(
         HttpRequestDuration,
         "http_request_duration",
         "Duration of each HTTP request.",
         &["method"],
         exponential_buckets(0.0005, 2.0, 20).unwrap()
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 fn main() {

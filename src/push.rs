@@ -155,12 +155,13 @@ fn push<S: BuildHasher>(
         let _ = encoder.encode(&[mf], &mut buf);
     }
 
-    let mut builder = HTTP_CLIENT.request(
-        Method::from_str(method).unwrap(),
-        Url::from_str(&push_url).unwrap()
-    )
-    .header(CONTENT_TYPE, encoder.format_type())
-    .body(buf);
+    let mut builder = HTTP_CLIENT
+        .request(
+            Method::from_str(method).unwrap(),
+            Url::from_str(&push_url).unwrap(),
+        )
+        .header(CONTENT_TYPE, encoder.format_type())
+        .body(buf);
 
     if let Some(BasicAuthentication { username, password }) = basic_auth {
         builder = builder.basic_auth(username, Some(password));
@@ -244,20 +245,20 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
     } {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
-            labels!{
+            labels! {
                 DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => str::from_utf8(&name[..last_char])
                                             .unwrap_or(DEFAULT_GROUP_LABEL_PAIR.1).to_owned(),
             }
         }
         _ => {
-            labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+            labels! {DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
         }
     }
 }
 
 #[cfg(target_os = "windows")]
 pub fn hostname_grouping_key() -> HashMap<String, String> {
-    labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+    labels! {DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
 }
 
 #[cfg(test)]

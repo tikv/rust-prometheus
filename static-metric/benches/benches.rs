@@ -110,7 +110,8 @@ fn bench_static_metrics_macro_deep(b: &mut Bencher) {
     let counter_vec = IntCounterVec::new(
         Opts::new("foo", "bar"),
         &["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10"],
-    ).unwrap();
+    )
+    .unwrap();
     let static_counter = StaticCounter3::from(&counter_vec);
     b.iter(|| {
         static_counter

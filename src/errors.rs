@@ -16,7 +16,7 @@ use std::result;
 
 use protobuf::error::ProtobufError;
 
-quick_error!{
+quick_error! {
     /// The error types for prometheus.
     #[derive(Debug)]
     pub enum Error {

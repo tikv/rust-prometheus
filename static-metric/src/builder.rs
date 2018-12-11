@@ -88,11 +88,12 @@ impl TokensBuilder {
                 let builder_context = MetricBuilderContext::new(metric, enum_definitions, i);
                 let code_struct = builder_context.build_struct();
                 let code_impl = builder_context.build_impl();
-                quote!{
+                quote! {
                     #code_struct
                     #code_impl
                 }
-            }).collect();
+            })
+            .collect();
 
         let scope_id = SCOPE_ID.fetch_add(1, Ordering::Relaxed);
         let scope_name = Ident::from(format!("prometheus_static_scope_{}", scope_id));
@@ -102,7 +103,7 @@ impl TokensBuilder {
         let metric_type = &metric.metric_type;
         let metric_vec_type = util::get_metric_vec_type(*metric_type);
 
-        quote!{
+        quote! {
             #visibility use self::#scope_name::#struct_name;
 
             #[allow(dead_code)]
@@ -128,7 +129,7 @@ impl TokensBuilder {
         let enum_item_values = label_enum.definitions.get_values();
         let match_patterns = label_enum.build_fields_with_path();
 
-        quote!{
+        quote! {
             #[allow(dead_code)]
             #[allow(non_camel_case_types)]
             #[derive(Clone, Copy, PartialEq)]
@@ -207,7 +208,7 @@ impl<'a> MetricBuilderContext<'a> {
             .get_names();
         let member_types: Vec<_> = field_names.iter().map(|_| &self.member_type).collect();
 
-        quote!{
+        quote! {
             #[allow(missing_copy_implementations)]
             pub struct #struct_name {
                 #(
@@ -222,7 +223,7 @@ impl<'a> MetricBuilderContext<'a> {
         let impl_from = self.build_impl_from();
         let impl_get = self.build_impl_get();
         let impl_try_get = self.build_impl_try_get();
-        quote!{
+        quote! {
             impl #struct_name {
                 #impl_from
                 #impl_get
@@ -240,7 +241,7 @@ impl<'a> MetricBuilderContext<'a> {
             .collect();
         let body = self.build_impl_from_body(&prev_labels_ident);
 
-        quote!{
+        quote! {
             pub fn from(
                 #(
                     #prev_labels_ident: &str,
@@ -271,7 +272,7 @@ impl<'a> MetricBuilderContext<'a> {
                         .enumerate()
                         .map(|(i, _)| &self.metric.labels[i].label_key)
                         .collect();
-                    quote!{
+                    quote! {
                         #name: m.with(&{
                             let mut coll = HashMap::new();
                             #(
@@ -283,7 +284,7 @@ impl<'a> MetricBuilderContext<'a> {
                     }
                 } else {
                     let prev_labels_ident = prev_labels_ident;
-                    quote!{
+                    quote! {
                         #name: #member_type::from(
                             #(
                                 #prev_labels_ident,
@@ -293,8 +294,9 @@ impl<'a> MetricBuilderContext<'a> {
                         ),
                     }
                 }
-            }).collect();
-        quote!{
+            })
+            .collect();
+        quote! {
             #(
                 #bodies
             )*
@@ -315,7 +317,7 @@ impl<'a> MetricBuilderContext<'a> {
                 .label
                 .get_value_def_list(self.enum_definitions)
                 .get_names();
-            quote!{
+            quote! {
                 pub fn get(&self, value: #e) -> &#member_type {
                     match value {
                         #(
@@ -334,7 +336,7 @@ impl<'a> MetricBuilderContext<'a> {
         let value_def_list = self.label.get_value_def_list(self.enum_definitions);
         let names = value_def_list.get_names();
         let values = value_def_list.get_values();
-        quote!{
+        quote! {
             pub fn try_get(&self, value: &str) -> Option<&#member_type> {
                 match value {
                     #(
