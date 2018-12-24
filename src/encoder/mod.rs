@@ -62,7 +62,8 @@ mod tests {
         let cv = CounterVec::new(
             Opts::new("test_counter_vec", "help information"),
             &["labelname"],
-        ).unwrap();
+        )
+        .unwrap();
 
         // Empty metrics
         let mfs = cv.collect();

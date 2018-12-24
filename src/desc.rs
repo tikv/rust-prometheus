@@ -33,17 +33,19 @@ fn is_ascii(c: char) -> bool {
 fn is_valid_metric_name(name: &str) -> bool {
     // Valid metric names must match regex [a-zA-Z_:][a-zA-Z0-9_:]*.
     fn valid_start(c: char) -> bool {
-        is_ascii(c) && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'_' | b':' => true,
-            _ => false,
-        }
+        is_ascii(c)
+            && match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'_' | b':' => true,
+                _ => false,
+            }
     }
 
     fn valid_char(c: char) -> bool {
-        is_ascii(c) && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' | b':' => true,
-            _ => false,
-        }
+        is_ascii(c)
+            && match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' | b':' => true,
+                _ => false,
+            }
     }
 
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
@@ -52,17 +54,19 @@ fn is_valid_metric_name(name: &str) -> bool {
 fn is_valid_label_name(name: &str) -> bool {
     // Valid label names must match regex [a-zA-Z_][a-zA-Z0-9_]*.
     fn valid_start(c: char) -> bool {
-        is_ascii(c) && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'_' => true,
-            _ => false,
-        }
+        is_ascii(c)
+            && match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'_' => true,
+                _ => false,
+            }
     }
 
     fn valid_char(c: char) -> bool {
-        is_ascii(c) && match c as u8 {
-            b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' => true,
-            _ => false,
-        }
+        is_ascii(c)
+            && match c as u8 {
+                b'a'...b'z' | b'A'...b'Z' | b'0'...b'9' | b'_' => true,
+                _ => false,
+            }
     }
 
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
@@ -275,7 +279,8 @@ mod tests {
                 "help".into(),
                 vec![name.into()],
                 HashMap::new(),
-            ).err()
+            )
+            .err()
             .expect(format!("expected error for {}", name).as_ref());
             match res {
                 Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid label name", name)),

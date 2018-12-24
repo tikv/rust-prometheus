@@ -60,38 +60,47 @@ impl ProcessCollector {
                 "process_cpu_seconds_total",
                 "Total user and system CPU time spent in \
                  seconds.",
-            ).namespace(namespace.clone()),
-        ).unwrap();
+            )
+            .namespace(namespace.clone()),
+        )
+        .unwrap();
         descs.extend(cpu_total.desc().into_iter().cloned());
 
         let open_fds = Gauge::with_opts(
             Opts::new("process_open_fds", "Number of open file descriptors.")
                 .namespace(namespace.clone()),
-        ).unwrap();
+        )
+        .unwrap();
         descs.extend(open_fds.desc().into_iter().cloned());
 
         let max_fds = Gauge::with_opts(
             Opts::new(
                 "process_max_fds",
                 "Maximum number of open file descriptors.",
-            ).namespace(namespace.clone()),
-        ).unwrap();
+            )
+            .namespace(namespace.clone()),
+        )
+        .unwrap();
         descs.extend(max_fds.desc().into_iter().cloned());
 
         let vsize = Gauge::with_opts(
             Opts::new(
                 "process_virtual_memory_bytes",
                 "Virtual memory size in bytes.",
-            ).namespace(namespace.clone()),
-        ).unwrap();
+            )
+            .namespace(namespace.clone()),
+        )
+        .unwrap();
         descs.extend(vsize.desc().into_iter().cloned());
 
         let rss = Gauge::with_opts(
             Opts::new(
                 "process_resident_memory_bytes",
                 "Resident memory size in bytes.",
-            ).namespace(namespace.clone()),
-        ).unwrap();
+            )
+            .namespace(namespace.clone()),
+        )
+        .unwrap();
         descs.extend(rss.desc().into_iter().cloned());
 
         let start_time = Gauge::with_opts(
@@ -99,8 +108,10 @@ impl ProcessCollector {
                 "process_start_time_seconds",
                 "Start time of the process since unix epoch \
                  in seconds.",
-            ).namespace(namespace.clone()),
-        ).unwrap();
+            )
+            .namespace(namespace.clone()),
+        )
+        .unwrap();
         descs.extend(start_time.desc().into_iter().cloned());
 
         ProcessCollector {

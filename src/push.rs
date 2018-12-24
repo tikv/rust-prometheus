@@ -17,8 +17,8 @@ use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
-use reqwest::header::{Authorization, Basic, ContentType};
-use reqwest::{Body, Client, Method, Request, StatusCode, Url};
+use reqwest::header::CONTENT_TYPE;
+use reqwest::{Client, Method, StatusCode, Url};
 
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
@@ -155,29 +155,22 @@ fn push<S: BuildHasher>(
         let _ = encoder.encode(&[mf], &mut buf);
     }
 
-    let mut request = Request::new(
-        Method::from_str(method).unwrap(),
-        Url::from_str(&push_url).unwrap(),
-    );
-    request
-        .headers_mut()
-        .set(ContentType(encoder.format_type().parse().unwrap()));
+    let mut builder = HTTP_CLIENT
+        .request(
+            Method::from_str(method).unwrap(),
+            Url::from_str(&push_url).unwrap(),
+        )
+        .header(CONTENT_TYPE, encoder.format_type())
+        .body(buf);
 
     if let Some(BasicAuthentication { username, password }) = basic_auth {
-        request.headers_mut().set(Authorization(Basic {
-            username,
-            password: Some(password),
-        }))
+        builder = builder.basic_auth(username, Some(password));
     }
 
-    *request.body_mut() = Some(Body::from(buf));
-
-    let response = HTTP_CLIENT
-        .execute(request)
-        .map_err(|e| Error::Msg(format!("{}", e)))?;
+    let response = builder.send().map_err(|e| Error::Msg(format!("{}", e)))?;
 
     match response.status() {
-        StatusCode::Accepted => Ok(()),
+        StatusCode::ACCEPTED => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
             response.status(),
@@ -252,20 +245,20 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
     } {
         0 => {
             let last_char = name.iter().position(|byte| *byte == 0).unwrap_or(max_len);
-            labels!{
+            labels! {
                 DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => str::from_utf8(&name[..last_char])
                                             .unwrap_or(DEFAULT_GROUP_LABEL_PAIR.1).to_owned(),
             }
         }
         _ => {
-            labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+            labels! {DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
         }
     }
 }
 
 #[cfg(target_os = "windows")]
 pub fn hostname_grouping_key() -> HashMap<String, String> {
-    labels!{DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
+    labels! {DEFAULT_GROUP_LABEL_PAIR.0.to_owned() => DEFAULT_GROUP_LABEL_PAIR.1.to_owned(),}
 }
 
 #[cfg(test)]

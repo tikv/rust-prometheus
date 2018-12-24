@@ -109,7 +109,11 @@ This library supports four features:
 
 #![cfg_attr(
     feature = "cargo-clippy",
-    allow(needless_pass_by_value, new_without_default_derive)
+    allow(
+        clippy::needless_pass_by_value,
+        clippy::new_without_default_derive,
+        clippy::new_ret_no_self
+    )
 )]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 #![deny(missing_docs)]
@@ -149,6 +153,7 @@ mod vec;
 #[cfg(all(feature = "process", target_os = "linux"))]
 pub mod process_collector;
 /// Protocol buffers format of metrics.
+#[allow(warnings)]
 #[path = "../proto/metrics.rs"]
 pub mod proto;
 

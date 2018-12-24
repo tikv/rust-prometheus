@@ -105,7 +105,7 @@ impl From<MetricValueDefShort> for MetricValueDef {
 #[derive(Debug)]
 pub struct MetricValueDefList(Vec<MetricValueDef>);
 
-#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
 impl Synom for MetricValueDefList {
     named!(parse -> Self, do_parse!(
         body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty)>>
@@ -169,7 +169,8 @@ impl MetricEnumDef {
                     leading_colon: None,
                     segments,
                 }
-            }).collect()
+            })
+            .collect()
     }
 }
 
@@ -187,7 +188,7 @@ pub struct MetricLabelDef {
     arm: MetricLabelArm,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
 impl Synom for MetricLabelDef {
     named!(parse -> Self, do_parse!(
         label: syn!(LitStr) >>
@@ -234,7 +235,7 @@ pub struct MetricDef {
     pub labels: Vec<MetricLabelDef>,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
 impl Synom for MetricDef {
     named!(parse -> Self, do_parse!(
         visibility: syn!(Visibility) >>
@@ -263,7 +264,7 @@ pub struct StaticMetricMacroBody {
     pub items: Vec<StaticMetricMacroBodyItem>,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
 impl Synom for StaticMetricMacroBody {
     named!(parse -> Self, do_parse!(
         items: many0!(alt!(

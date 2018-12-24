@@ -922,7 +922,8 @@ mod tests {
         let vec = HistogramVec::new(
             HistogramOpts::new("test_histogram_vec", "test histogram vec help"),
             &["l1", "l2"],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).observe(1.0);
@@ -940,7 +941,8 @@ mod tests {
             HistogramOpts::new("test_histogram_vec", "test histogram vec help")
                 .buckets(buckets.clone()),
             &labels,
-        ).unwrap();
+        )
+        .unwrap();
 
         let histogram = vec.with_label_values(&["v1", "v2"]);
         histogram.observe(1.0);
@@ -990,7 +992,8 @@ mod tests {
         let vec = HistogramVec::new(
             HistogramOpts::new("test_histogram_vec_local", "test histogram vec help"),
             &["l1", "l2"],
-        ).unwrap();
+        )
+        .unwrap();
         let mut local_vec = vec.local();
 
         vec.remove_label_values(&["v1", "v2"]).unwrap_err();

@@ -42,7 +42,8 @@ lazy_static! {
         "http_requests",
         "Total number of HTTP requests.",
         &["method", "product"]
-    ).unwrap();
+    )
+    .unwrap();
     pub static ref HTTP_COUNTER: HttpRequestStatistics =
         HttpRequestStatistics::from(&HTTP_COUNTER_VEC);
 }

@@ -38,7 +38,7 @@ impl RegisterMethodInvoking {
     pub fn into_tokens(self, register_type: &str) -> Tokens {
         let register_macro_name = Ident::from(format!("register_{}_vec", register_type));
         let (static_struct_name, arguments) = (self.static_struct_name, self.arguments);
-        quote!{
+        quote! {
             {
                 let metric_result = #register_macro_name!(#(#arguments),*);
                 metric_result.map(|m| #static_struct_name::from(&m))

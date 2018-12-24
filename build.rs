@@ -8,7 +8,8 @@ fn generate_protobuf_binding_file() {
         input: &["proto/metrics.proto"],
         includes: &["proto"],
         ..Default::default()
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 #[cfg(not(feature = "gen"))]

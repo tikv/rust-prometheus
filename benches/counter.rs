@@ -26,7 +26,8 @@ fn bench_counter_with_label_values(b: &mut Bencher) {
     let counter = CounterVec::new(
         Opts::new("benchmark_counter", "A counter to benchmark it."),
         &["one", "two", "three"],
-    ).unwrap();
+    )
+    .unwrap();
     b.iter(|| counter.with_label_values(&["eins", "zwei", "drei"]).inc())
 }
 
@@ -35,7 +36,8 @@ fn bench_counter_with_mapped_labels(b: &mut Bencher) {
     let counter = CounterVec::new(
         Opts::new("benchmark_counter", "A counter to benchmark it."),
         &["one", "two", "three"],
-    ).unwrap();
+    )
+    .unwrap();
 
     b.iter(|| {
         let mut labels = HashMap::with_capacity(3);
@@ -51,7 +53,8 @@ fn bench_counter_with_prepared_mapped_labels(b: &mut Bencher) {
     let counter = CounterVec::new(
         Opts::new("benchmark_counter", "A counter to benchmark it."),
         &["one", "two", "three"],
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut labels = HashMap::with_capacity(3);
     labels.insert("two", "zwei");

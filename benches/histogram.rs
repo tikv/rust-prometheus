@@ -24,7 +24,8 @@ fn bench_histogram_with_label_values(b: &mut Bencher) {
     let histogram = HistogramVec::new(
         HistogramOpts::new("benchmark_histogram", "A histogram to benchmark it."),
         &["one", "two", "three"],
-    ).unwrap();
+    )
+    .unwrap();
     b.iter(|| {
         histogram
             .with_label_values(&["eins", "zwei", "drei"])
@@ -37,7 +38,8 @@ fn bench_histogram_no_labels(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram",
         "A histogram to benchmark it.",
-    )).unwrap();
+    ))
+    .unwrap();
     b.iter(|| histogram.observe(3.1415))
 }
 
@@ -46,7 +48,8 @@ fn bench_histogram_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_timer",
         "A histogram to benchmark it.",
-    )).unwrap();
+    ))
+    .unwrap();
     b.iter(|| histogram.start_timer())
 }
 
@@ -56,7 +59,8 @@ fn bench_histogram_coarse_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_timer",
         "A histogram to benchmark it.",
-    )).unwrap();
+    ))
+    .unwrap();
     b.iter(|| histogram.start_coarse_timer())
 }
 
@@ -65,7 +69,8 @@ fn bench_histogram_local(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_local",
         "A histogram to benchmark it.",
-    )).unwrap();
+    ))
+    .unwrap();
     let local = histogram.local();
     b.iter(|| local.observe(3.1415));
     local.flush();
@@ -76,7 +81,8 @@ fn bench_local_histogram_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_local_timer",
         "A histogram to benchmark it.",
-    )).unwrap();
+    ))
+    .unwrap();
     let local = histogram.local();
     b.iter(|| local.start_timer());
     local.flush();
@@ -88,7 +94,8 @@ fn bench_local_histogram_coarse_timer(b: &mut Bencher) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_timer",
         "A histogram to benchmark it.",
-    )).unwrap();
+    ))
+    .unwrap();
     let local = histogram.local();
     b.iter(|| local.start_coarse_timer());
     local.flush();

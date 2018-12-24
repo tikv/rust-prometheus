@@ -206,7 +206,8 @@ mod tests {
         let vec = GaugeVec::new(
             Opts::new("test_gauge_vec", "test gauge vec help"),
             &["l1", "l2"],
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
@@ -228,7 +229,8 @@ mod tests {
         let vec = GaugeVec::new(
             Opts::new("test_gauge_vec", "test gauge vec help"),
             &["l1", "l2"],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
         vec.with_label_values(&["v1", "v2"]).inc();
