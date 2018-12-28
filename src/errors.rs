@@ -14,8 +14,10 @@
 use std::io::Error as IoError;
 use std::result;
 
+#[cfg(feature = "protobuf")]
 use protobuf::error::ProtobufError;
 
+#[cfg(feature = "protobuf")]
 quick_error! {
     /// The error types for prometheus.
     #[derive(Debug)]
@@ -41,12 +43,42 @@ quick_error! {
             description(err.description())
             display("Io {}", err)
         }
+
         /// An error containing a [`protobuf::Error`].
         Protobuf(err: ProtobufError) {
             from()
             cause(err)
             description(err.description())
             display("Protobuf {}", err)
+        }
+    }
+}
+
+#[cfg(not(feature = "protobuf"))]
+quick_error! {
+    /// The error types for prometheus.
+    #[derive(Debug)]
+    pub enum Error {
+        /// A duplicate metric collector has already been registered.
+        AlreadyReg {
+            description("duplicate metrics collector registration attempted")
+        }
+        /// The label cardinality was inconsistent.
+        InconsistentCardinality(expect: usize, got: usize) {
+            description("inconsistent label cardinality")
+            display("expect {} label values, but got {}", expect, got)
+        }
+        /// An error message which is only a string.
+        Msg(msg: String) {
+            description(msg)
+            display("Error: {}", msg)
+        }
+        /// An error containing a [`std::io::Error`].
+        Io(err: IoError) {
+            from()
+            cause(err)
+            description(err.description())
+            display("Io {}", err)
         }
     }
 }

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use protobuf::RepeatedField;
-
 use atomic64::{Atomic, Number};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
@@ -106,7 +104,7 @@ impl<P: Atomic> Value<P> {
 
     pub fn metric(&self) -> Metric {
         let mut m = Metric::new();
-        m.set_label(RepeatedField::from_vec(self.label_pairs.clone()));
+        m.set_label(from_vec!(self.label_pairs.clone()));
 
         let val = self.get();
         match self.val_type {
@@ -130,7 +128,7 @@ impl<P: Atomic> Value<P> {
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.val_type.metric_type());
-        m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
+        m.set_metric(from_vec!(vec![self.metric()]));
         m
     }
 }

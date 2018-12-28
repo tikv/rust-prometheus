@@ -17,7 +17,6 @@ use std::hash::Hasher;
 use std::sync::Arc;
 
 use fnv::FnvHasher;
-use protobuf::RepeatedField;
 use spin::RwLock;
 
 use desc::{Desc, Describer};
@@ -56,7 +55,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         for child in children.values() {
             metrics.push(child.metric());
         }
-        m.set_metric(RepeatedField::from_vec(metrics));
+        m.set_metric(from_vec!(metrics));
         m
     }
 

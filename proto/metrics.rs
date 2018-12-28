@@ -21,6 +21,11 @@
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
+#[macro_export]
+macro_rules! from_vec {
+    ($e: expr) => { ::protobuf::RepeatedField::from_vec($e) };
+}
+
 #[derive(PartialEq,Clone,Default)]
 pub struct LabelPair {
     // message fields

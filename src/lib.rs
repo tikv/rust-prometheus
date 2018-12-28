@@ -118,6 +118,18 @@ This library supports four features:
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 #![deny(missing_docs)]
 
+/// Protocol buffers format of metrics.
+#[macro_use]
+#[cfg(feature = "protobuf")]
+#[allow(warnings)]
+#[path = "../proto/metrics.rs"]
+pub mod proto;
+
+#[macro_use]
+#[cfg(not(feature = "protobuf"))]
+#[path = "no_proto.rs"]
+pub mod proto;
+
 #[macro_use]
 extern crate cfg_if;
 extern crate fnv;
@@ -129,6 +141,7 @@ extern crate lazy_static;
 extern crate libc;
 #[cfg(all(feature = "process", target_os = "linux"))]
 extern crate procinfo;
+#[cfg(feature = "protobuf")]
 extern crate protobuf;
 #[macro_use]
 extern crate quick_error;
@@ -152,10 +165,6 @@ mod vec;
 
 #[cfg(all(feature = "process", target_os = "linux"))]
 pub mod process_collector;
-/// Protocol buffers format of metrics.
-#[allow(warnings)]
-#[path = "../proto/metrics.rs"]
-pub mod proto;
 
 pub mod local {
     /*!
@@ -189,7 +198,10 @@ pub mod core {
 
 pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
 pub use self::encoder::Encoder;
-pub use self::encoder::{ProtobufEncoder, TextEncoder};
+#[cfg(feature = "protobuf")]
+pub use self::encoder::ProtobufEncoder;
+pub use self::encoder::TextEncoder;
+#[cfg(feature = "protobuf")]
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::errors::{Error, Result};
 pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
