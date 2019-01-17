@@ -17,9 +17,10 @@ extern crate lazy_static;
 #[macro_use]
 extern crate prometheus;
 
-use hyper::header::ContentType;
-use hyper::mime::Mime;
-use hyper::server::{Request, Response, Server};
+use hyper::header::{CONTENT_TYPE, HeaderValue};
+use hyper::rt::Future;
+use hyper::service::service_fn_ok;
+use hyper::{Body, Response, Server};
 
 use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
 
@@ -45,24 +46,33 @@ lazy_static! {
 }
 
 fn main() {
-    let encoder = TextEncoder::new();
     let addr = "127.0.0.1:9898";
-    println!("listening addr {:?}", addr);
-    Server::http(addr)
-        .unwrap()
-        .handle(move |_: Request, mut res: Response| {
+
+    let make_service = || {
+        service_fn_ok(|_req| {
             HTTP_COUNTER.inc();
             let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
 
             let metric_families = prometheus::gather();
             let mut buffer = vec![];
+            let encoder = TextEncoder::new();
             encoder.encode(&metric_families, &mut buffer).unwrap();
-            res.headers_mut()
-                .set(ContentType(encoder.format_type().parse::<Mime>().unwrap()));
-            res.send(&buffer).unwrap();
+
+            let mut response = Response::new(Body::from(buffer.clone()));
+            response.headers_mut()
+                    .insert(CONTENT_TYPE, HeaderValue::from_str(encoder.format_type()).unwrap());
 
             timer.observe_duration();
             HTTP_BODY_GAUGE.set(buffer.len() as f64);
+
+            response
         })
-        .unwrap();
+    };
+
+    println!("listening addr {:?}", addr);
+    let server = Server::bind(&addr.parse().unwrap()).serve(make_service);
+
+    hyper::rt::run(server.map_err(|e| {
+        eprintln!("server error: {}", e);
+    }));
 }
