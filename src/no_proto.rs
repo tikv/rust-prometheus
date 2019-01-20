@@ -20,8 +20,8 @@ macro_rules! from_vec {
 
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct LabelPair {
-    name: Option<String>,
-    value: Option<String>,
+    name: String,
+    value: String,
 }
 
 impl LabelPair {
@@ -41,7 +41,7 @@ impl LabelPair {
 
     // Param is passed by value, moved
     pub fn set_name(&mut self, v: String) {
-        self.name = Some(v);
+        self.name = v;
     }
 
     // Mutable pointer to the field.
@@ -77,7 +77,7 @@ impl LabelPair {
 
     // Param is passed by value, moved
     pub fn set_value(&mut self, v: String) {
-        self.value = Some(v);
+        self.value = v;
     }
 
     // Mutable pointer to the field.
@@ -104,7 +104,7 @@ impl LabelPair {
 
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Gauge {
-    value: Option<f64>,
+    value: f64,
 }
 
 impl Gauge {
@@ -124,7 +124,7 @@ impl Gauge {
 
     // Param is passed by value, moved
     pub fn set_value(&mut self, v: f64) {
-        self.value = Some(v);
+        self.value = v;
     }
 
     pub fn get_value(&self) -> f64 {
@@ -136,7 +136,7 @@ impl Gauge {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Counter {
     // message fields
-    value: Option<f64>,
+    value: f64,
 }
 
 impl Counter {
@@ -156,7 +156,7 @@ impl Counter {
 
     // Param is passed by value, moved
     pub fn set_value(&mut self, v: f64) {
-        self.value = Some(v);
+        self.value = v;
     }
 
     pub fn get_value(&self) -> f64 {
@@ -167,8 +167,8 @@ impl Counter {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Quantile {
     // message fields
-    quantile: Option<f64>,
-    value: Option<f64>,
+    quantile: f64,
+    value: f64,
 }
 
 impl Quantile {
@@ -188,7 +188,7 @@ impl Quantile {
 
     // Param is passed by value, moved
     pub fn set_quantile(&mut self, v: f64) {
-        self.quantile = Some(v);
+        self.quantile = v;
     }
 
     pub fn get_quantile(&self) -> f64 {
@@ -207,7 +207,7 @@ impl Quantile {
 
     // Param is passed by value, moved
     pub fn set_value(&mut self, v: f64) {
-        self.value = Some(v);
+        self.value = v;
     }
 
     pub fn get_value(&self) -> f64 {
@@ -218,8 +218,8 @@ impl Quantile {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Summary {
     // message fields
-    sample_count: Option<u64>,
-    sample_sum: Option<f64>,
+    sample_count: u64,
+    sample_sum: f64,
     quantile: Vec<Quantile>,
 }
 
@@ -240,7 +240,7 @@ impl Summary {
 
     // Param is passed by value, moved
     pub fn set_sample_count(&mut self, v: u64) {
-        self.sample_count = Some(v);
+        self.sample_count = v;
     }
 
     pub fn get_sample_count(&self) -> u64 {
@@ -259,7 +259,7 @@ impl Summary {
 
     // Param is passed by value, moved
     pub fn set_sample_sum(&mut self, v: f64) {
-        self.sample_sum = Some(v);
+        self.sample_sum = v;
     }
 
     pub fn get_sample_sum(&self) -> f64 {
@@ -295,7 +295,7 @@ impl Summary {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Untyped {
     // message fields
-    value: Option<f64>,
+    value: f64,
 }
 
 impl Untyped {
@@ -315,7 +315,7 @@ impl Untyped {
 
     // Param is passed by value, moved
     pub fn set_value(&mut self, v: f64) {
-        self.value = Some(v);
+        self.value = v;
     }
 
     pub fn get_value(&self) -> f64 {
@@ -326,8 +326,8 @@ impl Untyped {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Histogram {
     // message fields
-    sample_count: Option<u64>,
-    sample_sum: Option<f64>,
+    sample_count: u64,
+    sample_sum: f64,
     bucket: Vec<Bucket>,
 }
 
@@ -348,7 +348,7 @@ impl Histogram {
 
     // Param is passed by value, moved
     pub fn set_sample_count(&mut self, v: u64) {
-        self.sample_count = Some(v);
+        self.sample_count = v;
     }
 
     pub fn get_sample_count(&self) -> u64 {
@@ -367,7 +367,7 @@ impl Histogram {
 
     // Param is passed by value, moved
     pub fn set_sample_sum(&mut self, v: f64) {
-        self.sample_sum = Some(v);
+        self.sample_sum = v;
     }
 
     pub fn get_sample_sum(&self) -> f64 {
@@ -403,8 +403,8 @@ impl Histogram {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Bucket {
     // message fields
-    cumulative_count: Option<u64>,
-    upper_bound: Option<f64>,
+    cumulative_count: u64,
+    upper_bound: f64,
 }
 
 impl Bucket {
@@ -424,7 +424,7 @@ impl Bucket {
 
     // Param is passed by value, moved
     pub fn set_cumulative_count(&mut self, v: u64) {
-        self.cumulative_count = Some(v);
+        self.cumulative_count = v;
     }
 
     pub fn get_cumulative_count(&self) -> u64 {
@@ -443,7 +443,7 @@ impl Bucket {
 
     // Param is passed by value, moved
     pub fn set_upper_bound(&mut self, v: f64) {
-        self.upper_bound = Some(v);
+        self.upper_bound = v;
     }
 
     pub fn get_upper_bound(&self) -> f64 {
@@ -461,7 +461,7 @@ pub struct Metric {
     summary: Option<Summary>,
     untyped: Option<Untyped>,
     histogram: Option<Histogram>,
-    timestamp_ms: Option<i64>,
+    timestamp_ms: i64,
 }
 
 impl Metric {
@@ -671,7 +671,7 @@ impl Metric {
 
     // Param is passed by value, moved
     pub fn set_timestamp_ms(&mut self, v: i64) {
-        self.timestamp_ms = Some(v);
+        self.timestamp_ms = v;
     }
 
     pub fn get_timestamp_ms(&self) -> i64 {
@@ -679,7 +679,7 @@ impl Metric {
     }
 }
 
-#[derive(Clone,PartialEq,Eq,Debug,Hash)]
+#[derive(Clone,PartialEq,Eq,Debug,Hash,Copy)]
 pub enum MetricType {
     COUNTER = 0,
     GAUGE = 1,
@@ -688,15 +688,12 @@ pub enum MetricType {
     HISTOGRAM = 4,
 }
 
-impl ::std::marker::Copy for MetricType {
-}
-
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct MetricFamily {
     // message fields
-    name: Option<String>,
-    help: Option<String>,
-    field_type: Option<MetricType>,
+    name: String,
+    help: String,
+    field_type: MetricType,
     metric: Vec<Metric>,
 }
 
@@ -717,7 +714,7 @@ impl MetricFamily {
 
     // Param is passed by value, moved
     pub fn set_name(&mut self, v: String) {
-        self.name = Some(v);
+        self.name = v;
     }
 
     // Mutable pointer to the field.
@@ -753,7 +750,7 @@ impl MetricFamily {
 
     // Param is passed by value, moved
     pub fn set_help(&mut self, v: String) {
-        self.help = Some(v);
+        self.help = v;
     }
 
     // Mutable pointer to the field.
@@ -789,7 +786,7 @@ impl MetricFamily {
 
     // Param is passed by value, moved
     pub fn set_field_type(&mut self, v: MetricType) {
-        self.field_type = Some(v);
+        self.field_type = v;
     }
 
     pub fn get_field_type(&self) -> MetricType {
