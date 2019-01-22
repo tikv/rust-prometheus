@@ -266,7 +266,6 @@ mod tests {
 
     use super::*;
     use proto;
-    use protobuf::RepeatedField;
     use std::error::Error;
 
     #[test]
