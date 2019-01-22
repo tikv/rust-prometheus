@@ -5,7 +5,7 @@
 
 use std::default::Default;
 
-lazy_static!{
+lazy_static! {
     static ref DEFAULT_GAUGE: Gauge = Gauge::default();
     static ref DEFAULT_HISTOGRAM: Histogram = Histogram::default();
     static ref DEFAULT_SUMMARY: Summary = Summary::default();
@@ -15,10 +15,12 @@ lazy_static!{
 
 #[macro_export]
 macro_rules! from_vec {
-    ($e: expr) => { $e };
+    ($e: expr) => {
+        $e
+    };
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct LabelPair {
     name: String,
     value: String,
@@ -102,7 +104,7 @@ impl LabelPair {
     }
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Gauge {
     value: f64,
 }
@@ -132,8 +134,7 @@ impl Gauge {
     }
 }
 
-
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Counter {
     // message fields
     value: f64,
@@ -164,7 +165,7 @@ impl Counter {
     }
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Quantile {
     // message fields
     quantile: f64,
@@ -215,7 +216,7 @@ impl Quantile {
     }
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Summary {
     // message fields
     sample_count: u64,
@@ -292,7 +293,7 @@ impl Summary {
     }
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Untyped {
     // message fields
     value: f64,
@@ -323,7 +324,7 @@ impl Untyped {
     }
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Histogram {
     // message fields
     sample_count: u64,
@@ -400,7 +401,7 @@ impl Histogram {
     }
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Bucket {
     // message fields
     cumulative_count: u64,
@@ -451,8 +452,7 @@ impl Bucket {
     }
 }
 
-
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Metric {
     // message fields
     label: Vec<LabelPair>,
@@ -656,7 +656,9 @@ impl Metric {
     }
 
     pub fn get_histogram(&self) -> &Histogram {
-        self.histogram.as_ref().unwrap_or_else(|| &DEFAULT_HISTOGRAM)
+        self.histogram
+            .as_ref()
+            .unwrap_or_else(|| &DEFAULT_HISTOGRAM)
     }
 
     // optional int64 timestamp_ms = 6;
@@ -679,7 +681,7 @@ impl Metric {
     }
 }
 
-#[derive(Clone,PartialEq,Eq,Debug,Hash,Copy)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Copy)]
 pub enum MetricType {
     COUNTER = 0,
     GAUGE = 1,
@@ -688,7 +690,7 @@ pub enum MetricType {
     HISTOGRAM = 4,
 }
 
-#[derive(PartialEq,Clone,Default,Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct MetricFamily {
     // message fields
     name: String,
