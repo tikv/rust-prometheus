@@ -22,7 +22,7 @@ use atomic64::{Atomic, AtomicF64, AtomicU64};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
-use proto;
+use model;
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -164,7 +164,7 @@ impl From<Opts> for HistogramOpts {
 
 pub struct HistogramCore {
     desc: Desc,
-    label_pairs: Vec<proto::LabelPair>,
+    label_pairs: Vec<model::LabelPair>,
 
     sum: AtomicF64,
     count: AtomicU64,
@@ -217,8 +217,8 @@ impl HistogramCore {
         self.sum.inc_by(v);
     }
 
-    pub fn proto(&self) -> proto::Histogram {
-        let mut h = proto::Histogram::new();
+    pub fn proto(&self) -> model::Histogram {
+        let mut h = model::Histogram::default();
         h.set_sample_sum(self.sum.get());
         h.set_sample_count(self.count.get() as u64);
 
@@ -226,7 +226,7 @@ impl HistogramCore {
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
             count += self.counts[i].get();
-            let mut b = proto::Bucket::new();
+            let mut b = model::Bucket::default();
             b.set_cumulative_count(count as u64);
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
@@ -410,8 +410,8 @@ impl Histogram {
 }
 
 impl Metric for Histogram {
-    fn metric(&self) -> proto::Metric {
-        let mut m = proto::Metric::new();
+    fn metric(&self) -> model::Metric {
+        let mut m = model::Metric::default();
         m.set_label(from_vec!(self.core.label_pairs.clone()));
 
         let h = self.core.proto();
@@ -426,11 +426,11 @@ impl Collector for Histogram {
         vec![&self.core.desc]
     }
 
-    fn collect(&self) -> Vec<proto::MetricFamily> {
-        let mut m = proto::MetricFamily::new();
+    fn collect(&self) -> Vec<model::MetricFamily> {
+        let mut m = model::MetricFamily::default();
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
-        m.set_field_type(proto::MetricType::HISTOGRAM);
+        m.set_field_type(model::MetricType::HISTOGRAM);
         m.set_metric(from_vec!(vec![self.metric()]));
 
         vec![m]
@@ -463,7 +463,7 @@ impl HistogramVec {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec =
-            MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
+            MetricVec::create(model::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
 
         Ok(metric_vec as HistogramVec)
     }

@@ -15,7 +15,7 @@
 use atomic64::{Atomic, Number};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
-use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
+use model::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for [`Counter`](::Counter) and [`Gauge`](::Gauge).
@@ -103,18 +103,18 @@ impl<P: Atomic> Value<P> {
     }
 
     pub fn metric(&self) -> Metric {
-        let mut m = Metric::new();
+        let mut m = Metric::default();
         m.set_label(from_vec!(self.label_pairs.clone()));
 
         let val = self.get();
         match self.val_type {
             ValueType::Counter => {
-                let mut counter = Counter::new();
+                let mut counter = Counter::default();
                 counter.set_value(val.into_f64());
                 m.set_counter(counter);
             }
             ValueType::Gauge => {
-                let mut gauge = Gauge::new();
+                let mut gauge = Gauge::default();
                 gauge.set_value(val.into_f64());
                 m.set_gauge(gauge);
             }
@@ -124,7 +124,7 @@ impl<P: Atomic> Value<P> {
     }
 
     pub fn collect(&self) -> MetricFamily {
-        let mut m = MetricFamily::new();
+        let mut m = MetricFamily::default();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.val_type.metric_type());
@@ -145,7 +145,7 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
 
     let mut label_pairs = Vec::with_capacity(total_len);
     for (i, n) in desc.variable_labels.iter().enumerate() {
-        let mut label_pair = LabelPair::new();
+        let mut label_pair = LabelPair::default();
         label_pair.set_name(n.clone());
         label_pair.set_value(label_values[i].to_owned());
         label_pairs.push(label_pair);

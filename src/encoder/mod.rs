@@ -25,7 +25,7 @@ pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
 
 pub use self::text::{TextEncoder, TEXT_FORMAT};
 
-use proto::MetricFamily;
+use model::MetricFamily;
 
 /// An interface for encoding metric families into an underlying wire protocol.
 pub trait Encoder {

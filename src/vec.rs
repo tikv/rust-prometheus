@@ -22,7 +22,7 @@ use spin::RwLock;
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric};
-use proto::{MetricFamily, MetricType};
+use model::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -45,7 +45,7 @@ pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
 
 impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn collect(&self) -> MetricFamily {
-        let mut m = MetricFamily::new();
+        let mut m = MetricFamily::default();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.metric_type);

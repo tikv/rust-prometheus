@@ -119,16 +119,27 @@ This library supports four features:
 #![deny(missing_docs)]
 
 /// Protocol buffers format of metrics.
-#[macro_use]
 #[cfg(feature = "protobuf")]
 #[allow(warnings)]
-#[path = "../proto/metrics.rs"]
-pub mod proto;
+#[path = "../proto/proto_model.rs"]
+pub mod model;
 
-#[macro_use]
+#[cfg(feature = "protobuf")]
+#[macro_export]
+macro_rules! from_vec {
+    ($e: expr) => { ::protobuf::RepeatedField::from_vec($e) };
+}
+
 #[cfg(not(feature = "protobuf"))]
-#[path = "no_proto.rs"]
-pub mod proto;
+#[path = "plain_model.rs"]
+pub mod model;
+
+#[cfg(not(feature = "protobuf"))]
+macro_rules! from_vec {
+    ($e: expr) => {
+        $e
+    };
+}
 
 #[macro_use]
 extern crate cfg_if;

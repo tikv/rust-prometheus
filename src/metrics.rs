@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use desc::{Desc, Describer};
 use errors::Result;
-use proto::{self, LabelPair};
+use model::{self, LabelPair};
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -27,13 +27,13 @@ pub trait Collector: Sync + Send {
     fn desc(&self) -> Vec<&Desc>;
 
     /// Collect metrics.
-    fn collect(&self) -> Vec<proto::MetricFamily>;
+    fn collect(&self) -> Vec<model::MetricFamily>;
 }
 
 /// An interface models a single sample value with its meta data being exported to Prometheus.
 pub trait Metric: Sync + Send + Clone {
     /// Return the protocol Metric.
-    fn metric(&self) -> proto::Metric;
+    fn metric(&self) -> model::Metric;
 }
 
 /// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.
@@ -199,11 +199,11 @@ fn build_fq_name(namespace: &str, subsystem: &str, name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::LabelPair;
+    use model::LabelPair;
     use std::cmp::{Ord, Ordering};
 
     fn new_label_pair(name: &str, value: &str) -> LabelPair {
-        let mut l = LabelPair::new();
+        let mut l = LabelPair::default();
         l.set_name(name.to_owned());
         l.set_value(value.to_owned());
         l
