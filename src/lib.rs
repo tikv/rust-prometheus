@@ -125,9 +125,10 @@ This library supports four features:
 pub mod model;
 
 #[cfg(feature = "protobuf")]
-#[macro_export]
 macro_rules! from_vec {
-    ($e: expr) => { ::protobuf::RepeatedField::from_vec($e) };
+    ($e: expr) => {
+        ::protobuf::RepeatedField::from_vec($e)
+    };
 }
 
 #[cfg(not(feature = "protobuf"))]

@@ -12,7 +12,6 @@ pub struct LabelPair {
 }
 
 impl LabelPair {
-
     pub fn set_name(&mut self, v: String) {
         self.name = v;
     }
@@ -36,7 +35,6 @@ pub struct Gauge {
 }
 
 impl Gauge {
-
     pub fn set_value(&mut self, v: f64) {
         self.value = v;
     }
@@ -53,7 +51,6 @@ pub struct Counter {
 }
 
 impl Counter {
-
     pub fn set_value(&mut self, v: f64) {
         self.value = v;
     }
@@ -70,7 +67,6 @@ pub struct Quantile {
 }
 
 impl Quantile {
-
     pub fn set_quantile(&mut self, v: f64) {
         self.quantile = v;
     }
@@ -96,7 +92,6 @@ pub struct Summary {
 }
 
 impl Summary {
-
     pub fn set_sample_count(&mut self, v: u64) {
         self.sample_count = v;
     }
@@ -130,7 +125,6 @@ pub struct Histogram {
 }
 
 impl Histogram {
-
     pub fn set_sample_count(&mut self, v: u64) {
         self.sample_count = v;
     }
@@ -164,7 +158,6 @@ pub struct Bucket {
 }
 
 impl Bucket {
-
     pub fn set_cumulative_count(&mut self, v: u64) {
         self.cumulative_count = v;
     }
@@ -193,7 +186,6 @@ pub struct Metric {
 }
 
 impl Metric {
-
     pub fn set_label(&mut self, v: Vec<LabelPair>) {
         self.label = v;
     }
@@ -267,7 +259,6 @@ pub struct MetricFamily {
 }
 
 impl MetricFamily {
-
     pub fn clear_name(&mut self) {
         self.name.clear();
     }
