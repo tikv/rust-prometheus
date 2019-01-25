@@ -43,7 +43,6 @@ quick_error! {
             description(err.description())
             display("Io {}", err)
         }
-
         /// An error containing a [`protobuf::Error`].
         Protobuf(err: ProtobufError) {
             from()
