@@ -1,0 +1,18 @@
+[package]
+name = "prometheus"
+version = "1.0.0-alpha.1"
+license = "Apache-2.0"
+keywords = ["prometheus", "metrics"]
+authors = ["overvenus@gmail.com", "siddontang@gmail.com", "vistaswx@gmail.com"]
+description = "Prometheus instrumentation library for Rust applications."
+edition = "2018"
+
+[features]
+default = []
+nightly = []
+
+[dependencies]
+fxhash = "0.2"
+failure = "0.1"
+crossbeam-utils = "0.6"
+hashbrown = "0.1"
