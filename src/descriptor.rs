@@ -1,6 +1,6 @@
 use crate::{Error, Result};
 
-struct Descriptor {
+pub struct Descriptor {
     name: String,
     help: String,
     ordered_const_labels: Vec<(String, String)>,
@@ -8,7 +8,12 @@ struct Descriptor {
 }
 
 impl Descriptor {
-    pub fn new(name: String, help: String, mut const_labels: Vec<(String, String)>, mut dynamic_label_names: Vec<String>) -> Result<Self> {
+    pub fn new(
+        name: String,
+        help: String,
+        mut const_labels: Vec<(String, String)>,
+        mut dynamic_label_names: Vec<String>,
+    ) -> Result<Self> {
         const_labels.sort();
         dynamic_label_names.sort();
         Ok(Self {

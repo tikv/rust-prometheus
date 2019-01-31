@@ -11,19 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(integer_atomics)]
 #![warn(missing_docs)]
 
 mod atomic;
-mod counter;
-mod encoder;
-mod label;
 mod collector;
-mod registry;
-mod error;
+mod counter;
 mod descriptor;
+mod encoder;
+mod error;
+mod label;
+mod registry;
 
-pub use label::*;
-pub use counter::*;
 pub use collector::*;
-pub use registry::*;
+pub use counter::*;
 pub use error::*;
+pub use label::*;
+pub use registry::*;
