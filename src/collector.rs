@@ -2,7 +2,7 @@
 ///
 /// Normal users should use [`Counter`], [`Gauge`] and [`Histogram`].
 pub trait Collector: Send + Sync {
-    fn describe(&self) {}
+    fn describe(&self) -> Vec<&crate::Descriptor>;
 
     fn collect(&self) {}
 

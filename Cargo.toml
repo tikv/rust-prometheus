@@ -9,7 +9,7 @@ edition = "2018"
 
 [features]
 default = []
-nightly = []
+nightly = ["hashbrown/nightly", "crossbeam-utils/nightly"]
 
 [dependencies]
 fxhash = "0.2"

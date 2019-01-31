@@ -1,5 +1,6 @@
 use crate::{Error, Result};
 
+/// The metric descriptor. It is essentially the immutable meta-data of a metric.
 pub struct Descriptor {
     name: String,
     help: String,
@@ -22,5 +23,15 @@ impl Descriptor {
             ordered_const_labels: const_labels,
             ordered_dynamic_label_names: dynamic_label_names,
         })
+    }
+
+    /// Gets the name of the metric.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Gets the help of the metric.
+    pub fn help(&self) -> &str {
+        &self.help
     }
 }

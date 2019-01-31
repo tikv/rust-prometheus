@@ -72,6 +72,11 @@ impl<A: Atomic> GeneralCounter<A> {
 
 impl<A: Atomic> crate::Collector for GeneralCounter<A> {
     #[inline]
+    fn describe(&self) -> Vec<&crate::Descriptor> {
+        vec![&self.0.desc]
+    }
+
+    #[inline]
     fn box_clone(&self) -> Box<crate::Collector> {
         Box::new(self.clone())
     }
@@ -121,6 +126,11 @@ impl<A: Atomic, Len: crate::LabelLengthPlaceholder> Clone for GeneralCounterVec<
 }
 
 impl<A: Atomic, Len: crate::LabelLengthPlaceholder> crate::Collector for GeneralCounterVec<A, Len> {
+    #[inline]
+    fn describe(&self) -> Vec<&crate::Descriptor> {
+        vec![&self.0.desc]
+    }
+
     #[inline]
     fn box_clone(&self) -> Box<crate::Collector> {
         Box::new(self.clone())

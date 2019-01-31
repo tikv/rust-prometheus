@@ -1,6 +1,6 @@
 use std::slice::Iter;
 
-pub trait LabelLengthPlaceholder: 'static {}
+pub trait LabelLengthPlaceholder: 'static + Send + Sync {}
 
 impl LabelLengthPlaceholder for [(); 1] {}
 

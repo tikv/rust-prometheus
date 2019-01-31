@@ -23,6 +23,7 @@ mod error;
 mod label;
 mod registry;
 
+pub use descriptor::*;
 pub use collector::*;
 pub use counter::*;
 pub use error::*;
