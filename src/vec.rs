@@ -22,7 +22,7 @@ use spin::RwLock;
 use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric};
-use model::{MetricFamily, MetricType};
+use proto::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -139,7 +139,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
                         name
-                    )))
+                    )));
                 }
             }
         }
@@ -156,7 +156,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
                         name
-                    )))
+                    )));
                 }
             }
         }

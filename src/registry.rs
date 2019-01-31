@@ -22,7 +22,7 @@ use spin::RwLock;
 
 use errors::{Error, Result};
 use metrics::Collector;
-use model;
+use proto;
 
 struct RegistryCore {
     pub collectors_by_id: HashMap<u64, Box<Collector>>,
@@ -114,7 +114,7 @@ impl RegistryCore {
         Ok(())
     }
 
-    fn gather(&self) -> Vec<model::MetricFamily> {
+    fn gather(&self) -> Vec<proto::MetricFamily> {
         let mut mf_by_name = BTreeMap::new();
 
         for c in self.collectors_by_id.values() {
@@ -236,7 +236,7 @@ impl Registry {
     /// `gather` calls the Collect method of the registered Collectors and then
     /// gathers the collected metrics into a lexicographically sorted slice
     /// of MetricFamily protobufs.
-    pub fn gather(&self) -> Vec<model::MetricFamily> {
+    pub fn gather(&self) -> Vec<proto::MetricFamily> {
         self.r.read().gather()
     }
 }
@@ -286,7 +286,7 @@ pub fn unregister(c: Box<Collector>) -> Result<()> {
 }
 
 /// Return all `MetricFamily` of `DEFAULT_REGISTRY`.
-pub fn gather() -> Vec<model::MetricFamily> {
+pub fn gather() -> Vec<proto::MetricFamily> {
     DEFAULT_REGISTRY.gather()
 }
 
@@ -297,7 +297,7 @@ mod tests {
     use counter::{Counter, CounterVec};
     use desc::Desc;
     use metrics::{Collector, Opts};
-    use model;
+    use proto;
     use std::collections::HashMap;
     use std::thread;
 
@@ -426,7 +426,7 @@ mod tests {
             self.descs.iter().collect()
         }
 
-        fn collect(&self) -> Vec<model::MetricFamily> {
+        fn collect(&self) -> Vec<proto::MetricFamily> {
             self.counters
                 .iter()
                 .inspect(|c| c.inc())

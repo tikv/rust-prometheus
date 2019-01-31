@@ -25,7 +25,7 @@ pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
 
 pub use self::text::{TextEncoder, TEXT_FORMAT};
 
-use model::MetricFamily;
+use proto::MetricFamily;
 
 /// An interface for encoding metric families into an underlying wire protocol.
 pub trait Encoder {
@@ -68,7 +68,7 @@ mod tests {
             Opts::new("test_counter_vec", "help information"),
             &["labelname"],
         )
-            .unwrap();
+        .unwrap();
 
         // Empty metrics
         let mfs = cv.collect();

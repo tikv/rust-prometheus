@@ -19,7 +19,7 @@ use fnv::FnvHasher;
 
 use errors::{Error, Result};
 use metrics::SEPARATOR_BYTE;
-use model::LabelPair;
+use proto::LabelPair;
 
 // TODO: use `char::is_ascii` instead once it landed in the stable rust.
 // Refer to https://github.com/rust-lang/rust/blob/

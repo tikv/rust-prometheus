@@ -15,7 +15,7 @@
 use atomic64::{Atomic, Number};
 use desc::{Desc, Describer};
 use errors::{Error, Result};
-use model::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
+use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for [`Counter`](::Counter) and [`Gauge`](::Gauge).

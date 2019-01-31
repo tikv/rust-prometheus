@@ -23,7 +23,7 @@ use reqwest::{Client, Method, StatusCode, Url};
 use encoder::{Encoder, ProtobufEncoder};
 use errors::{Error, Result};
 use metrics::Collector;
-use model;
+use proto;
 use registry::Registry;
 
 const REQWEST_TIMEOUT_SEC: Duration = Duration::from_secs(10);
@@ -63,7 +63,7 @@ pub fn push_metrics<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
     url: &str,
-    mfs: Vec<model::MetricFamily>,
+    mfs: Vec<proto::MetricFamily>,
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push(job, grouping, url, mfs, "PUT", basic_auth)
@@ -76,7 +76,7 @@ pub fn push_add_metrics<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
     url: &str,
-    mfs: Vec<model::MetricFamily>,
+    mfs: Vec<proto::MetricFamily>,
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push(job, grouping, url, mfs, "POST", basic_auth)
@@ -88,7 +88,7 @@ fn push<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
     url: &str,
-    mfs: Vec<model::MetricFamily>,
+    mfs: Vec<proto::MetricFamily>,
     method: &str,
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
@@ -265,7 +265,7 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
 mod tests {
 
     use super::*;
-    use model;
+    use proto;
     use std::error::Error;
 
     #[test]
@@ -284,11 +284,11 @@ mod tests {
         ];
 
         for case in table {
-            let mut l = model::LabelPair::new();
+            let mut l = proto::LabelPair::new();
             l.set_name(case.0.to_owned());
-            let mut m = model::Metric::new();
+            let mut m = proto::Metric::new();
             m.set_label(from_vec!(vec![l]));
-            let mut mf = model::MetricFamily::new();
+            let mut mf = proto::MetricFamily::new();
             mf.set_metric(from_vec!(vec![m]));
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(res.unwrap_err().description().contains(case.1));

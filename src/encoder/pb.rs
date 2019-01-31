@@ -14,7 +14,7 @@
 use std::io::Write;
 
 use errors::Result;
-use model::MetricFamily;
+use proto::MetricFamily;
 use protobuf::Message;
 
 use super::{check_metric_family, Encoder};

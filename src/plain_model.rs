@@ -12,6 +12,19 @@ pub struct LabelPair {
 }
 
 impl LabelPair {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> LabelPair {
+        Default::default()
+    }
+
+    #[deprecated(
+        note = "This method is protobuf specific and will be removed in a future version",
+        since = "0.5.1"
+    )]
+    pub fn clear_name(&mut self) {
+        self.name.clear();
+    }
+
     pub fn set_name(&mut self, v: String) {
         self.name = v;
     }
@@ -35,6 +48,11 @@ pub struct Gauge {
 }
 
 impl Gauge {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Gauge {
+        Default::default()
+    }
+
     pub fn set_value(&mut self, v: f64) {
         self.value = v;
     }
@@ -46,11 +64,16 @@ impl Gauge {
 
 #[derive(PartialEq, Clone, Default, Debug)]
 pub struct Counter {
-    // message fields
     value: f64,
 }
 
 impl Counter {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Counter {
+        Default::default()
+    }
+
+    // Param is passed by value, moved
     pub fn set_value(&mut self, v: f64) {
         self.value = v;
     }
@@ -67,6 +90,11 @@ pub struct Quantile {
 }
 
 impl Quantile {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Quantile {
+        Default::default()
+    }
+
     pub fn set_quantile(&mut self, v: f64) {
         self.quantile = v;
     }
@@ -92,6 +120,11 @@ pub struct Summary {
 }
 
 impl Summary {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Summary {
+        Default::default()
+    }
+
     pub fn set_sample_count(&mut self, v: u64) {
         self.sample_count = v;
     }
@@ -118,6 +151,34 @@ impl Summary {
 }
 
 #[derive(PartialEq, Clone, Default, Debug)]
+pub struct Untyped {
+    value: f64,
+}
+
+impl Untyped {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Untyped {
+        Default::default()
+    }
+
+    #[deprecated(
+        note = "Untyped struct is protobuf specific and will be removed in a future version",
+        since = "0.5.1"
+    )]
+    pub fn set_value(&mut self, v: f64) {
+        self.value = v;
+    }
+
+    #[deprecated(
+        note = "Untyped struct is protobuf specific and will be removed in a future version",
+        since = "0.5.1"
+    )]
+    pub fn get_value(&self) -> f64 {
+        self.value
+    }
+}
+
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct Histogram {
     sample_count: u64,
     sample_sum: f64,
@@ -125,6 +186,11 @@ pub struct Histogram {
 }
 
 impl Histogram {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Histogram {
+        Default::default()
+    }
+
     pub fn set_sample_count(&mut self, v: u64) {
         self.sample_count = v;
     }
@@ -152,12 +218,16 @@ impl Histogram {
 
 #[derive(PartialEq, Clone, Default, Debug)]
 pub struct Bucket {
-    // message fields
     cumulative_count: u64,
     upper_bound: f64,
 }
 
 impl Bucket {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Bucket {
+        Default::default()
+    }
+
     pub fn set_cumulative_count(&mut self, v: u64) {
         self.cumulative_count = v;
     }
@@ -177,15 +247,22 @@ impl Bucket {
 
 #[derive(PartialEq, Clone, Default, Debug)]
 pub struct Metric {
+    // message fields
     label: Vec<LabelPair>,
     gauge: Gauge,
     counter: Counter,
     summary: Summary,
+    untyped: Untyped,
     histogram: Histogram,
     timestamp_ms: i64,
 }
 
 impl Metric {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> Metric {
+        Default::default()
+    }
+
     pub fn set_label(&mut self, v: Vec<LabelPair>) {
         self.label = v;
     }
@@ -216,6 +293,22 @@ impl Metric {
 
     pub fn get_summary(&self) -> &Summary {
         &self.summary
+    }
+
+    #[deprecated(
+        note = "This method is protobuf specific and will be removed in a future version",
+        since = "0.5.1"
+    )]
+    pub fn set_untyped(&mut self, v: Untyped) {
+        self.untyped = v;
+    }
+
+    #[deprecated(
+        note = "This method is protobuf specific and will be removed in a future version",
+        since = "0.5.1"
+    )]
+    pub fn get_untyped(&self) -> &Untyped {
+        &self.untyped
     }
 
     pub fn set_histogram(&mut self, v: Histogram) {
@@ -259,6 +352,11 @@ pub struct MetricFamily {
 }
 
 impl MetricFamily {
+    #[deprecated(note = "Use default()", since = "0.5.1")]
+    pub fn new() -> MetricFamily {
+        Default::default()
+    }
+
     pub fn clear_name(&mut self) {
         self.name.clear();
     }
@@ -285,6 +383,14 @@ impl MetricFamily {
 
     pub fn get_field_type(&self) -> MetricType {
         self.field_type
+    }
+
+    #[deprecated(
+        note = "This method is protobuf specific and will be removed in a future version",
+        since = "0.5.1"
+    )]
+    pub fn clear_metric(&mut self) {
+        self.metric.clear();
     }
 
     pub fn set_metric(&mut self, v: Vec<Metric>) {

@@ -122,7 +122,7 @@ This library supports four features:
 #[cfg(feature = "protobuf")]
 #[allow(warnings)]
 #[path = "../proto/proto_model.rs"]
-pub mod model;
+pub mod proto;
 
 #[cfg(feature = "protobuf")]
 macro_rules! from_vec {
@@ -133,7 +133,7 @@ macro_rules! from_vec {
 
 #[cfg(not(feature = "protobuf"))]
 #[path = "plain_model.rs"]
-pub mod model;
+pub mod proto;
 
 #[cfg(not(feature = "protobuf"))]
 macro_rules! from_vec {

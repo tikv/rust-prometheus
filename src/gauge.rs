@@ -19,7 +19,7 @@ use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use desc::Desc;
 use errors::Result;
 use metrics::{Collector, Metric, Opts};
-use model;
+use proto;
 use value::{Value, ValueType};
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -105,13 +105,13 @@ impl<P: Atomic> Collector for GenericGauge<P> {
         vec![&self.v.desc]
     }
 
-    fn collect(&self) -> Vec<model::MetricFamily> {
+    fn collect(&self) -> Vec<proto::MetricFamily> {
         vec![self.v.collect()]
     }
 }
 
 impl<P: Atomic> Metric for GenericGauge<P> {
-    fn metric(&self) -> model::Metric {
+    fn metric(&self) -> proto::Metric {
         self.v.metric()
     }
 }
@@ -163,7 +163,7 @@ impl<P: Atomic> GenericGaugeVec<P> {
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec = MetricVec::create(model::MetricType::GAUGE, GaugeVecBuilder::new(), opts)?;
+        let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder::new(), opts)?;
 
         Ok(metric_vec as Self)
     }

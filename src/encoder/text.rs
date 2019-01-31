@@ -15,8 +15,8 @@ use std::io::Write;
 
 use errors::Result;
 use histogram::BUCKET_LABEL;
-use model::MetricFamily;
-use model::{self, MetricType};
+use proto::MetricFamily;
+use proto::{self, MetricType};
 
 use super::{check_metric_family, Encoder};
 
@@ -129,7 +129,7 @@ impl Encoder for TextEncoder {
 /// The function returns the number of bytes written and any error encountered.
 fn write_sample(
     name: &str,
-    mc: &model::Metric,
+    mc: &proto::Metric,
     additional_label_name: &str,
     additional_label_value: &str,
     value: f64,
@@ -164,7 +164,7 @@ fn write_sample(
 /// text format, and enclosed in '{...}'. The function returns the number of
 /// bytes written and any error encountered.
 fn label_pairs_to_text(
-    pairs: &[model::LabelPair],
+    pairs: &[proto::LabelPair],
     additional_label_name: &str,
     additional_label_value: &str,
     writer: &mut Write,

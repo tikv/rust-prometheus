@@ -27,7 +27,7 @@ use desc::Desc;
 use errors::{Error, Result};
 use gauge::Gauge;
 use metrics::{Collector, Opts};
-use model;
+use proto;
 
 /// The `pid_t` data type represents process IDs.
 pub use libc::pid_t;
@@ -138,7 +138,7 @@ impl Collector for ProcessCollector {
         self.descs.iter().collect()
     }
 
-    fn collect(&self) -> Vec<model::MetricFamily> {
+    fn collect(&self) -> Vec<proto::MetricFamily> {
         // file descriptors
         if let Ok(num) = open_fds(self.pid) {
             self.open_fds.set(num as f64);
