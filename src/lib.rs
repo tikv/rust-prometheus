@@ -23,9 +23,9 @@ mod error;
 mod label;
 mod registry;
 
-pub use descriptor::*;
 pub use collector::*;
 pub use counter::*;
+pub use descriptor::*;
 pub use error::*;
 pub use label::*;
 pub use registry::*;

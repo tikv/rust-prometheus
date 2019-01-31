@@ -2,32 +2,10 @@ use std::slice::Iter;
 
 pub trait LabelLengthPlaceholder: 'static + Send + Sync {}
 
-impl LabelLengthPlaceholder for [(); 1] {}
-
-impl LabelLengthPlaceholder for [(); 2] {}
-
 pub trait IntoLabelVec {
     type Len: LabelLengthPlaceholder;
 
     fn into(self) -> Vec<String>;
-}
-
-impl<T: Into<String>> IntoLabelVec for [T; 1] {
-    type Len = [(); 1];
-
-    fn into(self) -> Vec<String> {
-        let [v1] = self;
-        vec![v1.into()]
-    }
-}
-
-impl<T: Into<String>> IntoLabelVec for [T; 2] {
-    type Len = [(); 2];
-
-    fn into(self) -> Vec<String> {
-        let [v1, v2] = self;
-        vec![v1.into(), v2.into()]
-    }
 }
 
 pub trait AsLabelValuesIter<Len: LabelLengthPlaceholder> {
@@ -36,18 +14,36 @@ pub trait AsLabelValuesIter<Len: LabelLengthPlaceholder> {
     fn values_iter(&self) -> Iter<Self::Item>;
 }
 
-impl<T: AsRef<str>> AsLabelValuesIter<[(); 1]> for [T; 1] {
-    type Item = T;
+macro_rules! array_impl {
+    ($len: expr) => {
+        impl LabelLengthPlaceholder for [(); $len] {}
 
-    fn values_iter(&self) -> Iter<T> {
-        self.iter()
-    }
+        impl<T: Into<String>> IntoLabelVec for [T; $len] {
+            type Len = [(); $len];
+
+            fn into(self) -> Vec<String> {
+                let vec = arrayvec::ArrayVec::from(self);
+                vec.into_iter().map(|v| v.into()).collect()
+            }
+        }
+
+        impl<T: AsRef<str>> AsLabelValuesIter<[(); $len]> for [T; $len] {
+            type Item = T;
+
+            fn values_iter(&self) -> Iter<T> {
+                self.iter()
+            }
+        }
+    };
 }
 
-impl<T: AsRef<str>> AsLabelValuesIter<[(); 2]> for [T; 2] {
-    type Item = T;
-
-    fn values_iter(&self) -> Iter<T> {
-        self.iter()
-    }
+macro_rules! array_impl_many {
+    ($($len: expr,)*) => {
+        $(array_impl!($len);)*
+    };
 }
+
+array_impl_many!(
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31,
+);
