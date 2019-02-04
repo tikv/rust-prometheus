@@ -17,7 +17,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate prometheus;
 
-use hyper::header::{CONTENT_TYPE, HeaderValue};
+use hyper::header::CONTENT_TYPE;
 use hyper::rt::Future;
 use hyper::service::service_fn_ok;
 use hyper::{Body, Response, Server};
@@ -58,12 +58,14 @@ fn main() {
             let encoder = TextEncoder::new();
             encoder.encode(&metric_families, &mut buffer).unwrap();
 
-            let mut response = Response::new(Body::from(buffer.clone()));
-            response.headers_mut()
-                    .insert(CONTENT_TYPE, HeaderValue::from_str(encoder.format_type()).unwrap());
+            let response_len = buffer.len();
+            let response = Response::builder()
+                .header(CONTENT_TYPE, encoder.format_type())
+                .body(Body::from(buffer))
+                .unwrap();
 
             timer.observe_duration();
-            HTTP_BODY_GAUGE.set(buffer.len() as f64);
+            HTTP_BODY_GAUGE.set(response_len as f64);
 
             response
         })
