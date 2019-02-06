@@ -140,7 +140,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
                         name
-                    )))
+                    )));
                 }
             }
         }
@@ -157,7 +157,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
                         name
-                    )))
+                    )));
                 }
             }
         }
