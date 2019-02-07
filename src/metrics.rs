@@ -203,7 +203,7 @@ mod tests {
     use std::cmp::{Ord, Ordering};
 
     fn new_label_pair(name: &str, value: &str) -> LabelPair {
-        let mut l = LabelPair::new();
+        let mut l = LabelPair::default();
         l.set_name(name.to_owned());
         l.set_value(value.to_owned());
         l

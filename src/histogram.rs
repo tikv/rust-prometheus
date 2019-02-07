@@ -23,7 +23,6 @@ use desc::{Desc, Describer};
 use errors::{Error, Result};
 use metrics::{Collector, Metric, Opts};
 use proto;
-use protobuf::RepeatedField;
 use value::make_label_pairs;
 use vec::{MetricVec, MetricVecBuilder};
 
@@ -219,7 +218,7 @@ impl HistogramCore {
     }
 
     pub fn proto(&self) -> proto::Histogram {
-        let mut h = proto::Histogram::new();
+        let mut h = proto::Histogram::default();
         h.set_sample_sum(self.sum.get());
         h.set_sample_count(self.count.get() as u64);
 
@@ -227,12 +226,12 @@ impl HistogramCore {
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
             count += self.counts[i].get();
-            let mut b = proto::Bucket::new();
+            let mut b = proto::Bucket::default();
             b.set_cumulative_count(count as u64);
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
         }
-        h.set_bucket(RepeatedField::from_vec(buckets));
+        h.set_bucket(from_vec!(buckets));
 
         h
     }
@@ -412,8 +411,8 @@ impl Histogram {
 
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
-        let mut m = proto::Metric::new();
-        m.set_label(RepeatedField::from_vec(self.core.label_pairs.clone()));
+        let mut m = proto::Metric::default();
+        m.set_label(from_vec!(self.core.label_pairs.clone()));
 
         let h = self.core.proto();
         m.set_histogram(h);
@@ -428,11 +427,11 @@ impl Collector for Histogram {
     }
 
     fn collect(&self) -> Vec<proto::MetricFamily> {
-        let mut m = proto::MetricFamily::new();
+        let mut m = proto::MetricFamily::default();
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
         m.set_field_type(proto::MetricType::HISTOGRAM);
-        m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
+        m.set_metric(from_vec!(vec![self.metric()]));
 
         vec![m]
     }
