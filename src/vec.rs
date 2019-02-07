@@ -17,7 +17,6 @@ use std::hash::Hasher;
 use std::sync::Arc;
 
 use fnv::FnvHasher;
-use protobuf::RepeatedField;
 use spin::RwLock;
 
 use desc::{Desc, Describer};
@@ -46,7 +45,7 @@ pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
 
 impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn collect(&self) -> MetricFamily {
-        let mut m = MetricFamily::new();
+        let mut m = MetricFamily::default();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.metric_type);
@@ -56,7 +55,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         for child in children.values() {
             metrics.push(child.metric());
         }
-        m.set_metric(RepeatedField::from_vec(metrics));
+        m.set_metric(from_vec!(metrics));
         m
     }
 
@@ -140,7 +139,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
                         name
-                    )))
+                    )));
                 }
             }
         }
@@ -157,7 +156,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
                         name
-                    )))
+                    )));
                 }
             }
         }

@@ -5,7 +5,7 @@ extern crate protobuf_codegen_pure;
 fn generate_protobuf_binding_file() {
     protobuf_codegen_pure::run(protobuf_codegen_pure::Args {
         out_dir: "proto",
-        input: &["proto/metrics.proto"],
+        input: &["proto/proto_model.proto"],
         includes: &["proto"],
         ..Default::default()
     })
