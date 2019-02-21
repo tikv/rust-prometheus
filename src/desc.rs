@@ -17,9 +17,9 @@ use std::hash::Hasher;
 
 use fnv::FnvHasher;
 
-use errors::{Error, Result};
-use metrics::SEPARATOR_BYTE;
-use proto::LabelPair;
+use crate::errors::{Error, Result};
+use crate::metrics::SEPARATOR_BYTE;
+use crate::proto::LabelPair;
 
 // TODO: use `char::is_ascii` instead once it landed in the stable rust.
 // Refer to https://github.com/rust-lang/rust/blob/
@@ -222,8 +222,8 @@ pub trait Describer {
 #[cfg(test)]
 mod tests {
 
-    use desc::{is_valid_label_name, is_valid_metric_name, Desc};
-    use errors::Error;
+    use crate::desc::{is_valid_label_name, is_valid_metric_name, Desc};
+    use crate::errors::Error;
     use std::collections::HashMap;
 
     #[test]

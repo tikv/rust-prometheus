@@ -20,7 +20,7 @@ extern crate test;
 #[path = "../src/atomic64/mod.rs"]
 mod atomic64;
 
-use atomic64::*;
+use crate::atomic64::*;
 use test::Bencher;
 
 #[bench]
