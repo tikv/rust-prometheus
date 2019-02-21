@@ -1,6 +1,7 @@
 [package]
 name = "prometheus-static-metric"
 version = "0.1.4"
+edition = "2018"
 license = "Apache-2.0"
 authors = ["me@breeswish.org"]
 description = "Static metric helper utilities for rust-prometheus."
