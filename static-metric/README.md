@@ -46,8 +46,6 @@ introducing a lot of templating code.
 + Add to `lib.rs`:
 
     ```rust
-    #![feature(proc_macro)]
-
     extern crate prometheus_static_metric;
     ```
 

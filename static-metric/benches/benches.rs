@@ -12,7 +12,6 @@
 // limitations under the License.
 
 #![feature(test)]
-#![feature(proc_macro)]
 
 extern crate prometheus;
 extern crate prometheus_static_metric;
