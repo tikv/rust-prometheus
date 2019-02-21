@@ -81,12 +81,22 @@ fn bench_static_metrics_macro(b: &mut Bencher) {
     b.iter(|| static_counter.foo.bar.inc());
 }
 
+make_static_metric! {
+    pub label_enum Foo { foo }
+    pub label_enum Bar { bar }
+
+    struct StaticCounter2b: IntCounter {
+        "d1" => Foo,
+        "d2" => Bar,
+    }
+}
+
 #[bench]
 /// macro implemented static metrics performance, with dynamic lookup.
 fn bench_static_metrics_macro_with_lookup(b: &mut Bencher) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
-    let static_counter = StaticCounter2::from(&counter_vec);
-    b.iter(|| static_counter.get("foo").get("bar").inc());
+    let static_counter = StaticCounter2b::from(&counter_vec);
+    b.iter(|| static_counter.get(Foo::foo).get(Bar::bar).inc());
 }
 
 make_static_metric! {
