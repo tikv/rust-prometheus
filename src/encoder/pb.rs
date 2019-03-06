@@ -13,8 +13,8 @@
 
 use std::io::Write;
 
-use errors::Result;
-use proto::MetricFamily;
+use crate::errors::Result;
+use crate::proto::MetricFamily;
 use protobuf::Message;
 
 use super::{check_metric_family, Encoder};
@@ -53,10 +53,10 @@ impl Encoder for ProtobufEncoder {
 
 #[cfg(test)]
 mod tests {
-    use counter::CounterVec;
-    use encoder::Encoder;
-    use metrics::Opts;
-    use registry;
+    use crate::counter::CounterVec;
+    use crate::encoder::Encoder;
+    use crate::metrics::Opts;
+    use crate::registry;
 
     // TODO: add more tests.
     #[rustfmt::skip]

@@ -20,11 +20,11 @@ use std::time::Duration;
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{Client, Method, StatusCode, Url};
 
-use encoder::{Encoder, ProtobufEncoder};
-use errors::{Error, Result};
-use metrics::Collector;
-use proto;
-use registry::Registry;
+use crate::encoder::{Encoder, ProtobufEncoder};
+use crate::errors::{Error, Result};
+use crate::metrics::Collector;
+use crate::proto;
+use crate::registry::Registry;
 
 const REQWEST_TIMEOUT_SEC: Duration = Duration::from_secs(10);
 

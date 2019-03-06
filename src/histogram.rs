@@ -18,13 +18,13 @@ use std::convert::From;
 use std::sync::Arc;
 use std::time::{Duration, Instant as StdInstant};
 
-use atomic64::{Atomic, AtomicF64, AtomicU64};
-use desc::{Desc, Describer};
-use errors::{Error, Result};
-use metrics::{Collector, Metric, Opts};
-use proto;
-use value::make_label_pairs;
-use vec::{MetricVec, MetricVecBuilder};
+use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
+use crate::desc::{Desc, Describer};
+use crate::errors::{Error, Result};
+use crate::metrics::{Collector, Metric, Opts};
+use crate::proto;
+use crate::value::make_label_pairs;
+use crate::vec::{MetricVec, MetricVecBuilder};
 
 /// The default [`Histogram`](::Histogram) buckets. The default buckets are
 /// tailored to broadly measure the response time (in seconds) of a
@@ -758,8 +758,8 @@ impl Clone for LocalHistogramVec {
 mod tests {
 
     use super::*;
-    use metrics::Collector;
-    use metrics::Metric;
+    use crate::metrics::Collector;
+    use crate::metrics::Metric;
     use std::f64::{EPSILON, INFINITY};
     use std::thread;
     use std::time::Duration;
