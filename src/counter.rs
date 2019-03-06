@@ -16,13 +16,13 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use atomic64::{Atomic, AtomicF64, AtomicI64, Number};
-use desc::Desc;
-use errors::Result;
-use metrics::{Collector, Metric, Opts};
-use proto;
-use value::{Value, ValueType};
-use vec::{MetricVec, MetricVecBuilder};
+use crate::atomic64::{Atomic, AtomicF64, AtomicI64, Number};
+use crate::desc::Desc;
+use crate::errors::Result;
+use crate::metrics::{Collector, Metric, Opts};
+use crate::proto;
+use crate::value::{Value, ValueType};
+use crate::vec::{MetricVec, MetricVecBuilder};
 
 /// The underlying implementation for [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
 #[derive(Debug)]
@@ -283,7 +283,7 @@ impl<P: Atomic> Clone for GenericLocalCounterVec<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use metrics::{Collector, Opts};
+    use crate::metrics::{Collector, Opts};
     use std::collections::HashMap;
     use std::f64::EPSILON;
 

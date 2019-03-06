@@ -13,10 +13,10 @@
 
 use std::io::Write;
 
-use errors::Result;
-use histogram::BUCKET_LABEL;
-use proto::MetricFamily;
-use proto::{self, MetricType};
+use crate::errors::Result;
+use crate::histogram::BUCKET_LABEL;
+use crate::proto::MetricFamily;
+use crate::proto::{self, MetricType};
 
 use super::{check_metric_family, Encoder};
 
@@ -133,7 +133,7 @@ fn write_sample(
     additional_label_name: &str,
     additional_label_value: &str,
     value: f64,
-    writer: &mut Write,
+    writer: &mut dyn Write,
 ) -> Result<()> {
     writer.write_all(name.as_bytes())?;
 
@@ -167,7 +167,7 @@ fn label_pairs_to_text(
     pairs: &[proto::LabelPair],
     additional_label_name: &str,
     additional_label_value: &str,
-    writer: &mut Write,
+    writer: &mut dyn Write,
 ) -> Result<()> {
     if pairs.is_empty() && additional_label_name.is_empty() {
         return Ok(());
@@ -229,10 +229,10 @@ fn escape_string(v: &str, include_double_quote: bool) -> String {
 mod tests {
 
     use super::*;
-    use counter::Counter;
-    use gauge::Gauge;
-    use histogram::{Histogram, HistogramOpts};
-    use metrics::{Collector, Opts};
+    use crate::counter::Counter;
+    use crate::gauge::Gauge;
+    use crate::histogram::{Histogram, HistogramOpts};
+    use crate::metrics::{Collector, Opts};
 
     #[test]
     fn test_ecape_string() {
