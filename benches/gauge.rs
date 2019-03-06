@@ -13,7 +13,6 @@
 
 #![feature(test)]
 
-extern crate prometheus;
 extern crate test;
 
 use prometheus::{Gauge, GaugeVec, IntGauge, Opts};

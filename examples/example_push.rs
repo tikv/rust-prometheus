@@ -13,7 +13,6 @@
 
 #![cfg_attr(not(feature = "push"), allow(unused_imports, dead_code))]
 
-extern crate getopts;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

@@ -107,13 +107,10 @@ This library supports four features:
 
 */
 
-#![cfg_attr(
-    feature = "cargo-clippy",
-    allow(
-        clippy::needless_pass_by_value,
-        clippy::new_without_default_derive,
-        clippy::new_ret_no_self
-    )
+#![allow(
+    clippy::needless_pass_by_value,
+    clippy::new_without_default,
+    clippy::new_ret_no_self
 )]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 #![deny(missing_docs)]
@@ -144,20 +141,10 @@ macro_rules! from_vec {
 
 #[macro_use]
 extern crate cfg_if;
-extern crate fnv;
-#[cfg(feature = "push")]
-extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
-#[cfg(any(feature = "nightly", feature = "push", feature = "process"))]
-extern crate libc;
-#[cfg(all(feature = "process", target_os = "linux"))]
-extern crate procinfo;
-#[cfg(feature = "protobuf")]
-extern crate protobuf;
 #[macro_use]
 extern crate quick_error;
-extern crate spin;
 
 mod encoder;
 mod errors;
