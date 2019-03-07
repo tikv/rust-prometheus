@@ -107,13 +107,10 @@ This library supports four features:
 
 */
 
-#![cfg_attr(
-    feature = "cargo-clippy",
-    allow(
-        clippy::needless_pass_by_value,
-        clippy::new_without_default_derive,
-        clippy::new_ret_no_self
-    )
+#![allow(
+    clippy::needless_pass_by_value,
+    clippy::new_without_default,
+    clippy::new_ret_no_self
 )]
 #![cfg_attr(feature = "nightly", feature(integer_atomics))]
 #![deny(missing_docs)]
