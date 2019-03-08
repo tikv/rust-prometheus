@@ -26,6 +26,16 @@ pub enum ValueType {
 }
 
 impl ValueType {
+    #[cfg(feature = "codec-prost")]
+    /// `metric_type` returns the corresponding proto metric type.
+    pub fn metric_type(self) -> MetricType {
+        match self {
+            ValueType::Counter => MetricType::Counter,
+            ValueType::Gauge => MetricType::Gauge,
+        }
+    }
+
+    #[cfg(not(feature = "codec-prost"))]
     /// `metric_type` returns the corresponding proto metric type.
     pub fn metric_type(self) -> MetricType {
         match self {

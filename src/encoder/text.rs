@@ -15,8 +15,9 @@ use std::io::Write;
 
 use crate::errors::Result;
 use crate::histogram::BUCKET_LABEL;
+use crate::proto;
 use crate::proto::MetricFamily;
-use crate::proto::{self, MetricType};
+use crate::proto_adapt::MetricType;
 
 use super::{check_metric_family, Encoder};
 
@@ -55,13 +56,13 @@ impl Encoder for TextEncoder {
 
             for m in mf.get_metric() {
                 match metric_type {
-                    MetricType::COUNTER => {
+                    MetricType::Counter => {
                         write_sample(name, m, "", "", m.get_counter().get_value(), writer)?;
                     }
-                    MetricType::GAUGE => {
+                    MetricType::Gauge => {
                         write_sample(name, m, "", "", m.get_gauge().get_value(), writer)?;
                     }
-                    MetricType::HISTOGRAM => {
+                    MetricType::Histogram => {
                         let h = m.get_histogram();
 
                         let mut inf_seen = false;
@@ -108,7 +109,7 @@ impl Encoder for TextEncoder {
                             writer,
                         )?;
                     }
-                    MetricType::SUMMARY | MetricType::UNTYPED => {
+                    MetricType::Summary | MetricType::Untyped => {
                         unimplemented!();
                     }
                 }

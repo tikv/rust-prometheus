@@ -15,12 +15,12 @@ use std::io::Write;
 
 use crate::errors::{Error, Result};
 
-#[cfg(feature = "protobuf")]
+#[cfg(feature = "codec-protobuf")]
 mod pb;
 
 mod text;
 
-#[cfg(feature = "protobuf")]
+#[cfg(feature = "codec-protobuf")]
 pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
 
 pub use self::text::{TextEncoder, TEXT_FORMAT};
@@ -60,7 +60,7 @@ mod tests {
     use crate::metrics::Opts;
 
     #[test]
-    #[cfg(feature = "protobuf")]
+    #[cfg(feature = "codec-protobuf")]
     fn test_bad_proto_metrics() {
         let mut writer = Vec::<u8>::new();
         let pb_encoder = ProtobufEncoder::new();

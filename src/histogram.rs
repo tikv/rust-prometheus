@@ -23,6 +23,7 @@ use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
 use crate::metrics::{Collector, Metric, Opts};
 use crate::proto;
+use crate::proto_adapt::MetricType;
 use crate::value::make_label_pairs;
 use crate::vec::{MetricVec, MetricVecBuilder};
 
@@ -430,7 +431,7 @@ impl Collector for Histogram {
         let mut m = proto::MetricFamily::default();
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
-        m.set_field_type(proto::MetricType::HISTOGRAM);
+        m.set_field_type(MetricType::Histogram);
         m.set_metric(from_vec!(vec![self.metric()]));
 
         vec![m]
@@ -462,8 +463,7 @@ impl HistogramVec {
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec =
-            MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
+        let metric_vec = MetricVec::create(MetricType::Histogram, HistogramVecBuilder {}, opts)?;
 
         Ok(metric_vec as HistogramVec)
     }

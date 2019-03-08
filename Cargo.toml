@@ -18,11 +18,13 @@ travis-ci = { repository = "pingcap/rust-prometheus" }
 features = ["nightly"]
 
 [features]
-default = ["protobuf"]
+default = ["codec-protobuf"]
 nightly = ["libc"]
 push = ["reqwest", "libc"]
 process = ["libc", "procinfo"]
 gen = ["protobuf-build"]
+codec-protobuf = ["protobuf"]
+codec-prost = ["bytes", "prost", "prost-derive", "protobuf"]
 
 [dependencies]
 protobuf = { version = "2.0", optional = true }
@@ -33,6 +35,10 @@ libc = { version = "0.2", optional = true }
 cfg-if = "0.1"
 spin = { version = "0.5", default-features = false }
 reqwest = { version = "0.9.5", optional = true }
+bytes = { version = "0.4", optional = true }
+prost = { path = "../prost", optional = true }
+prost-derive = { path = "../prost/prost-derive", optional = true }
+
 
 [target.'cfg(target_os = "linux")'.dependencies]
 procinfo = { version = "0.3", optional = true }
