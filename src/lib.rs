@@ -227,4 +227,4 @@ pub use self::push::{
     BasicAuthentication,
 };
 pub use self::registry::Registry;
-pub use self::registry::{gather, register, unregister};
+pub use self::registry::{default_registry, gather, register, unregister};
