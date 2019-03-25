@@ -15,7 +15,6 @@
 use std::collections::btree_map::Entry as BEntry;
 use std::collections::hash_map::Entry as HEntry;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::iter::FromIterator;
 use std::sync::Arc;
 
 use spin::RwLock;
@@ -28,6 +27,10 @@ struct RegistryCore {
     pub collectors_by_id: HashMap<u64, Box<Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
     pub desc_ids: HashSet<u64>,
+    /// Optional common labels for all registered collectors.
+    pub labels: Option<HashMap<String, String>>,
+    /// Optional common namespace for all registered collectors.
+    pub prefix: Option<String>,
 }
 
 impl RegistryCore {
@@ -180,8 +183,36 @@ impl RegistryCore {
         }
 
         // Write out MetricFamilies sorted by their name.
-        let kvs = Vec::from_iter(mf_by_name.into_iter());
-        kvs.into_iter().map(|(_, m)| m).collect()
+        mf_by_name
+            .into_iter()
+            .map(|(_, mut m)| {
+                // Add registry namespace prefix, if any.
+                if let Some(ref namespace) = self.prefix {
+                    let prefixed = format!("{}_{}", namespace, m.get_name());
+                    m.set_name(prefixed);
+                }
+
+                // Add registry common labels, if any.
+                if let Some(ref hmap) = self.labels {
+                    let mut pairs: Vec<proto::LabelPair> = hmap
+                        .iter()
+                        .map(|(k, v)| {
+                            let mut label = proto::LabelPair::new();
+                            label.set_name(k.to_string());
+                            label.set_value(v.to_string());
+                            label
+                        })
+                        .collect();
+
+                    for metric in m.mut_metric().iter_mut() {
+                        let mut labels = metric.take_label().into_vec();
+                        labels.append(&mut pairs);
+                        metric.set_label(labels.into());
+                    }
+                }
+                m
+            })
+            .collect()
     }
 }
 
@@ -198,6 +229,8 @@ impl Default for Registry {
             collectors_by_id: HashMap::new(),
             dim_hashes_by_name: HashMap::new(),
             desc_ids: HashSet::new(),
+            labels: None,
+            prefix: None,
         };
 
         Registry {
@@ -210,6 +243,26 @@ impl Registry {
     /// `new` creates a Registry.
     pub fn new() -> Registry {
         Registry::default()
+    }
+
+    /// Create a new registry, with optional custom prefix and labels.
+    pub fn new_custom(
+        prefix: Option<String>,
+        labels: Option<HashMap<String, String>>,
+    ) -> Result<Registry> {
+        if let Some(ref namespace) = prefix {
+            if namespace.is_empty() {
+                return Err(Error::Msg("empty prefix namespace".to_string()));
+            }
+        }
+
+        let reg = Registry::default();
+        {
+            let mut core = reg.r.write();
+            core.prefix = prefix;
+            core.labels = labels;
+        }
+        Ok(reg)
     }
 
     /// `register` registers a new [`Collector`](::core::Collector) to be included in metrics
@@ -425,6 +478,41 @@ mod tests {
         assert_eq!(ms[1].get_counter().get_value() as u64, 1);
         assert_eq!(ms[2].get_counter().get_value() as u64, 3);
         assert_eq!(ms[3].get_counter().get_value() as u64, 4);
+    }
+
+    #[test]
+    fn test_with_prefix_gather() {
+        Registry::new_custom(Some("".to_string()), None).is_err();
+
+        let r = Registry::new_custom(Some("common_prefix".to_string()), None).unwrap();
+        let counter_a = Counter::new("test_a_counter", "test help").unwrap();
+        r.register(Box::new(counter_a.clone())).unwrap();
+
+        let mfs = r.gather();
+        assert_eq!(mfs.len(), 1);
+        assert_eq!(mfs[0].get_name(), "common_prefix_test_a_counter");
+    }
+
+    #[test]
+    fn test_with_labels_gather() {
+        let mut labels = HashMap::new();
+        labels.insert("tkey".to_string(), "tvalue".to_string());
+
+        let r = Registry::new_custom(None, Some(labels)).unwrap();
+        let counter_a = Counter::new("test_a_counter", "test help").unwrap();
+        r.register(Box::new(counter_a.clone())).unwrap();
+
+        let mfs = r.gather();
+        assert_eq!(mfs.len(), 1);
+        assert_eq!(mfs[0].get_name(), "test_a_counter");
+
+        let mut needle = proto::LabelPair::new();
+        needle.set_name("tkey".to_string());
+        needle.set_value("tvalue".to_string());
+        let metrics = mfs[0].get_metric();
+        for m in metrics {
+            assert!(m.get_label().contains(&needle));
+        }
     }
 
     struct MultipleCollector {

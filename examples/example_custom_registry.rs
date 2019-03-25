@@ -19,6 +19,7 @@ extern crate lazy_static;
 extern crate prometheus;
 
 use prometheus::{Encoder, IntCounter, Registry};
+use std::collections::HashMap;
 
 lazy_static! {
     static ref DEFAULT_COUNTER: IntCounter = IntCounter::new("default", "generic counter").unwrap();
@@ -29,8 +30,10 @@ fn main() {
     // Register default metrics.
     default_metrics(prometheus::default_registry());
 
-    // Register custom metrics.
-    let custom_registry = Registry::new();
+    // Register custom metrics to a custom registry.
+    let mut labels = HashMap::new();
+    labels.insert("mykey".to_string(), "myvalue".to_string());
+    let custom_registry = Registry::new_custom(Some("myprefix".to_string()), Some(labels)).unwrap();
     custom_metrics(&custom_registry);
 
     // Print metrics for the default registry.
