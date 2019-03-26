@@ -111,7 +111,7 @@ This library supports four features:
     feature = "cargo-clippy",
     allow(
         clippy::needless_pass_by_value,
-        clippy::new_without_default_derive,
+        clippy::new_without_default,
         clippy::new_ret_no_self
     )
 )]
