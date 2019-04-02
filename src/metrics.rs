@@ -107,8 +107,8 @@ impl Opts {
     }
 
     /// `namespace` sets the namespace.
-    pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
-        self.namespace = namesapce.into();
+    pub fn namespace<S: Into<String>>(mut self, namespace: S) -> Self {
+        self.namespace = namespace.into();
         self
     }
 

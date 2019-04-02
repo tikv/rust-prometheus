@@ -268,6 +268,12 @@ lazy_static! {
     };
 }
 
+/// Default registry (global static).
+pub fn default_registry() -> &'static Registry {
+    lazy_static::initialize(&DEFAULT_REGISTRY);
+    &DEFAULT_REGISTRY
+}
+
 /// Registers a new [`Collector`](::core::Collector) to be included in metrics collection. It
 /// returns an error if the descriptors provided by the [`Collector`](::core::Collector) are invalid or
 /// if they - in combination with descriptors of already registered Collectors -
@@ -335,9 +341,14 @@ mod tests {
 
         assert!(register(Box::new(counter.clone())).is_ok());
         assert_ne!(gather().len(), 0);
+        assert_ne!(default_registry().gather().len(), 0);
+        assert_eq!(gather().len(), default_registry().gather().len());
 
         assert!(unregister(Box::new(counter.clone())).is_ok());
         assert!(unregister(Box::new(counter.clone())).is_err());
+        assert!(default_registry()
+            .unregister(Box::new(counter.clone()))
+            .is_err());
         assert!(register(Box::new(counter.clone())).is_ok());
     }
 

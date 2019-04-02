@@ -111,7 +111,7 @@ This library supports four features:
     feature = "cargo-clippy",
     allow(
         clippy::needless_pass_by_value,
-        clippy::new_without_default_derive,
+        clippy::new_without_default,
         clippy::new_ret_no_self
     )
 )]
@@ -227,4 +227,4 @@ pub use self::push::{
     BasicAuthentication,
 };
 pub use self::registry::Registry;
-pub use self::registry::{gather, register, unregister};
+pub use self::registry::{default_registry, gather, register, unregister};
