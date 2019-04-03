@@ -8,24 +8,23 @@ impl LabelPair {
     pub fn clear_name(&mut self) {
         self.name = ::std::option::Option::None
     }
-    pub fn set_name(&mut self, v: String) {
-        self.name = ::std::option::Option::Some(v);;    }
+    pub fn set_name(&mut self, v: std::string::String) {
+        self.name = ::std::option::Option::Some(v);
+    }
     pub fn get_name(&self) -> &str {
         match self.name.as_ref() {
             Some(v) => v,
             None => "",
         }
     }
-    pub fn mut_name(&mut self) -> &mut String {
+    pub fn mut_name(&mut self) -> &mut std::string::String {
         if self.name.is_none() {
-            self.name = ::std::option::Option::Some(String::default());
+            self.name = ::std::option::Option::Some(std::string::String::default());
         }
         self.name.as_mut().unwrap()
     }
-    pub fn take_name(&mut self) -> String {
-        self.name
-            .take()
-            .unwrap_or_else(|| ::std::string::String::new())
+    pub fn take_name(&mut self) -> std::string::String {
+        self.name.take().unwrap_or_else(::std::string::String::new)
     }
     pub fn has_value(&self) -> bool {
         self.value.is_some()
@@ -33,24 +32,23 @@ impl LabelPair {
     pub fn clear_value(&mut self) {
         self.value = ::std::option::Option::None
     }
-    pub fn set_value(&mut self, v: String) {
-        self.value = ::std::option::Option::Some(v);;    }
+    pub fn set_value(&mut self, v: std::string::String) {
+        self.value = ::std::option::Option::Some(v);
+    }
     pub fn get_value(&self) -> &str {
         match self.value.as_ref() {
             Some(v) => v,
             None => "",
         }
     }
-    pub fn mut_value(&mut self) -> &mut String {
+    pub fn mut_value(&mut self) -> &mut std::string::String {
         if self.value.is_none() {
-            self.value = ::std::option::Option::Some(String::default());
+            self.value = ::std::option::Option::Some(std::string::String::default());
         }
         self.value.as_mut().unwrap()
     }
-    pub fn take_value(&mut self) -> String {
-        self.value
-            .take()
-            .unwrap_or_else(|| ::std::string::String::new())
+    pub fn take_value(&mut self) -> std::string::String {
+        self.value.take().unwrap_or_else(::std::string::String::new)
     }
 }
 impl ::protobuf::Clear for LabelPair {
@@ -84,7 +82,7 @@ impl ::protobuf::Message for LabelPair {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -110,7 +108,8 @@ impl Gauge {
         self.value = ::std::option::Option::None
     }
     pub fn set_value(&mut self, v: f64) {
-        self.value = ::std::option::Option::Some(v);;    }
+        self.value = ::std::option::Option::Some(v);
+    }
     pub fn get_value(&self) -> f64 {
         match self.value {
             Some(v) => v,
@@ -149,7 +148,7 @@ impl ::protobuf::Message for Gauge {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -175,7 +174,8 @@ impl Counter {
         self.value = ::std::option::Option::None
     }
     pub fn set_value(&mut self, v: f64) {
-        self.value = ::std::option::Option::Some(v);;    }
+        self.value = ::std::option::Option::Some(v);
+    }
     pub fn get_value(&self) -> f64 {
         match self.value {
             Some(v) => v,
@@ -214,7 +214,7 @@ impl ::protobuf::Message for Counter {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -240,7 +240,8 @@ impl Quantile {
         self.quantile = ::std::option::Option::None
     }
     pub fn set_quantile(&mut self, v: f64) {
-        self.quantile = ::std::option::Option::Some(v);;    }
+        self.quantile = ::std::option::Option::Some(v);
+    }
     pub fn get_quantile(&self) -> f64 {
         match self.quantile {
             Some(v) => v,
@@ -254,7 +255,8 @@ impl Quantile {
         self.value = ::std::option::Option::None
     }
     pub fn set_value(&mut self, v: f64) {
-        self.value = ::std::option::Option::Some(v);;    }
+        self.value = ::std::option::Option::Some(v);
+    }
     pub fn get_value(&self) -> f64 {
         match self.value {
             Some(v) => v,
@@ -293,7 +295,7 @@ impl ::protobuf::Message for Quantile {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -319,7 +321,8 @@ impl Summary {
         self.sample_count = ::std::option::Option::None
     }
     pub fn set_sample_count(&mut self, v: u64) {
-        self.sample_count = ::std::option::Option::Some(v);;    }
+        self.sample_count = ::std::option::Option::Some(v);
+    }
     pub fn get_sample_count(&self) -> u64 {
         match self.sample_count {
             Some(v) => v,
@@ -333,7 +336,8 @@ impl Summary {
         self.sample_sum = ::std::option::Option::None
     }
     pub fn set_sample_sum(&mut self, v: f64) {
-        self.sample_sum = ::std::option::Option::Some(v);;    }
+        self.sample_sum = ::std::option::Option::Some(v);
+    }
     pub fn get_sample_sum(&self) -> f64 {
         match self.sample_sum {
             Some(v) => v,
@@ -387,7 +391,7 @@ impl ::protobuf::Message for Summary {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -413,7 +417,8 @@ impl Untyped {
         self.value = ::std::option::Option::None
     }
     pub fn set_value(&mut self, v: f64) {
-        self.value = ::std::option::Option::Some(v);;    }
+        self.value = ::std::option::Option::Some(v);
+    }
     pub fn get_value(&self) -> f64 {
         match self.value {
             Some(v) => v,
@@ -452,7 +457,7 @@ impl ::protobuf::Message for Untyped {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -478,7 +483,8 @@ impl Histogram {
         self.sample_count = ::std::option::Option::None
     }
     pub fn set_sample_count(&mut self, v: u64) {
-        self.sample_count = ::std::option::Option::Some(v);;    }
+        self.sample_count = ::std::option::Option::Some(v);
+    }
     pub fn get_sample_count(&self) -> u64 {
         match self.sample_count {
             Some(v) => v,
@@ -492,7 +498,8 @@ impl Histogram {
         self.sample_sum = ::std::option::Option::None
     }
     pub fn set_sample_sum(&mut self, v: f64) {
-        self.sample_sum = ::std::option::Option::Some(v);;    }
+        self.sample_sum = ::std::option::Option::Some(v);
+    }
     pub fn get_sample_sum(&self) -> f64 {
         match self.sample_sum {
             Some(v) => v,
@@ -546,7 +553,7 @@ impl ::protobuf::Message for Histogram {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -572,7 +579,8 @@ impl Bucket {
         self.cumulative_count = ::std::option::Option::None
     }
     pub fn set_cumulative_count(&mut self, v: u64) {
-        self.cumulative_count = ::std::option::Option::Some(v);;    }
+        self.cumulative_count = ::std::option::Option::Some(v);
+    }
     pub fn get_cumulative_count(&self) -> u64 {
         match self.cumulative_count {
             Some(v) => v,
@@ -586,7 +594,8 @@ impl Bucket {
         self.upper_bound = ::std::option::Option::None
     }
     pub fn set_upper_bound(&mut self, v: f64) {
-        self.upper_bound = ::std::option::Option::Some(v);;    }
+        self.upper_bound = ::std::option::Option::Some(v);
+    }
     pub fn get_upper_bound(&self) -> f64 {
         match self.upper_bound {
             Some(v) => v,
@@ -625,7 +634,7 @@ impl ::protobuf::Message for Bucket {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -666,7 +675,8 @@ impl Metric {
         self.gauge = ::std::option::Option::None
     }
     pub fn set_gauge(&mut self, v: Gauge) {
-        self.gauge = ::std::option::Option::Some(v);;    }
+        self.gauge = ::std::option::Option::Some(v);
+    }
     pub fn get_gauge(&self) -> &Gauge {
         match self.gauge.as_ref() {
             Some(v) => v,
@@ -680,7 +690,7 @@ impl Metric {
         self.gauge.as_mut().unwrap()
     }
     pub fn take_gauge(&mut self) -> Gauge {
-        self.gauge.take().unwrap_or_else(|| Gauge::default())
+        self.gauge.take().unwrap_or_else(Gauge::default)
     }
     pub fn has_counter(&self) -> bool {
         self.counter.is_some()
@@ -689,7 +699,8 @@ impl Metric {
         self.counter = ::std::option::Option::None
     }
     pub fn set_counter(&mut self, v: Counter) {
-        self.counter = ::std::option::Option::Some(v);;    }
+        self.counter = ::std::option::Option::Some(v);
+    }
     pub fn get_counter(&self) -> &Counter {
         match self.counter.as_ref() {
             Some(v) => v,
@@ -703,7 +714,7 @@ impl Metric {
         self.counter.as_mut().unwrap()
     }
     pub fn take_counter(&mut self) -> Counter {
-        self.counter.take().unwrap_or_else(|| Counter::default())
+        self.counter.take().unwrap_or_else(Counter::default)
     }
     pub fn has_summary(&self) -> bool {
         self.summary.is_some()
@@ -712,7 +723,8 @@ impl Metric {
         self.summary = ::std::option::Option::None
     }
     pub fn set_summary(&mut self, v: Summary) {
-        self.summary = ::std::option::Option::Some(v);;    }
+        self.summary = ::std::option::Option::Some(v);
+    }
     pub fn get_summary(&self) -> &Summary {
         match self.summary.as_ref() {
             Some(v) => v,
@@ -726,7 +738,7 @@ impl Metric {
         self.summary.as_mut().unwrap()
     }
     pub fn take_summary(&mut self) -> Summary {
-        self.summary.take().unwrap_or_else(|| Summary::default())
+        self.summary.take().unwrap_or_else(Summary::default)
     }
     pub fn has_untyped(&self) -> bool {
         self.untyped.is_some()
@@ -735,7 +747,8 @@ impl Metric {
         self.untyped = ::std::option::Option::None
     }
     pub fn set_untyped(&mut self, v: Untyped) {
-        self.untyped = ::std::option::Option::Some(v);;    }
+        self.untyped = ::std::option::Option::Some(v);
+    }
     pub fn get_untyped(&self) -> &Untyped {
         match self.untyped.as_ref() {
             Some(v) => v,
@@ -749,7 +762,7 @@ impl Metric {
         self.untyped.as_mut().unwrap()
     }
     pub fn take_untyped(&mut self) -> Untyped {
-        self.untyped.take().unwrap_or_else(|| Untyped::default())
+        self.untyped.take().unwrap_or_else(Untyped::default)
     }
     pub fn has_histogram(&self) -> bool {
         self.histogram.is_some()
@@ -758,7 +771,8 @@ impl Metric {
         self.histogram = ::std::option::Option::None
     }
     pub fn set_histogram(&mut self, v: Histogram) {
-        self.histogram = ::std::option::Option::Some(v);;    }
+        self.histogram = ::std::option::Option::Some(v);
+    }
     pub fn get_histogram(&self) -> &Histogram {
         match self.histogram.as_ref() {
             Some(v) => v,
@@ -772,9 +786,7 @@ impl Metric {
         self.histogram.as_mut().unwrap()
     }
     pub fn take_histogram(&mut self) -> Histogram {
-        self.histogram
-            .take()
-            .unwrap_or_else(|| Histogram::default())
+        self.histogram.take().unwrap_or_else(Histogram::default)
     }
     pub fn has_timestamp_ms(&self) -> bool {
         self.timestamp_ms.is_some()
@@ -783,7 +795,8 @@ impl Metric {
         self.timestamp_ms = ::std::option::Option::None
     }
     pub fn set_timestamp_ms(&mut self, v: i64) {
-        self.timestamp_ms = ::std::option::Option::Some(v);;    }
+        self.timestamp_ms = ::std::option::Option::Some(v);
+    }
     pub fn get_timestamp_ms(&self) -> i64 {
         match self.timestamp_ms {
             Some(v) => v,
@@ -822,7 +835,7 @@ impl ::protobuf::Message for Metric {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -847,24 +860,23 @@ impl MetricFamily {
     pub fn clear_name(&mut self) {
         self.name = ::std::option::Option::None
     }
-    pub fn set_name(&mut self, v: String) {
-        self.name = ::std::option::Option::Some(v);;    }
+    pub fn set_name(&mut self, v: std::string::String) {
+        self.name = ::std::option::Option::Some(v);
+    }
     pub fn get_name(&self) -> &str {
         match self.name.as_ref() {
             Some(v) => v,
             None => "",
         }
     }
-    pub fn mut_name(&mut self) -> &mut String {
+    pub fn mut_name(&mut self) -> &mut std::string::String {
         if self.name.is_none() {
-            self.name = ::std::option::Option::Some(String::default());
+            self.name = ::std::option::Option::Some(std::string::String::default());
         }
         self.name.as_mut().unwrap()
     }
-    pub fn take_name(&mut self) -> String {
-        self.name
-            .take()
-            .unwrap_or_else(|| ::std::string::String::new())
+    pub fn take_name(&mut self) -> std::string::String {
+        self.name.take().unwrap_or_else(::std::string::String::new)
     }
     pub fn has_help(&self) -> bool {
         self.help.is_some()
@@ -872,24 +884,23 @@ impl MetricFamily {
     pub fn clear_help(&mut self) {
         self.help = ::std::option::Option::None
     }
-    pub fn set_help(&mut self, v: String) {
-        self.help = ::std::option::Option::Some(v);;    }
+    pub fn set_help(&mut self, v: std::string::String) {
+        self.help = ::std::option::Option::Some(v);
+    }
     pub fn get_help(&self) -> &str {
         match self.help.as_ref() {
             Some(v) => v,
             None => "",
         }
     }
-    pub fn mut_help(&mut self) -> &mut String {
+    pub fn mut_help(&mut self) -> &mut std::string::String {
         if self.help.is_none() {
-            self.help = ::std::option::Option::Some(String::default());
+            self.help = ::std::option::Option::Some(std::string::String::default());
         }
         self.help.as_mut().unwrap()
     }
-    pub fn take_help(&mut self) -> String {
-        self.help
-            .take()
-            .unwrap_or_else(|| ::std::string::String::new())
+    pub fn take_help(&mut self) -> std::string::String {
+        self.help.take().unwrap_or_else(::std::string::String::new)
     }
     pub fn has_field_type(&self) -> bool {
         self.r#type.is_some()
@@ -897,7 +908,7 @@ impl MetricFamily {
     pub fn clear_field_type(&mut self) {
         self.r#type = ::std::option::Option::None
     }
-    pub fn set_field_type(&mut self, v: MetricType) {
+    pub fn set_field_type_(&mut self, v: MetricType) {
         self.r#type =
             ::std::option::Option::Some(unsafe { ::std::mem::transmute::<MetricType, i32>(v) });
     }
@@ -956,7 +967,7 @@ impl ::protobuf::Message for MetricFamily {
         unimplemented!();
     }
     fn is_initialized(&self) -> bool {
-        unimplemented!();
+        true
     }
     fn merge_from(
         &mut self,
@@ -969,5 +980,17 @@ impl ::protobuf::Message for MetricFamily {
     }
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         unimplemented!();
+    }
+}
+impl MetricType {
+    pub fn values() -> &'static [Self] {
+        static VALUES: &'static [MetricType] = &[
+            MetricType::Counter,
+            MetricType::Gauge,
+            MetricType::Summary,
+            MetricType::Untyped,
+            MetricType::Histogram,
+        ];
+        VALUES
     }
 }

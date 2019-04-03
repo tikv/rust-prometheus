@@ -137,7 +137,14 @@ impl<P: Atomic> Value<P> {
         let mut m = MetricFamily::default();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
-        m.set_field_type(self.val_type.metric_type());
+        #[cfg(feature = "codec-prost")]
+        {
+            m.set_field_type_(self.val_type.metric_type());
+        }
+        #[cfg(not(feature = "codec-prost"))]
+        {
+            m.set_field_type(self.val_type.metric_type());
+        }
         m.set_metric(from_vec!(vec![self.metric()]));
         m
     }
