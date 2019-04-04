@@ -431,11 +431,11 @@ impl Collector for Histogram {
         let mut m = proto::MetricFamily::default();
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
-        #[cfg(feature = "codec-prost")]
+        #[cfg(feature = "prost-codec")]
         {
             m.set_field_type_(MetricType::Histogram);
         }
-        #[cfg(not(feature = "codec-prost"))]
+        #[cfg(not(feature = "prost-codec"))]
         {
             m.set_field_type(MetricType::Histogram);
         }

@@ -26,7 +26,7 @@ pub enum ValueType {
 }
 
 impl ValueType {
-    #[cfg(feature = "codec-prost")]
+    #[cfg(feature = "prost-codec")]
     /// `metric_type` returns the corresponding proto metric type.
     pub fn metric_type(self) -> MetricType {
         match self {
@@ -35,7 +35,7 @@ impl ValueType {
         }
     }
 
-    #[cfg(not(feature = "codec-prost"))]
+    #[cfg(not(feature = "prost-codec"))]
     /// `metric_type` returns the corresponding proto metric type.
     pub fn metric_type(self) -> MetricType {
         match self {
@@ -137,11 +137,11 @@ impl<P: Atomic> Value<P> {
         let mut m = MetricFamily::default();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
-        #[cfg(feature = "codec-prost")]
+        #[cfg(feature = "prost-codec")]
         {
             m.set_field_type_(self.val_type.metric_type());
         }
-        #[cfg(not(feature = "codec-prost"))]
+        #[cfg(not(feature = "prost-codec"))]
         {
             m.set_field_type(self.val_type.metric_type());
         }

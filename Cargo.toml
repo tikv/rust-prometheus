@@ -18,13 +18,13 @@ travis-ci = { repository = "pingcap/rust-prometheus" }
 features = ["nightly"]
 
 [features]
-default = ["codec-protobuf"]
+default = ["protobuf-codec"]
 nightly = ["libc"]
 push = ["reqwest", "libc"]
 process = ["libc", "procinfo"]
 gen = ["protobuf-build"]
-codec-protobuf = ["protobuf"]
-codec-prost = ["bytes", "prost", "prost-derive", "protobuf"]
+protobuf-codec = ["protobuf"]
+prost-codec = ["bytes", "prost", "prost-derive", "protobuf"]
 
 [dependencies]
 protobuf = { version = "2.0", optional = true }

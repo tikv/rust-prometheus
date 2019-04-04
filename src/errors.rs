@@ -14,10 +14,10 @@
 use std::io::Error as IoError;
 use std::result;
 
-#[cfg(feature = "codec-protobuf")]
+#[cfg(feature = "protobuf-codec")]
 use protobuf::error::ProtobufError;
 
-#[cfg(feature = "codec-protobuf")]
+#[cfg(feature = "protobuf-codec")]
 quick_error! {
     /// The error types for prometheus.
     #[derive(Debug)]
@@ -53,7 +53,7 @@ quick_error! {
     }
 }
 
-#[cfg(not(feature = "codec-protobuf"))]
+#[cfg(not(feature = "protobuf-codec"))]
 quick_error! {
     /// The error types for prometheus.
     #[derive(Debug)]
