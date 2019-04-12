@@ -284,7 +284,7 @@ mod tests {
         for case in table {
             let mut l = proto::LabelPair::new_();
             l.set_name(case.0.to_owned());
-            let mut m = proto::Metric::new)();
+            let mut m = proto::Metric::new_();
             m.set_label(vec![l]);
             let mut mf = proto::MetricFamily::new_();
             mf.set_metric(vec![m]);

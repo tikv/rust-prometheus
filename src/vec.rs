@@ -48,21 +48,14 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         let mut m = MetricFamily::default();
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
-        #[cfg(feature = "prost-codec")]
-        {
-            m.set_field_type_(self.metric_type);
-        }
-        #[cfg(not(feature = "prost-codec"))]
-        {
-            m.set_field_type(self.metric_type);
-        }
+        m.set_field_type_(self.metric_type);
 
         let children = self.children.read();
         let mut metrics = Vec::with_capacity(children.len());
         for child in children.values() {
             metrics.push(child.metric());
         }
-        m.set_metric(from_vec!(metrics));
+        m.set_metric(metrics);
         m
     }
 

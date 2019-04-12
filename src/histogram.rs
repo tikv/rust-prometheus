@@ -232,7 +232,7 @@ impl HistogramCore {
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
         }
-        h.set_bucket(from_vec!(buckets));
+        h.set_bucket(buckets);
 
         h
     }
@@ -413,7 +413,7 @@ impl Histogram {
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
         let mut m = proto::Metric::default();
-        m.set_label(from_vec!(self.core.label_pairs.clone()));
+        m.set_label(self.core.label_pairs.clone());
 
         let h = self.core.proto();
         m.set_histogram(h);
@@ -431,15 +431,8 @@ impl Collector for Histogram {
         let mut m = proto::MetricFamily::default();
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
-        #[cfg(feature = "prost-codec")]
-        {
-            m.set_field_type_(MetricType::Histogram);
-        }
-        #[cfg(not(feature = "prost-codec"))]
-        {
-            m.set_field_type(MetricType::Histogram);
-        }
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.set_field_type_(MetricType::Histogram);
+        m.set_metric(vec![self.metric()]);
 
         vec![m]
     }

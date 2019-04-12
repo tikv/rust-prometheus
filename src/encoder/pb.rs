@@ -15,7 +15,7 @@ use std::io::Write;
 
 use crate::errors::Result;
 use crate::proto::MetricFamily;
-use protobuf::Message;
+use prost::Message;
 
 use super::{check_metric_family, Encoder};
 
@@ -38,10 +38,12 @@ impl ProtobufEncoder {
 
 impl Encoder for ProtobufEncoder {
     fn encode<W: Write>(&self, metric_families: &[MetricFamily], writer: &mut W) -> Result<()> {
+        let mut buf = Vec::new();
         for mf in metric_families {
             // Fail-fast checks.
             check_metric_family(mf)?;
-            mf.write_length_delimited_to_writer(writer)?;
+            mf.encode_length_delimited(&mut buf)?;
+            writer.write_all(&buf)?;
         }
         Ok(())
     }

@@ -506,7 +506,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
         assert_eq!(mfs[0].get_name(), "test_a_counter");
 
-        let mut needle = proto::LabelPair::new();
+        let mut needle = proto::LabelPair::new_();
         needle.set_name("tkey".to_string());
         needle.set_value("tvalue".to_string());
         let metrics = mfs[0].get_metric();

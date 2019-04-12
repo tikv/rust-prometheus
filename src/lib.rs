@@ -115,50 +115,14 @@ This library supports four features:
 #![deny(missing_docs)]
 
 /// Protocol buffers format of metrics.
-#[cfg(feature = "protobuf-codec")]
-#[allow(warnings)]
-#[path = "../proto/proto_model.rs"]
-pub mod proto;
-
-#[cfg(feature = "prost-codec")]
 pub mod proto {
     #![allow(missing_docs)]
     include!("../proto/io.prometheus.client.rs");
     include!("../proto/wrapper_io.prometheus.client.rs");
 }
 
-#[cfg(feature = "protobuf-codec")]
-mod proto_adapt {
-    #[allow(non_snake_case)]
-    pub mod MetricType {
-        pub use crate::proto::MetricType::COUNTER as Counter;
-        pub use crate::proto::MetricType::GAUGE as Gauge;
-        pub use crate::proto::MetricType::HISTOGRAM as Histogram;
-        pub use crate::proto::MetricType::SUMMARY as Summary;
-        pub use crate::proto::MetricType::UNTYPED as Untyped;
-    }
-}
-#[cfg(feature = "prost-codec")]
 mod proto_adapt {
     pub use crate::proto::MetricType;
-}
-
-#[cfg(feature = "protobuf-codec")]
-macro_rules! from_vec {
-    ($e: expr) => {
-        ::protobuf::RepeatedField::from_vec($e)
-    };
-}
-
-#[cfg(all(not(feature = "protobuf-codec"), not(feature = "prost-codec")))]
-#[path = "plain_model.rs"]
-pub mod proto;
-
-#[cfg(not(feature = "protobuf-codec"))]
-macro_rules! from_vec {
-    ($e: expr) => {
-        $e
-    };
 }
 
 #[macro_use]
@@ -219,10 +183,8 @@ pub mod core {
 
 pub use self::counter::{Counter, CounterVec, IntCounter, IntCounterVec};
 pub use self::encoder::Encoder;
-#[cfg(feature = "protobuf-codec")]
 pub use self::encoder::ProtobufEncoder;
 pub use self::encoder::TextEncoder;
-#[cfg(feature = "protobuf-codec")]
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::errors::{Error, Result};
 pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
