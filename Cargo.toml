@@ -48,7 +48,7 @@ getopts = "0.2"
 hyper = { version = "0.9", default-features = false }
 
 [build-dependencies]
-protobuf-build = { version = "0.2", optional = true }
+protobuf-build = { version = "0.4", optional = true }
 
 [workspace]
 members = ["static-metric"]

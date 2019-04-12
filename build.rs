@@ -35,6 +35,7 @@ fn main() {
                 .map(|m| format!("proto/{}.rs", m))
                 .collect::<Vec<_>>(),
             "proto",
+            GenOpt::All,
         );
 
         // Rust-protobuf
