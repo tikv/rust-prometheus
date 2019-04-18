@@ -13,17 +13,9 @@
 // limitations under the License.
 
 use std::cmp::*;
+use std::f64;
 use std::ops::*;
-
-#[cfg(not(feature = "nightly"))]
-mod fallback;
-#[cfg(not(feature = "nightly"))]
-pub use self::fallback::{AtomicF64, AtomicI64, AtomicU64};
-
-#[cfg(feature = "nightly")]
-mod nightly;
-#[cfg(feature = "nightly")]
-pub use self::nightly::{AtomicF64, AtomicI64, AtomicU64};
+use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
 
 /// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
 /// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
@@ -87,6 +79,130 @@ pub trait Atomic: Send + Sync {
     fn inc_by(&self, delta: Self::T);
     /// Decrement the value by a given amount.
     fn dec_by(&self, delta: Self::T);
+}
+
+/// A atomic float.
+pub struct AtomicF64 {
+    inner: StdAtomicU64,
+}
+
+#[inline]
+fn u64_to_f64(val: u64) -> f64 {
+    f64::from_bits(val)
+}
+
+#[inline]
+fn f64_to_u64(val: f64) -> u64 {
+    f64::to_bits(val)
+}
+
+impl Atomic for AtomicF64 {
+    type T = f64;
+
+    fn new(val: Self::T) -> AtomicF64 {
+        AtomicF64 {
+            inner: StdAtomicU64::new(f64_to_u64(val)),
+        }
+    }
+
+    #[inline]
+    fn set(&self, val: Self::T) {
+        self.inner.store(f64_to_u64(val), Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn get(&self) -> Self::T {
+        u64_to_f64(self.inner.load(Ordering::Relaxed))
+    }
+
+    #[inline]
+    fn inc_by(&self, delta: Self::T) {
+        loop {
+            let current = self.inner.load(Ordering::Acquire);
+            let new = u64_to_f64(current) + delta;
+            let swapped = self
+                .inner
+                .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
+            if swapped == current {
+                return;
+            }
+        }
+    }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inc_by(-delta);
+    }
+}
+
+/// A atomic signed integer.
+pub struct AtomicI64 {
+    inner: StdAtomicI64,
+}
+
+impl Atomic for AtomicI64 {
+    type T = i64;
+
+    fn new(val: Self::T) -> AtomicI64 {
+        AtomicI64 {
+            inner: StdAtomicI64::new(val),
+        }
+    }
+
+    #[inline]
+    fn set(&self, val: Self::T) {
+        self.inner.store(val, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn get(&self) -> Self::T {
+        self.inner.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn inc_by(&self, delta: Self::T) {
+        self.inner.fetch_add(delta, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inner.fetch_sub(delta, Ordering::Relaxed);
+    }
+}
+
+/// A atomic unsigned integer.
+pub struct AtomicU64 {
+    inner: StdAtomicU64,
+}
+
+impl Atomic for AtomicU64 {
+    type T = u64;
+
+    fn new(val: Self::T) -> AtomicU64 {
+        AtomicU64 {
+            inner: StdAtomicU64::new(val),
+        }
+    }
+
+    #[inline]
+    fn set(&self, val: Self::T) {
+        self.inner.store(val, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn get(&self) -> Self::T {
+        self.inner.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn inc_by(&self, delta: Self::T) {
+        self.inner.fetch_add(delta, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inner.fetch_sub(delta, Ordering::Relaxed);
+    }
 }
 
 #[cfg(test)]

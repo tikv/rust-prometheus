@@ -231,8 +231,6 @@ const DEFAULT_GROUP_LABEL_PAIR: (&str, &str) = ("instance", "unknown");
 /// Note: This function returns `instance = "unknown"` in Windows.
 #[cfg(not(target_os = "windows"))]
 pub fn hostname_grouping_key() -> HashMap<String, String> {
-    use libc;
-
     // Host names are limited to 255 bytes.
     //   ref: http://pubs.opengroup.org/onlinepubs/7908799/xns/gethostname.html
     let max_len = 256;
