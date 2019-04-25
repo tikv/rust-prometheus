@@ -13,6 +13,9 @@ documentation = "https://docs.rs/prometheus"
 [badges]
 travis-ci = { repository = "pingcap/rust-prometheus" }
 
+[package.metadata.docs.rs]
+features = ["nightly"]
+
 [features]
 default = ["protobuf"]
 nightly = ["libc"]
