@@ -97,7 +97,7 @@ impl RegistryCore {
         for desc in c.desc() {
             if id_set.iter().find(|id| **id == desc.id).is_none() {
                 id_set.push(desc.id);
-                collector_id += desc.id;
+                collector_id = collector_id.wrapping_add(desc.id);
             }
         }
 
