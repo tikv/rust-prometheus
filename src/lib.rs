@@ -115,7 +115,6 @@ This library supports four features:
         clippy::new_ret_no_self
     )
 )]
-#![cfg_attr(feature = "nightly", feature(integer_atomics))]
 #![deny(missing_docs)]
 
 /// Protocol buffers format of metrics.

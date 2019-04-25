@@ -13,9 +13,12 @@ documentation = "https://docs.rs/prometheus"
 [badges]
 travis-ci = { repository = "pingcap/rust-prometheus" }
 
+[package.metadata.docs.rs]
+features = ["nightly"]
+
 [features]
 default = ["protobuf"]
-nightly = ["libc", "spin/unstable"]
+nightly = ["libc"]
 push = ["reqwest", "libc"]
 process = ["libc", "procinfo"]
 gen = ["protobuf-codegen-pure"]
@@ -27,7 +30,7 @@ fnv = "1.0"
 lazy_static = "1.1.0"
 libc = {version = "0.2", optional = true}
 cfg-if = "0.1"
-spin = {version = "0.4", default-features = false}
+spin = "0.5"
 reqwest = {version = "0.9.5", optional = true}
 
 [target.'cfg(target_os = "linux")'.dependencies]
