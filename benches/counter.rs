@@ -16,6 +16,8 @@
 extern crate prometheus;
 extern crate test;
 
+use std::sync::{Arc, atomic};
+use std::thread;
 use std::collections::HashMap;
 
 use prometheus::{Counter, CounterVec, IntCounter, Opts};
@@ -76,4 +78,105 @@ fn bench_counter_no_labels(b: &mut Bencher) {
 fn bench_int_counter_no_labels(b: &mut Bencher) {
     let counter = IntCounter::new("benchmark_int_counter", "A int_counter to benchmark.").unwrap();
     b.iter(|| counter.inc())
+}
+
+#[bench]
+fn bench_counter_no_labels_concurrent_nop(b: &mut Bencher) {
+    let signal_exit = Arc::new(atomic::AtomicBool::new(false));
+    let counter = Counter::new("foo", "bar").unwrap();
+
+    let thread_handles: Vec<_> = (0..4).map(|_| {
+        let signal_exit2 = signal_exit.clone();
+        thread::spawn(move || {
+            while !signal_exit2.load(atomic::Ordering::Relaxed) {
+                // Do nothing as the control group.
+            }
+        })
+    }).collect();
+
+    b.iter(|| counter.inc());
+
+    // Wait for accompanying thread to exit.
+    signal_exit.store(true, atomic::Ordering::Relaxed);
+    for h in thread_handles {
+        h.join().unwrap();
+    }
+}
+
+#[bench]
+fn bench_counter_no_labels_concurrent_write(b: &mut Bencher) {
+    let signal_exit = Arc::new(atomic::AtomicBool::new(false));
+    let counter = Counter::new("foo", "bar").unwrap();
+
+    let thread_handles: Vec<_> = (0..4).map(|_| {
+        let signal_exit2 = signal_exit.clone();
+        let counter2 = counter.clone();
+        thread::spawn(move || {
+            while !signal_exit2.load(atomic::Ordering::Relaxed) {
+                // Update counter concurrently as the normal group.
+                counter2.inc();
+            }
+        })
+    }).collect();
+
+    b.iter(|| counter.inc());
+
+    // Wait for accompanying thread to exit.
+    signal_exit.store(true, atomic::Ordering::Relaxed);
+    for h in thread_handles {
+        h.join().unwrap();
+    }
+}
+
+#[bench]
+fn bench_int_counter_no_labels_concurrent_write(b: &mut Bencher) {
+    let signal_exit = Arc::new(atomic::AtomicBool::new(false));
+    let counter = IntCounter::new("foo", "bar").unwrap();
+
+    let thread_handles: Vec<_> = (0..4).map(|_| {
+        let signal_exit2 = signal_exit.clone();
+        let counter2 = counter.clone();
+        thread::spawn(move || {
+            while !signal_exit2.load(atomic::Ordering::Relaxed) {
+                // Update counter concurrently as the normal group.
+                counter2.inc();
+            }
+        })
+    }).collect();
+
+    b.iter(|| counter.inc());
+
+    // Wait for accompanying thread to exit.
+    signal_exit.store(true, atomic::Ordering::Relaxed);
+    for h in thread_handles {
+        h.join().unwrap();
+    }
+}
+
+#[bench]
+fn bench_counter_with_label_values_concurrent_write(b: &mut Bencher) {
+    let signal_exit = Arc::new(atomic::AtomicBool::new(false));
+    let counter = CounterVec::new(
+        Opts::new("foo", "bar"),
+        &["one", "two", "three"],
+    )
+        .unwrap();
+
+    let thread_handles: Vec<_> = (0..4).map(|_| {
+        let signal_exit2 = signal_exit.clone();
+        let counter2 = counter.clone();
+        thread::spawn(move || {
+            while !signal_exit2.load(atomic::Ordering::Relaxed) {
+                counter2.with_label_values(&["eins", "zwei", "drei"]).inc();
+            }
+        })
+    }).collect();
+
+    b.iter(|| counter.with_label_values(&["eins", "zwei", "drei"]).inc());
+
+    // Wait for accompanying thread to exit.
+    signal_exit.store(true, atomic::Ordering::Relaxed);
+    for h in thread_handles {
+        h.join().unwrap();
+    }
 }
