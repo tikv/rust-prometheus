@@ -93,7 +93,7 @@ impl RegistryCore {
 
     fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
         let mut id_set = Vec::new();
-        let mut collector_id = 0;
+        let mut collector_id: u64 = 0;
         for desc in c.desc() {
             if id_set.iter().find(|id| **id == desc.id).is_none() {
                 id_set.push(desc.id);
