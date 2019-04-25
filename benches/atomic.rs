@@ -12,12 +12,10 @@
 // limitations under the License.
 
 #![feature(test)]
-#![cfg_attr(feature = "nightly", feature(integer_atomics))]
 
-extern crate spin;
 extern crate test;
 
-#[path = "../src/atomic64/mod.rs"]
+#[path = "../src/atomic64.rs"]
 mod atomic64;
 
 use atomic64::*;
