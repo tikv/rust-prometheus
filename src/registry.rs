@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn test_with_prefix_gather() {
-        Registry::new_custom(Some("".to_string()), None).is_err();
+        assert!(Registry::new_custom(Some("".to_string()), None).is_err());
 
         let r = Registry::new_custom(Some("common_prefix".to_string()), None).unwrap();
         let counter_a = Counter::new("test_a_counter", "test help").unwrap();
