@@ -17,6 +17,7 @@ use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Or
 
 use super::Atomic;
 
+/// Atomic float.
 pub struct AtomicF64 {
     inner: StdAtomicU64,
 }
@@ -70,6 +71,7 @@ impl Atomic for AtomicF64 {
     }
 }
 
+/// Atomic signed int.
 pub struct AtomicI64 {
     inner: StdAtomicI64,
 }
@@ -104,6 +106,7 @@ impl Atomic for AtomicI64 {
     }
 }
 
+/// Atomic unsigned int.
 pub struct AtomicU64 {
     inner: StdAtomicU64,
 }
