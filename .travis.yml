@@ -26,11 +26,11 @@ matrix:
   - rust: beta
   - rust: stable
     install:
-      - rustup component add clippy-preview
-      - rustup component add rustfmt-preview
+      - rustup component add clippy
+      - rustup component add rustfmt
     before_script:
       - cargo fmt --all -- --check
-      - cargo clippy --all -- -D clippy
+      - cargo clippy --all -- -D clippy::all
   allow_failures:
   - rust: nightly
 

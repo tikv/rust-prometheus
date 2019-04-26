@@ -117,6 +117,7 @@ This library supports four features:
 /// Protocol buffers format of metrics.
 pub mod proto {
     #![allow(missing_docs)]
+    #![allow(clippy::redundant_pattern_matching)]
     include!("../proto/io.prometheus.client.rs");
     include!("../proto/wrapper_io.prometheus.client.rs");
 }

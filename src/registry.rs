@@ -207,7 +207,7 @@ impl RegistryCore {
                     for metric in m.mut_metric().iter_mut() {
                         let mut labels = metric.take_label();
                         labels.append(&mut pairs);
-                        metric.set_label(labels.into());
+                        metric.set_label(labels);
                     }
                 }
                 m
