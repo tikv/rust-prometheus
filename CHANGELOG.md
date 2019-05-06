@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Add: Expose the default registry (#231).
+
+- Add: Support common namespace prefix and common labels (#233).
+
 ## 0.5.0
 
 - Change: Added TLS and BasicAuthentication support to `push` client.
