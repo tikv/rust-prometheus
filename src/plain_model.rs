@@ -267,6 +267,14 @@ impl Metric {
         self.label = v;
     }
 
+    pub fn mut_label(&mut self) -> &mut [LabelPair] {
+        &mut self.label
+    }
+
+    pub fn take_label(&mut self) -> Vec<LabelPair> {
+        ::std::mem::replace(&mut self.label, Vec::new())
+    }
+
     pub fn get_label(&self) -> &[LabelPair] {
         &self.label
     }
