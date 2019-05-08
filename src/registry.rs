@@ -197,7 +197,7 @@ impl RegistryCore {
                     let mut pairs: Vec<proto::LabelPair> = hmap
                         .iter()
                         .map(|(k, v)| {
-                            let mut label = proto::LabelPair::new();
+                            let mut label = proto::LabelPair::default();
                             label.set_name(k.to_string());
                             label.set_value(v.to_string());
                             label
@@ -205,7 +205,7 @@ impl RegistryCore {
                         .collect();
 
                     for metric in m.mut_metric().iter_mut() {
-                        let mut labels = metric.take_label().into_vec();
+                        let mut labels: Vec<_> = metric.take_label().into();
                         labels.append(&mut pairs);
                         metric.set_label(labels.into());
                     }
@@ -506,7 +506,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
         assert_eq!(mfs[0].get_name(), "test_a_counter");
 
-        let mut needle = proto::LabelPair::new();
+        let mut needle = proto::LabelPair::default();
         needle.set_name("tkey".to_string());
         needle.set_value("tvalue".to_string());
         let metrics = mfs[0].get_metric();

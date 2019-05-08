@@ -11,9 +11,11 @@ addons:
       - gcc-multilib
 
 env:
+  matrix:
+    - FEATURES="protobuf push process"
+    - FEATURES=""
   global:
     - RUSTFLAGS=--deny=warnings
-    - FEATURES="push process"
     - ARCH=i686
 
 # Must be present for matrix.
@@ -35,7 +37,7 @@ matrix:
   - rust: nightly
 
 script:
-  - cargo test --features="$FEATURES"
+  - cargo test --no-default-features --features="$FEATURES"
   - |
     if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
         # Clean up.
