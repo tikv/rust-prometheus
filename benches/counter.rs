@@ -13,7 +13,6 @@
 
 #![feature(test)]
 
-extern crate prometheus;
 extern crate test;
 
 use std::sync::{Arc, atomic};

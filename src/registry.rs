@@ -19,12 +19,12 @@ use std::sync::Arc;
 
 use spin::RwLock;
 
-use errors::{Error, Result};
-use metrics::Collector;
-use proto;
+use crate::errors::{Error, Result};
+use crate::metrics::Collector;
+use crate::proto;
 
 struct RegistryCore {
-    pub collectors_by_id: HashMap<u64, Box<Collector>>,
+    pub collectors_by_id: HashMap<u64, Box<dyn Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
     pub desc_ids: HashSet<u64>,
     /// Optional common labels for all registered collectors.
@@ -34,7 +34,7 @@ struct RegistryCore {
 }
 
 impl RegistryCore {
-    fn register(&mut self, c: Box<Collector>) -> Result<()> {
+    fn register(&mut self, c: Box<dyn Collector>) -> Result<()> {
         let mut desc_id_set = HashSet::new();
         let mut collector_id: u64 = 0;
 
@@ -91,7 +91,7 @@ impl RegistryCore {
         }
     }
 
-    fn unregister(&mut self, c: Box<Collector>) -> Result<()> {
+    fn unregister(&mut self, c: Box<dyn Collector>) -> Result<()> {
         let mut id_set = Vec::new();
         let mut collector_id: u64 = 0;
         for desc in c.desc() {
@@ -197,7 +197,7 @@ impl RegistryCore {
                     let mut pairs: Vec<proto::LabelPair> = hmap
                         .iter()
                         .map(|(k, v)| {
-                            let mut label = proto::LabelPair::new();
+                            let mut label = proto::LabelPair::default();
                             label.set_name(k.to_string());
                             label.set_value(v.to_string());
                             label
@@ -205,7 +205,7 @@ impl RegistryCore {
                         .collect();
 
                     for metric in m.mut_metric().iter_mut() {
-                        let mut labels = metric.take_label().into_vec();
+                        let mut labels: Vec<_> = metric.take_label().into();
                         labels.append(&mut pairs);
                         metric.set_label(labels.into());
                     }
@@ -274,7 +274,7 @@ impl Registry {
     /// If the provided [`Collector`](::core::Collector) is equal to a [`Collector`](::core::Collector) already registered
     /// (which includes the case of re-registering the same [`Collector`](::core::Collector)), the
     /// AlreadyReg error returns.
-    pub fn register(&self, c: Box<Collector>) -> Result<()> {
+    pub fn register(&self, c: Box<dyn Collector>) -> Result<()> {
         self.r.write().register(c)
     }
 
@@ -282,7 +282,7 @@ impl Registry {
     /// in as an argument.  (Two Collectors are considered equal if their
     /// Describe method yields the same set of descriptors.) The function
     /// returns error when the [`Collector`](::core::Collector) is not registered.
-    pub fn unregister(&self, c: Box<Collector>) -> Result<()> {
+    pub fn unregister(&self, c: Box<dyn Collector>) -> Result<()> {
         self.r.write().unregister(c)
     }
 
@@ -297,7 +297,7 @@ impl Registry {
 cfg_if! {
     if #[cfg(all(feature = "process", target_os="linux"))] {
         fn register_default_process_collector(reg: &Registry) -> Result<()> {
-            use process_collector::ProcessCollector;
+            use crate::process_collector::ProcessCollector;
 
             let pc = ProcessCollector::for_self();
             reg.register(Box::new(pc))
@@ -332,7 +332,7 @@ pub fn default_registry() -> &'static Registry {
 /// if they - in combination with descriptors of already registered Collectors -
 /// do not fulfill the consistency and uniqueness criteria described in the [`Desc`](::core::Desc)
 /// documentation.
-pub fn register(c: Box<Collector>) -> Result<()> {
+pub fn register(c: Box<dyn Collector>) -> Result<()> {
     DEFAULT_REGISTRY.register(c)
 }
 
@@ -340,7 +340,7 @@ pub fn register(c: Box<Collector>) -> Result<()> {
 /// an argument. (Two Collectors are considered equal if their Describe method
 /// yields the same set of descriptors.) The function returns an error if a
 /// [`Collector`](::core::Collector) was not registered.
-pub fn unregister(c: Box<Collector>) -> Result<()> {
+pub fn unregister(c: Box<dyn Collector>) -> Result<()> {
     DEFAULT_REGISTRY.unregister(c)
 }
 
@@ -353,10 +353,10 @@ pub fn gather() -> Vec<proto::MetricFamily> {
 mod tests {
 
     use super::*;
-    use counter::{Counter, CounterVec};
-    use desc::Desc;
-    use metrics::{Collector, Opts};
-    use proto;
+    use crate::counter::{Counter, CounterVec};
+    use crate::desc::Desc;
+    use crate::metrics::{Collector, Opts};
+    use crate::proto;
     use std::collections::HashMap;
     use std::thread;
 
@@ -506,7 +506,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
         assert_eq!(mfs[0].get_name(), "test_a_counter");
 
-        let mut needle = proto::LabelPair::new();
+        let mut needle = proto::LabelPair::default();
         needle.set_name("tkey".to_string());
         needle.set_value("tvalue".to_string());
         let metrics = mfs[0].get_metric();

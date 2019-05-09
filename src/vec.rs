@@ -19,10 +19,10 @@ use std::sync::Arc;
 use fnv::FnvHasher;
 use spin::RwLock;
 
-use desc::{Desc, Describer};
-use errors::{Error, Result};
-use metrics::{Collector, Metric};
-use proto::{MetricFamily, MetricType};
+use crate::desc::{Desc, Describer};
+use crate::errors::{Error, Result};
+use crate::metrics::{Collector, Metric};
+use crate::proto::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
 pub trait MetricVecBuilder: Send + Sync + Clone {
@@ -32,7 +32,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     type P: Describer + Sync + Send + Clone;
 
     /// `build` builds a [`Metric`](::core::Metric) with option and corresponding label names.
-    fn build(&self, &Self::P, &[&str]) -> Result<Self::M>;
+    fn build(&self, _: &Self::P, _: &[&str]) -> Result<Self::M>;
 }
 
 pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
@@ -306,9 +306,9 @@ impl<T: MetricVecBuilder> Collector for MetricVec<T> {
 #[cfg(test)]
 mod tests {
 
-    use counter::CounterVec;
-    use gauge::GaugeVec;
-    use metrics::{Metric, Opts};
+    use crate::counter::CounterVec;
+    use crate::gauge::GaugeVec;
+    use crate::metrics::{Metric, Opts};
     use std::collections::HashMap;
 
     #[test]

@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -50,7 +49,7 @@ fn main() {
     println!("listening addr {:?}", addr);
     Server::http(addr)
         .unwrap()
-        .handle(move |_: Request, mut res: Response| {
+        .handle(move |_: Request<'_, '_>, mut res: Response<'_>| {
             HTTP_COUNTER.inc();
             let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
 
