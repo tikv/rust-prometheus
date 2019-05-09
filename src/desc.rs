@@ -21,19 +21,12 @@ use crate::errors::{Error, Result};
 use crate::metrics::SEPARATOR_BYTE;
 use crate::proto::LabelPair;
 
-// TODO: use `char::is_ascii` instead once it landed in the stable rust.
-// Refer to https://github.com/rust-lang/rust/blob/
-//          3e9a7f7fbbf2898b9f1d60886f92e76370040d83/src/libstd_unicode/char.rs#L943
-fn is_ascii(c: char) -> bool {
-    c as u32 <= 0x7F
-}
-
 // Details of required format are at
 //   https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
 fn is_valid_metric_name(name: &str) -> bool {
     // Valid metric names must match regex [a-zA-Z_:][a-zA-Z0-9_:]*.
     fn valid_start(c: char) -> bool {
-        is_ascii(c)
+        c.is_ascii()
             && match c as u8 {
                 b'a'..=b'z' | b'A'..=b'Z' | b'_' | b':' => true,
                 _ => false,
@@ -41,7 +34,7 @@ fn is_valid_metric_name(name: &str) -> bool {
     }
 
     fn valid_char(c: char) -> bool {
-        is_ascii(c)
+        c.is_ascii()
             && match c as u8 {
                 b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' | b':' => true,
                 _ => false,
@@ -54,7 +47,7 @@ fn is_valid_metric_name(name: &str) -> bool {
 fn is_valid_label_name(name: &str) -> bool {
     // Valid label names must match regex [a-zA-Z_][a-zA-Z0-9_]*.
     fn valid_start(c: char) -> bool {
-        is_ascii(c)
+        c.is_ascii()
             && match c as u8 {
                 b'a'..=b'z' | b'A'..=b'Z' | b'_' => true,
                 _ => false,
@@ -62,7 +55,7 @@ fn is_valid_label_name(name: &str) -> bool {
     }
 
     fn valid_char(c: char) -> bool {
-        is_ascii(c)
+        c.is_ascii()
             && match c as u8 {
                 b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' => true,
                 _ => false,
