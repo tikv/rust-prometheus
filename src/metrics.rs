@@ -15,9 +15,9 @@
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
 use std::collections::HashMap;
 
-use desc::{Desc, Describer};
-use errors::Result;
-use proto::{self, LabelPair};
+use crate::desc::{Desc, Describer};
+use crate::errors::Result;
+use crate::proto::{self, LabelPair};
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -199,7 +199,7 @@ fn build_fq_name(namespace: &str, subsystem: &str, name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::LabelPair;
+    use crate::proto::LabelPair;
     use std::cmp::{Ord, Ordering};
 
     fn new_label_pair(name: &str, value: &str) -> LabelPair {
