@@ -22,12 +22,12 @@ use std::sync::Mutex;
 use libc;
 use procinfo::pid as pid_info;
 
-use counter::Counter;
-use desc::Desc;
-use errors::{Error, Result};
-use gauge::Gauge;
-use metrics::{Collector, Opts};
-use proto;
+use crate::counter::Counter;
+use crate::desc::Desc;
+use crate::errors::{Error, Result};
+use crate::gauge::Gauge;
+use crate::metrics::{Collector, Opts};
+use crate::proto;
 
 /// The `pid_t` data type represents process IDs.
 pub use libc::pid_t;
@@ -272,8 +272,8 @@ lazy_static! {
 mod tests {
 
     use super::*;
-    use metrics::Collector;
-    use registry;
+    use crate::metrics::Collector;
+    use crate::registry;
     use std::f64::EPSILON;
 
     #[test]

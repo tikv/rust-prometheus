@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use atomic64::{Atomic, Number};
-use desc::{Desc, Describer};
-use errors::{Error, Result};
-use proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
+use crate::atomic64::{Atomic, Number};
+use crate::desc::{Desc, Describer};
+use crate::errors::{Error, Result};
+use crate::proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
 /// for [`Counter`](::Counter) and [`Gauge`](::Gauge).
