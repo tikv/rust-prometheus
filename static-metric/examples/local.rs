@@ -72,10 +72,7 @@ pub fn may_flush_metrics() {
 }
 
 
-/// This example demonstrates the usage of:
-/// 1. using alternative metric types (i.e. IntCounter)
-/// 2. specifying different label order compared to the definition
-/// 3. using non-identifiers as values
+/// This example demonstrates the usage of using static metrics with local metrics.
 
 fn main() {
     TLS_HTTP_COUNTER.with(|m| m.borrow_mut().foo.post.http1.inc());
