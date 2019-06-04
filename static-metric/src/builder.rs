@@ -100,8 +100,6 @@ impl TokensBuilder {
 
         let visibility = &metric.visibility;
         let struct_name = &metric.struct_name;
-        let metric_type = &metric.metric_type;
-        let metric_vec_type = util::get_metric_vec_type(*metric_type);
 
         quote! {
             #visibility use self::#scope_name::#struct_name;
@@ -109,8 +107,8 @@ impl TokensBuilder {
             #[allow(dead_code)]
             mod #scope_name {
                 use ::std::collections::HashMap;
-                use ::prometheus::#metric_type;
-                use ::prometheus::#metric_vec_type;
+                use ::prometheus::*;
+                use ::prometheus::local::*;
 
                 #[allow(unused_imports)]
                 use super::*;
@@ -170,7 +168,6 @@ struct MetricBuilderContext<'a> {
     is_last_label: bool,
 
     struct_name: Ident,
-    metric_vec_type: Ident,
     member_type: Ident,
 }
 
@@ -189,7 +186,6 @@ impl<'a> MetricBuilderContext<'a> {
             is_last_label,
 
             struct_name: util::get_label_struct_name(metric.struct_name, label_index),
-            metric_vec_type: util::get_metric_vec_type(metric.metric_type),
             member_type: util::get_member_type(
                 metric.struct_name,
                 label_index,
@@ -223,18 +219,20 @@ impl<'a> MetricBuilderContext<'a> {
         let impl_from = self.build_impl_from();
         let impl_get = self.build_impl_get();
         let impl_try_get = self.build_impl_try_get();
+        let impl_flush = self.build_impl_flush();
         quote! {
             impl #struct_name {
                 #impl_from
                 #impl_get
                 #impl_try_get
+                #impl_flush
             }
         }
     }
 
     fn build_impl_from(&self) -> Tokens {
         let struct_name = &self.struct_name;
-        let metric_vec_type = &self.metric_vec_type;
+        let metric_vec_type = util::to_non_local_metric_type(util::get_metric_vec_type(self.metric.metric_type));
 
         let prev_labels_ident: Vec<_> = (0..self.label_index)
             .map(|i| Ident::from(format!("label_{}", i)))
@@ -272,6 +270,14 @@ impl<'a> MetricBuilderContext<'a> {
                         .enumerate()
                         .map(|(i, _)| &self.metric.labels[i].label_key)
                         .collect();
+                    let local_suffix_call: Tokens;
+                    if util::is_local_metric(self.metric.metric_type) {
+                        local_suffix_call = quote! {
+                            .local()
+                        };
+                    } else {
+                        local_suffix_call = Tokens::new();
+                    }
                     quote! {
                         #name: m.with(&{
                             let mut coll = HashMap::new();
@@ -280,7 +286,7 @@ impl<'a> MetricBuilderContext<'a> {
                             )*
                             coll.insert(#current_label, #value);
                             coll
-                        }),
+                        })#local_suffix_call,
                     }
                 } else {
                     let prev_labels_ident = prev_labels_ident;
@@ -345,6 +351,21 @@ impl<'a> MetricBuilderContext<'a> {
                     _ => None,
                 }
             }
+        }
+    }
+
+    fn build_impl_flush(&self) -> Tokens {
+        // TODO: Remove this &mut in body
+        if util::is_local_metric(self.metric.metric_type) {
+            let value_def_list = self.label.get_value_def_list(self.enum_definitions);
+            let names = value_def_list.get_names();
+            quote! {
+                pub fn flush(&mut self) {
+                    #(self.#names.flush();)*
+                }
+            }
+        } else {
+            Tokens::new()
         }
     }
 }
