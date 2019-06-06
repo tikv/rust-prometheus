@@ -511,6 +511,7 @@ mod tests {
         assert_eq!(vec.with_label_values(&["v1", "v2"]).get(), 34);
     }
 
+    #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_counter_negative_inc() {
@@ -518,6 +519,7 @@ mod tests {
         counter.inc_by(-42.0);
     }
 
+    #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_local_counter_negative_inc() {
@@ -526,6 +528,7 @@ mod tests {
         local.inc_by(-42.0);
     }
 
+    #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_int_counter_negative_inc() {
@@ -533,6 +536,7 @@ mod tests {
         counter.inc_by(-42);
     }
 
+    #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_int_local_counter_negative_inc() {
