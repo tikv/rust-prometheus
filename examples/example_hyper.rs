@@ -16,12 +16,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate prometheus;
 
-use hyper::{
-    Body, Response, Server,
-    header::CONTENT_TYPE,
-    rt::Future,
-    service::service_fn_ok,
-};
+use hyper::{header::CONTENT_TYPE, rt::Future, service::service_fn_ok, Body, Response, Server};
 
 use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
 
