@@ -232,7 +232,8 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_from(&self) -> Tokens {
         let struct_name = &self.struct_name;
-        let metric_vec_type = util::to_non_local_metric_type(util::get_metric_vec_type(self.metric.metric_type));
+        let metric_vec_type =
+            util::to_non_local_metric_type(util::get_metric_vec_type(self.metric.metric_type));
 
         let prev_labels_ident: Vec<_> = (0..self.label_index)
             .map(|i| Ident::from(format!("label_{}", i)))

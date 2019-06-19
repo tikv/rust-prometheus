@@ -13,12 +13,12 @@
 
 #[macro_use]
 extern crate lazy_static;
+extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
-extern crate coarsetime;
 
 use coarsetime::Instant;
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell, RefCell};
 
 use prometheus::*;
 use prometheus_static_metric::make_static_metric;
@@ -70,7 +70,6 @@ pub fn may_flush_metrics() {
         TLS_HTTP_COUNTER.with(|m| m.borrow_mut().flush());
     });
 }
-
 
 /// This example demonstrates the usage of using static metrics with local metrics.
 
