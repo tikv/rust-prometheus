@@ -17,8 +17,6 @@ Use metric enums to reuse possible values of a label.
 
 */
 
-#![feature(proc_macro)]
-
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
