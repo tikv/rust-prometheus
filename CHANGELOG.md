@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1
+
+- Fix compile error when ProtoBuf feature is not enabled (#240).
+
 ## 0.6.0
 
 - Add: Expose the default registry (#231).
