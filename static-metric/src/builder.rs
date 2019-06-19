@@ -271,14 +271,11 @@ impl<'a> MetricBuilderContext<'a> {
                         .enumerate()
                         .map(|(i, _)| &self.metric.labels[i].label_key)
                         .collect();
-                    let local_suffix_call: Tokens;
-                    if util::is_local_metric(self.metric.metric_type) {
-                        local_suffix_call = quote! {
-                            .local()
-                        };
+                    let local_suffix_call = if util::is_local_metric(self.metric.metric_type) {
+                        quote! { .local() }
                     } else {
-                        local_suffix_call = Tokens::new();
-                    }
+                        Tokens::new()
+                    };
                     quote! {
                         #name: m.with(&{
                             let mut coll = HashMap::new();
