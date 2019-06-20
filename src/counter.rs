@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -170,7 +171,7 @@ impl<P: Atomic> GenericCounterVec<P> {
 /// and [`LocalIntCounter`](::local::LocalIntCounter).
 pub struct GenericLocalCounter<P: Atomic> {
     counter: GenericCounter<P>,
-    val: P::T,
+    val: RefCell<P::T>,
 }
 
 /// An unsync [`Counter`](::Counter).
@@ -184,7 +185,7 @@ impl<P: Atomic> GenericLocalCounter<P> {
     fn new(counter: GenericCounter<P>) -> Self {
         Self {
             counter,
-            val: P::T::from_i64(0),
+            val: RefCell::new(P::T::from_i64(0)),
         }
     }
 
@@ -194,31 +195,31 @@ impl<P: Atomic> GenericLocalCounter<P> {
     ///
     /// Panics in debug build if the value is < 0.
     #[inline]
-    pub fn inc_by(&mut self, v: P::T) {
+    pub fn inc_by(&self, v: P::T) {
         debug_assert!(v >= P::T::from_i64(0));
-        self.val += v;
+        *self.val.borrow_mut() += v;
     }
 
     /// Increase the local counter by 1.
     #[inline]
-    pub fn inc(&mut self) {
-        self.val += P::T::from_i64(1);
+    pub fn inc(&self) {
+        *self.val.borrow_mut() += P::T::from_i64(1);
     }
 
     /// Return the local counter value.
     #[inline]
     pub fn get(&self) -> P::T {
-        self.val
+        *self.val.borrow()
     }
 
     /// Flush the local metrics to the [`Counter`](::Counter).
     #[inline]
-    pub fn flush(&mut self) {
-        if self.val == P::T::from_i64(0) {
+    pub fn flush(&self) {
+        if *self.val.borrow() == P::T::from_i64(0) {
             return;
         }
-        self.counter.inc_by(self.val);
-        self.val = P::T::from_i64(0);
+        self.counter.inc_by(*self.val.borrow());
+        *self.val.borrow_mut() = P::T::from_i64(0);
     }
 }
 
