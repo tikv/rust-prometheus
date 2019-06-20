@@ -18,7 +18,7 @@ extern crate prometheus;
 extern crate prometheus_static_metric;
 
 use coarsetime::Instant;
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 
 use prometheus::*;
 use prometheus_static_metric::make_static_metric;
@@ -54,9 +54,7 @@ lazy_static! {
 thread_local! {
     static THREAD_LAST_TICK_TIME: Cell<Instant> = Cell::new(Instant::now());
 
-    pub static TLS_HTTP_COUNTER: RefCell<LocalHttpRequestStatistics> = RefCell::new(
-        LocalHttpRequestStatistics::from(&HTTP_COUNTER_VEC)
-    );
+    pub static TLS_HTTP_COUNTER: LocalHttpRequestStatistics = LocalHttpRequestStatistics::from(&HTTP_COUNTER_VEC);
 }
 
 pub fn may_flush_metrics() {
@@ -67,16 +65,16 @@ pub fn may_flush_metrics() {
             return;
         }
         tls_last_tick.set(now);
-        TLS_HTTP_COUNTER.with(|m| m.borrow_mut().flush());
+        TLS_HTTP_COUNTER.with(|m| m.flush());
     });
 }
 
 /// This example demonstrates the usage of using static metrics with local metrics.
 
 fn main() {
-    TLS_HTTP_COUNTER.with(|m| m.borrow_mut().foo.post.http1.inc());
-    TLS_HTTP_COUNTER.with(|m| m.borrow_mut().foo.post.http1.inc());
-    TLS_HTTP_COUNTER.with(|m| m.borrow_mut().foo.post.http1.inc());
+    TLS_HTTP_COUNTER.with(|m| m.foo.post.http1.inc());
+    TLS_HTTP_COUNTER.with(|m| m.foo.post.http1.inc());
+    TLS_HTTP_COUNTER.with(|m| m.foo.post.http1.inc());
 
     assert_eq!(
         HTTP_COUNTER_VEC
