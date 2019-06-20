@@ -13,7 +13,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 
     ```toml
     [dependencies]
-    prometheus = "0.6"
+    prometheus = "0.7"
     ```
 
 + Add this to your crate in `lib.rs`:
