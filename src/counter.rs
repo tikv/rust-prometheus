@@ -328,8 +328,8 @@ mod tests {
     #[test]
     fn test_local_counter() {
         let counter = Counter::new("counter", "counter helper").unwrap();
-        let mut local_counter1 = counter.local();
-        let mut local_counter2 = counter.local();
+        let local_counter1 = counter.local();
+        let local_counter2 = counter.local();
 
         local_counter1.inc();
         local_counter2.inc();
@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn test_int_local_counter() {
         let counter = IntCounter::new("foo", "bar").unwrap();
-        let mut local_counter = counter.local();
+        let local_counter = counter.local();
 
         local_counter.inc();
         assert_eq!(local_counter.get(), 1);
@@ -525,7 +525,7 @@ mod tests {
     #[should_panic(expected = "assertion failed")]
     fn test_local_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
-        let mut local = counter.local();
+        let local = counter.local();
         local.inc_by(-42.0);
     }
 
@@ -542,7 +542,7 @@ mod tests {
     #[should_panic(expected = "assertion failed")]
     fn test_int_local_counter_negative_inc() {
         let counter = IntCounter::new("foo", "bar").unwrap();
-        let mut local = counter.local();
+        let local = counter.local();
         local.inc_by(-42);
     }
 }
