@@ -13,7 +13,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 
     ```toml
     [dependencies]
-    prometheus = "0.4"
+    prometheus = "0.7"
     ```
 
 + Add this to your crate in `lib.rs`:
@@ -27,7 +27,6 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
     ```toml
     [dependencies.prometheus]
     git = "https://github.com/pingcap/rust-prometheus.git"
-    default-features = false
     features = ["nightly"]
     ```
 

@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(proc_macro)]
-
 extern crate prometheus;
 extern crate prometheus_static_metric;
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- Provide immutable interface for local counters.
+
+## 0.6.1
+
+- Fix compile error when ProtoBuf feature is not enabled (#240).
+
 ## 0.6.0
 
 - Add: Expose the default registry (#231).

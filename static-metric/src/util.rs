@@ -13,6 +13,19 @@
 
 use syn::Ident;
 
+pub fn is_local_metric(metric_type: Ident) -> bool {
+    metric_type.to_string().starts_with("Local")
+}
+
+pub fn to_non_local_metric_type(metric_type: Ident) -> Ident {
+    let metric_type_str = metric_type.to_string();
+    if metric_type_str.starts_with("Local") {
+        Ident::from(&metric_type_str[5..])
+    } else {
+        metric_type
+    }
+}
+
 pub fn get_metric_vec_type(metric_type: Ident) -> Ident {
     Ident::from(format!("{}Vec", metric_type))
 }

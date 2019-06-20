@@ -18,7 +18,7 @@ by using the `register_static_xxx!` macro provided by this crate.
 
 */
 
-#![feature(proc_macro)]
+#![feature(proc_macro_hygiene)]
 
 #[macro_use]
 extern crate lazy_static;
