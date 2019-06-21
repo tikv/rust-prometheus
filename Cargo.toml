@@ -40,6 +40,7 @@ procinfo = { version = "0.3", optional = true }
 [dev-dependencies]
 getopts = "0.2"
 hyper = "0.12"
+coarsetime = "0.1"
 
 [build-dependencies]
 protobuf-codegen-pure = { version = "2.0", optional = true }

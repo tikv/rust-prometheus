@@ -237,28 +237,29 @@ impl HistogramCore {
     }
 }
 
-enum Instant {
+#[derive(Clone, Copy)]
+pub enum Instant {
     Monotonic(StdInstant),
     #[cfg(all(feature = "nightly", target_os = "linux"))]
     MonotonicCoarse(timespec),
 }
 
 impl Instant {
-    fn now() -> Instant {
+    pub fn now() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
     #[cfg(all(feature = "nightly", target_os = "linux"))]
-    fn now_coarse() -> Instant {
+    pub fn now_coarse() -> Instant {
         Instant::MonotonicCoarse(get_time_coarse())
     }
 
     #[cfg(all(feature = "nightly", not(target_os = "linux")))]
-    fn now_coarse() -> Instant {
+    pub fn now_coarse() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
-    fn elapsed(&self) -> Duration {
+    pub fn elapsed(&self) -> Duration {
         match *self {
             Instant::Monotonic(i) => i.elapsed(),
 

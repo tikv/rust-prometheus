@@ -112,7 +112,6 @@ This library supports four features:
     clippy::new_without_default,
     clippy::new_ret_no_self
 )]
-#![deny(missing_docs)]
 
 /// Protocol buffers format of metrics.
 #[cfg(feature = "protobuf")]
@@ -153,7 +152,7 @@ mod atomic64;
 mod counter;
 mod desc;
 mod gauge;
-mod histogram;
+pub mod histogram;
 mod metrics;
 #[cfg(feature = "push")]
 mod push;
