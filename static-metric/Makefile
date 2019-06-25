@@ -9,7 +9,7 @@ test:
 	cargo test --features="${ENABLE_FEATURES}" -- --nocapture
 
 format:
-	@cargo fmt --all -- --write-mode diff >/dev/null || cargo fmt --all
+	@cargo fmt --all -- --check >/dev/null || cargo fmt --all
 
 bench: format
 	RUSTFLAGS="--cfg bench" cargo bench --features="${ENABLE_FEATURES}" -- --nocapture

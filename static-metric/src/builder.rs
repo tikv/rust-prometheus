@@ -353,12 +353,11 @@ impl<'a> MetricBuilderContext<'a> {
     }
 
     fn build_impl_flush(&self) -> Tokens {
-        // TODO: Remove this &mut in body
         if util::is_local_metric(self.metric.metric_type) {
             let value_def_list = self.label.get_value_def_list(self.enum_definitions);
             let names = value_def_list.get_names();
             quote! {
-                pub fn flush(&mut self) {
+                pub fn flush(&self) {
                     #(self.#names.flush();)*
                 }
             }
