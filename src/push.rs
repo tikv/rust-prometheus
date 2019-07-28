@@ -183,7 +183,7 @@ fn push_from_collector<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
     url: &str,
-    collectors: Vec<Box<Collector>>,
+    collectors: Vec<Box<dyn Collector>>,
     method: &str,
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
@@ -202,7 +202,7 @@ pub fn push_collector<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
     url: &str,
-    collectors: Vec<Box<Collector>>,
+    collectors: Vec<Box<dyn Collector>>,
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "PUT", basic_auth)
@@ -214,7 +214,7 @@ pub fn push_add_collector<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
     url: &str,
-    collectors: Vec<Box<Collector>>,
+    collectors: Vec<Box<dyn Collector>>,
     basic_auth: Option<BasicAuthentication>,
 ) -> Result<()> {
     push_from_collector(job, grouping, url, collectors, "POST", basic_auth)
