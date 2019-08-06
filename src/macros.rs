@@ -33,26 +33,18 @@
 /// ```
 #[macro_export]
 macro_rules! labels {
-    () => {
-        {
-            use std::collections::HashMap;
-
-            HashMap::new()
-        }
-    };
-
-    ( $ ( $ KEY : expr => $ VALUE : expr , ) + ) => {
+    ( $( $ KEY : expr => $ VALUE : expr ),* $(,)? ) => {
         {
             use std::collections::HashMap;
 
             let mut lbs = HashMap::new();
             $(
                 lbs.insert($KEY, $VALUE);
-            )+
+            )*
 
             lbs
         }
-    }
+    };
 }
 
 /// Create an [`Opts`](::Opts).
