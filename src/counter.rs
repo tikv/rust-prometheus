@@ -86,6 +86,12 @@ impl<P: Atomic> GenericCounter<P> {
         self.v.get()
     }
 
+    /// Restart the counter, resetting its value back to 0.
+    #[inline]
+    pub fn reset(&self) {
+        self.v.set(P::T::from_i64(0))
+    }
+
     /// Return a [`GenericLocalCounter`](::core::GenericLocalCounter) for single thread usage.
     pub fn local(&self) -> GenericLocalCounter<P> {
         GenericLocalCounter::new(self.clone())
@@ -212,6 +218,12 @@ impl<P: Atomic> GenericLocalCounter<P> {
         *self.val.borrow()
     }
 
+    /// Restart the counter, resetting its value back to 0.
+    #[inline]
+    pub fn reset(&self) {
+        *self.val.borrow_mut() = P::T::from_i64(0);
+    }
+
     /// Flush the local metrics to the [`Counter`](::Counter).
     #[inline]
     pub fn flush(&self) {
@@ -306,6 +318,9 @@ mod tests {
         let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
+
+        counter.reset();
+        assert_eq!(counter.get() as u64, 0);
     }
 
     #[test]
@@ -323,6 +338,9 @@ mod tests {
         let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 0);
         assert_eq!(m.get_counter().get_value() as u64, 12);
+
+        counter.reset();
+        assert_eq!(counter.get() as u64, 0);
     }
 
     #[test]
@@ -341,6 +359,15 @@ mod tests {
         assert_eq!(counter.get() as u64, 1);
         local_counter2.flush();
         assert_eq!(counter.get() as u64, 2);
+
+        local_counter1.reset();
+        local_counter2.reset();
+        counter.reset();
+        assert_eq!(counter.get() as u64, 0);
+        local_counter1.flush();
+        assert_eq!(counter.get() as u64, 0);
+        local_counter2.flush();
+        assert_eq!(counter.get() as u64, 0);
     }
 
     #[test]
@@ -356,6 +383,12 @@ mod tests {
         local_counter.flush();
         assert_eq!(local_counter.get(), 0);
         assert_eq!(counter.get(), 6);
+
+        local_counter.reset();
+        counter.reset();
+        assert_eq!(counter.get() as u64, 0);
+        local_counter.flush();
+        assert_eq!(counter.get() as u64, 0);
     }
 
     #[test]
