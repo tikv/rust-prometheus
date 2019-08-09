@@ -304,48 +304,80 @@ mod coarse {
     }
 }
 
-/// A struct represents an event being timed. When the timer goes out of
-/// scope, the duration will be observed, or call `observe_duration` to manually
-/// observe.
+/// Timer to measure and record the duration of an event.
 ///
-/// NOTICE: A timer can be observed only once (automatically or manually).
+/// This timer can be stopped and observed at most once, either automatically (when it
+/// goes out of scope) or manually.
+/// Alternatively, it can be manually stopped and discarded in order to not record its value.
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
 pub struct HistogramTimer {
+    /// An histogram for automatic recording of observations.
     histogram: Histogram,
+    /// Whether the timer has already been observed once.
+    observed: bool,
+    /// Starting instant for the timer.
     start: Instant,
 }
 
 impl HistogramTimer {
-    fn new(histogram: Histogram) -> HistogramTimer {
-        HistogramTimer {
+    fn new(histogram: Histogram) -> Self {
+        Self {
             histogram,
+            observed: false,
             start: Instant::now(),
         }
     }
 
     #[cfg(feature = "nightly")]
-    fn new_coarse(histogram: Histogram) -> HistogramTimer {
+    fn new_coarse(histogram: Histogram) -> Self {
         HistogramTimer {
             histogram,
+            observed: false,
             start: Instant::now_coarse(),
         }
     }
 
-    /// `observe_duration` observes the amount of time in seconds since
-    /// `Histogram.start_timer` was called.
+    /// Observe and record timer duration (in seconds).
+    ///
+    /// It observes the floating-point number of seconds elapsed since the timer
+    /// started, and it records that value to the attached histogram.
     pub fn observe_duration(self) {
-        drop(self);
+        self.stop_and_record();
     }
 
-    fn observe(&mut self) {
+    /// Observe, record and return timer duration (in seconds).
+    ///
+    /// It observes and returns a floating-point number for seconds elapsed since
+    /// the timer started, recording that value to the attached histogram.
+    pub fn stop_and_record(self) -> f64 {
+        let mut timer = self;
+        timer.observe(true)
+    }
+
+    /// Observe and return timer duration (in seconds).
+    ///
+    /// It returns a floating-point number of seconds elapsed since the timer started,
+    /// without recording to any histogram.
+    pub fn stop_and_discard(self) -> f64 {
+        let mut timer = self;
+        timer.observe(false)
+    }
+
+    fn observe(&mut self, record: bool) -> f64 {
         let v = duration_to_seconds(self.start.elapsed());
-        self.histogram.observe(v)
+        self.observed = true;
+        if record {
+            self.histogram.observe(v);
+        }
+        v
     }
 }
 
 impl Drop for HistogramTimer {
     fn drop(&mut self) {
-        self.observe();
+        if !self.observed {
+            self.observe(true);
+        }
     }
 }
 
@@ -578,26 +610,73 @@ impl Clone for LocalHistogram {
 /// An unsync [`HistogramTimer`](::HistogramTimer).
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
 pub struct LocalHistogramTimer {
+    /// A local histogram for automatic recording of observations.
     local: LocalHistogram,
+    /// Whether the timer has already been observed once.
+    observed: bool,
+    /// Starting instant for the timer.
     start: Instant,
 }
 
 impl LocalHistogramTimer {
-    /// `observe_duration` observes the amount of time in seconds since
-    /// `LocalHistogram.start_timer` was called.
-    pub fn observe_duration(self) {
-        drop(self);
+    fn new(histogram: LocalHistogram) -> Self {
+        Self {
+            local: histogram,
+            observed: false,
+            start: Instant::now(),
+        }
     }
 
-    fn observe(&mut self) {
+    #[cfg(feature = "nightly")]
+    fn new_coarse(histogram: Histogram) -> Self {
+        Self {
+            local: histogram,
+            observed: false,
+            start: Instant::now_coarse(),
+        }
+    }
+
+    /// Observe and record timer duration (in seconds).
+    ///
+    /// It observes the floating-point number of seconds elapsed since the timer
+    /// started, and it records that value to the attached histogram.
+    pub fn observe_duration(self) {
+        self.stop_and_record();
+    }
+
+    /// Observe, record and return timer duration (in seconds).
+    ///
+    /// It observes and returns a floating-point number for seconds elapsed since
+    /// the timer started, recording that value to the attached histogram.
+    pub fn stop_and_record(self) -> f64 {
+        let mut timer = self;
+        timer.observe(true)
+    }
+
+    /// Observe and return timer duration (in seconds).
+    ///
+    /// It returns a floating-point number of seconds elapsed since the timer started,
+    /// without recording to any histogram.
+    pub fn stop_and_discard(self) -> f64 {
+        let mut timer = self;
+        timer.observe(false)
+    }
+
+    fn observe(&mut self, record: bool) -> f64 {
         let v = duration_to_seconds(self.start.elapsed());
-        self.local.observe(v)
+        self.observed = true;
+        if record {
+            self.local.observe(v);
+        }
+        v
     }
 }
 
 impl Drop for LocalHistogramTimer {
     fn drop(&mut self) {
-        self.observe()
+        if !self.observed {
+            self.observe(true);
+        }
     }
 }
 
@@ -677,20 +756,14 @@ impl LocalHistogram {
 
     /// Return a `LocalHistogramTimer` to track a duration.
     pub fn start_timer(&self) -> LocalHistogramTimer {
-        LocalHistogramTimer {
-            local: self.clone(),
-            start: Instant::now(),
-        }
+        LocalHistogramTimer::new(self.clone())
     }
 
     /// Return a `LocalHistogramTimer` to track a duration.
     /// It is faster but less precise.
     #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
-        LocalHistogramTimer {
-            local: self.clone(),
-            start: Instant::now_coarse(),
-        }
+        LocalHistogramTimer::new_coarse(self.clone())
     }
 
     /// Clear the local metric.
