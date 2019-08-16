@@ -114,6 +114,7 @@ impl<P: Atomic> Metric for GenericCounter<P> {
     }
 }
 
+#[derive(Debug)]
 pub struct CounterVecBuilder<P: Atomic> {
     _phantom: PhantomData<P>,
 }
@@ -175,6 +176,7 @@ impl<P: Atomic> GenericCounterVec<P> {
 
 /// The underlying implementation for [`LocalCounter`](::local::LocalCounter)
 /// and [`LocalIntCounter`](::local::LocalIntCounter).
+#[derive(Debug)]
 pub struct GenericLocalCounter<P: Atomic> {
     counter: GenericCounter<P>,
     val: RefCell<P::T>,
@@ -246,6 +248,16 @@ impl<P: Atomic> Clone for GenericLocalCounter<P> {
 pub struct GenericLocalCounterVec<P: Atomic> {
     vec: GenericCounterVec<P>,
     local: HashMap<u64, GenericLocalCounter<P>>,
+}
+
+impl<P: Atomic> std::fmt::Debug for GenericLocalCounterVec<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "GenericLocalCounterVec ({} locals)",
+            self.local.keys().len()
+        )
+    }
 }
 
 /// An unsync [`CounterVec`](::CounterVec).
