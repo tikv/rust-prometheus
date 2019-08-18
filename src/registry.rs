@@ -33,6 +33,16 @@ struct RegistryCore {
     pub prefix: Option<String>,
 }
 
+impl std::fmt::Debug for RegistryCore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RegistryCore ({} collectors)",
+            self.collectors_by_id.keys().len()
+        )
+    }
+}
+
 impl RegistryCore {
     fn register(&mut self, c: Box<dyn Collector>) -> Result<()> {
         let mut desc_id_set = HashSet::new();
@@ -218,7 +228,7 @@ impl RegistryCore {
 
 /// A struct for registering Prometheus collectors, collecting their metrics, and gathering
 /// them into `MetricFamilies` for exposition.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Registry {
     r: Arc<RwLock<RegistryCore>>,
 }

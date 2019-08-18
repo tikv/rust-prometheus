@@ -38,6 +38,7 @@ const MERTICS_NUMBER: usize = 6;
 /// A collector which exports the current state of
 /// process metrics including cpu, memory and file descriptor usage as well as
 /// the process start time for the given process id.
+#[derive(Debug)]
 pub struct ProcessCollector {
     pid: pid_t,
     descs: Vec<Desc>,

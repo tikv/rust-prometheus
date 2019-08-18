@@ -82,6 +82,7 @@ pub trait Atomic: Send + Sync {
 }
 
 /// A atomic float.
+#[derive(Debug)]
 pub struct AtomicF64 {
     inner: StdAtomicU64,
 }
@@ -136,6 +137,7 @@ impl Atomic for AtomicF64 {
 }
 
 /// A atomic signed integer.
+#[derive(Debug)]
 pub struct AtomicI64 {
     inner: StdAtomicI64,
 }
@@ -171,6 +173,7 @@ impl Atomic for AtomicI64 {
 }
 
 /// A atomic unsigned integer.
+#[derive(Debug)]
 pub struct AtomicU64 {
     inner: StdAtomicU64,
 }
