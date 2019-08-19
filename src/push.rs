@@ -38,6 +38,7 @@ lazy_static! {
 /// `BasicAuthentication` holder for supporting `push` to Pushgateway endpoints
 /// using Basic access authentication.
 /// Can be passed to any `push_metrics` method.
+#[derive(Debug)]
 pub struct BasicAuthentication {
     /// The Basic Authentication username (possibly empty string).
     pub username: String,

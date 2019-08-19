@@ -77,7 +77,7 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
 /// A struct that bundles the options for creating a [`Histogram`](::Histogram) metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HistogramOpts {
     /// A container holding various options.
     pub common_opts: Opts,
@@ -162,6 +162,7 @@ impl From<Opts> for HistogramOpts {
     }
 }
 
+#[derive(Debug)]
 pub struct HistogramCore {
     desc: Desc,
     label_pairs: Vec<proto::LabelPair>,
@@ -237,6 +238,7 @@ impl HistogramCore {
     }
 }
 
+#[derive(Debug)]
 enum Instant {
     Monotonic(StdInstant),
     #[cfg(all(feature = "nightly", target_os = "linux"))]
@@ -310,6 +312,7 @@ mod coarse {
 /// goes out of scope) or manually.
 /// Alternatively, it can be manually stopped and discarded in order to not record its value.
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
+#[derive(Debug)]
 pub struct HistogramTimer {
     /// An histogram for automatic recording of observations.
     histogram: Histogram,
@@ -394,7 +397,7 @@ impl Drop for HistogramTimer {
 /// buckets, and they are in general less accurate. The Observe method of a
 /// [`Histogram`](::Histogram) has a very low performance overhead in comparison with the Observe
 /// method of a Summary.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Histogram {
     core: Arc<HistogramCore>,
 }
@@ -469,7 +472,7 @@ impl Collector for Histogram {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HistogramVecBuilder {}
 
 impl MetricVecBuilder for HistogramVecBuilder {
@@ -585,7 +588,7 @@ fn duration_to_seconds(d: Duration) -> f64 {
     d.as_secs() as f64 + nanos
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LocalHistogramCore {
     histogram: Histogram,
     counts: Vec<u64>,
@@ -594,6 +597,7 @@ pub struct LocalHistogramCore {
 }
 
 /// An unsync [`Histogram`](::Histogram).
+#[derive(Debug)]
 pub struct LocalHistogram {
     core: RefCell<LocalHistogramCore>,
 }
@@ -609,6 +613,7 @@ impl Clone for LocalHistogram {
 
 /// An unsync [`HistogramTimer`](::HistogramTimer).
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
+#[derive(Debug)]
 pub struct LocalHistogramTimer {
     /// A local histogram for automatic recording of observations.
     local: LocalHistogram,
@@ -784,6 +789,7 @@ impl Drop for LocalHistogram {
 }
 
 /// An unsync [`HistogramVec`](::HistogramVec).
+#[derive(Debug)]
 pub struct LocalHistogramVec {
     vec: HistogramVec,
     local: HashMap<u64, LocalHistogram>,

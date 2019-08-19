@@ -24,6 +24,7 @@ use crate::value::{Value, ValueType};
 use crate::vec::{MetricVec, MetricVecBuilder};
 
 /// The underlying implementation for [`Gauge`](::Gauge) and [`IntGauge`](::IntGauge).
+#[derive(Debug)]
 pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
@@ -116,6 +117,7 @@ impl<P: Atomic> Metric for GenericGauge<P> {
     }
 }
 
+#[derive(Debug)]
 pub struct GaugeVecBuilder<P: Atomic> {
     _phantom: PhantomData<P>,
 }

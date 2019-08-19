@@ -113,6 +113,7 @@ This library supports four features:
     clippy::new_ret_no_self
 )]
 #![deny(missing_docs)]
+#![deny(missing_debug_implementations)]
 
 /// Protocol buffers format of metrics.
 #[cfg(feature = "protobuf")]

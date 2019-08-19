@@ -35,6 +35,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     fn build(&self, _: &Self::P, _: &[&str]) -> Result<Self::M>;
 }
 
+#[derive(Debug)]
 pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
     pub children: RwLock<HashMap<u64, T::M>>,
     pub desc: Desc,
@@ -184,6 +185,12 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
     pub(crate) v: Arc<MetricVecCore<T>>,
+}
+
+impl<T: MetricVecBuilder> std::fmt::Debug for MetricVec<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MetricVec")
+    }
 }
 
 impl<T: MetricVecBuilder> MetricVec<T> {
