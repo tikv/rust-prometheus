@@ -531,14 +531,7 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
         )));
     }
 
-    let mut next = start;
-    let mut buckets = Vec::with_capacity(count);
-    for _ in 0..count {
-        buckets.push(next);
-        next += width;
-    }
-
-    Ok(buckets)
+    Ok((0..count).map(|step| start + step as f64 * width).collect())
 }
 
 /// Create `count` buckets, where the lowest bucket has an
