@@ -35,7 +35,7 @@ spin = "0.5"
 reqwest = { version = "0.9.5", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-procinfo = { version = "0.3", optional = true }
+procinfo = { version = "0.4", optional = true }
 
 [dev-dependencies]
 getopts = "0.2"
