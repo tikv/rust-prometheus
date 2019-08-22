@@ -652,7 +652,7 @@ impl LocalHistogramTimer {
     }
 
     #[cfg(feature = "nightly")]
-    fn new_coarse(histogram: Histogram) -> Self {
+    fn new_coarse(histogram: LocalHistogram) -> Self {
         Self {
             local: histogram,
             observed: false,

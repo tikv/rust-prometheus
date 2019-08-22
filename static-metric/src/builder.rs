@@ -14,7 +14,8 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use quote::Tokens;
+use proc_macro2::{Span, TokenStream as Tokens};
+use quote::TokenStreamExt;
 use syn::{Ident, Visibility};
 
 use super::parser::*;
@@ -42,7 +43,7 @@ impl TokensBuilder {
                     // If this is a label enum definition, expand to an `enum` and
                     // add to the collection.
                     tokens.append_all(Self::build_label_enum(&e));
-                    enums_definitions.insert(e.enum_name, e);
+                    enums_definitions.insert(e.enum_name.clone(), e);
                 }
             }
         }
@@ -96,7 +97,10 @@ impl TokensBuilder {
             .collect();
 
         let scope_id = SCOPE_ID.fetch_add(1, Ordering::Relaxed);
-        let scope_name = Ident::from(format!("prometheus_static_scope_{}", scope_id));
+        let scope_name = Ident::new(
+            &format!("prometheus_static_scope_{}", scope_id),
+            Span::call_site(),
+        );
 
         let visibility = &metric.visibility;
         let struct_name = &metric.struct_name;
@@ -185,11 +189,11 @@ impl<'a> MetricBuilderContext<'a> {
             label_index,
             is_last_label,
 
-            struct_name: util::get_label_struct_name(metric.struct_name, label_index),
+            struct_name: util::get_label_struct_name(metric.struct_name.clone(), label_index),
             member_type: util::get_member_type(
-                metric.struct_name,
+                metric.struct_name.clone(),
                 label_index,
-                metric.metric_type,
+                metric.metric_type.clone(),
                 is_last_label,
             ),
         }
@@ -232,11 +236,12 @@ impl<'a> MetricBuilderContext<'a> {
 
     fn build_impl_from(&self) -> Tokens {
         let struct_name = &self.struct_name;
-        let metric_vec_type =
-            util::to_non_local_metric_type(util::get_metric_vec_type(self.metric.metric_type));
+        let metric_vec_type = util::to_non_local_metric_type(util::get_metric_vec_type(
+            self.metric.metric_type.clone(),
+        ));
 
         let prev_labels_ident: Vec<_> = (0..self.label_index)
-            .map(|i| Ident::from(format!("label_{}", i)))
+            .map(|i| Ident::new(&format!("label_{}", i), Span::call_site()))
             .collect();
         let body = self.build_impl_from_body(&prev_labels_ident);
 
@@ -271,11 +276,12 @@ impl<'a> MetricBuilderContext<'a> {
                         .enumerate()
                         .map(|(i, _)| &self.metric.labels[i].label_key)
                         .collect();
-                    let local_suffix_call = if util::is_local_metric(self.metric.metric_type) {
-                        quote! { .local() }
-                    } else {
-                        Tokens::new()
-                    };
+                    let local_suffix_call =
+                        if util::is_local_metric(self.metric.metric_type.clone()) {
+                            quote! { .local() }
+                        } else {
+                            Tokens::new()
+                        };
                     quote! {
                         #name: m.with(&{
                             let mut coll = HashMap::new();
@@ -353,7 +359,7 @@ impl<'a> MetricBuilderContext<'a> {
     }
 
     fn build_impl_flush(&self) -> Tokens {
-        if util::is_local_metric(self.metric.metric_type) {
+        if util::is_local_metric(self.metric.metric_type.clone()) {
             let value_def_list = self.label.get_value_def_list(self.enum_definitions);
             let names = value_def_list.get_names();
             quote! {
