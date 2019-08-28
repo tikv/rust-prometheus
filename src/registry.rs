@@ -204,7 +204,7 @@ impl RegistryCore {
 
                 // Add registry common labels, if any.
                 if let Some(ref hmap) = self.labels {
-                    let mut pairs: Vec<proto::LabelPair> = hmap
+                    let pairs: Vec<proto::LabelPair> = hmap
                         .iter()
                         .map(|(k, v)| {
                             let mut label = proto::LabelPair::default();
@@ -216,7 +216,7 @@ impl RegistryCore {
 
                     for metric in m.mut_metric().iter_mut() {
                         let mut labels: Vec<_> = metric.take_label().into();
-                        labels.append(&mut pairs);
+                        labels.append(&mut pairs.clone());
                         metric.set_label(labels.into());
                     }
                 }
@@ -511,15 +511,26 @@ mod tests {
         let r = Registry::new_custom(None, Some(labels)).unwrap();
         let counter_a = Counter::new("test_a_counter", "test help").unwrap();
         r.register(Box::new(counter_a.clone())).unwrap();
+        let counter_vec =
+            CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
+        r.register(Box::new(counter_vec.clone())).unwrap();
+
+        counter_vec.with_label_values(&["one", "two"]).inc();
+        counter_vec.with_label_values(&["three", "four"]).inc();
 
         let mfs = r.gather();
-        assert_eq!(mfs.len(), 1);
+        assert_eq!(mfs.len(), 2);
         assert_eq!(mfs[0].get_name(), "test_a_counter");
+        assert_eq!(mfs[1].get_name(), "test_vec");
 
         let mut needle = proto::LabelPair::default();
         needle.set_name("tkey".to_string());
         needle.set_value("tvalue".to_string());
         let metrics = mfs[0].get_metric();
+        for m in metrics {
+            assert!(m.get_label().contains(&needle));
+        }
+        let metrics = mfs[1].get_metric();
         for m in metrics {
             assert!(m.get_label().contains(&needle));
         }
