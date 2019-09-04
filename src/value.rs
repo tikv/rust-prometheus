@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::atomic64::{Atomic, Number, AtomicI64};
+use crate::atomic64::{Atomic, AtomicI64, Number};
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
 use crate::proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
