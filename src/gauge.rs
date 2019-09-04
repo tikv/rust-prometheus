@@ -99,6 +99,12 @@ impl<P: Atomic> GenericGauge<P> {
     pub fn get(&self) -> P::T {
         self.v.get()
     }
+
+    /// Set timestamp in ms of the gauge
+    #[inline]
+    pub fn set_timestamp_ms(&self, val: i64) {
+        self.v.set_timestamp_ms(val);
+    }
 }
 
 impl<P: Atomic> Collector for GenericGauge<P> {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::atomic64::{Atomic, Number};
+use crate::atomic64::{Atomic, Number, AtomicI64};
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
 use crate::proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
@@ -43,6 +43,7 @@ impl ValueType {
 pub struct Value<P: Atomic> {
     pub desc: Desc,
     pub val: P,
+    pub timestamp_ms: AtomicI64,
     pub val_type: ValueType,
     pub label_pairs: Vec<LabelPair>,
 }
@@ -67,6 +68,7 @@ impl<P: Atomic> Value<P> {
         Ok(Self {
             desc,
             val: P::new(val),
+            timestamp_ms: AtomicI64::new(0),
             val_type,
             label_pairs,
         })
@@ -102,6 +104,11 @@ impl<P: Atomic> Value<P> {
         self.val.dec_by(val)
     }
 
+    #[inline]
+    pub fn set_timestamp_ms(&self, val: i64) {
+        self.timestamp_ms.set(val);
+    }
+
     pub fn metric(&self) -> Metric {
         let mut m = Metric::default();
         m.set_label(from_vec!(self.label_pairs.clone()));
@@ -119,6 +126,8 @@ impl<P: Atomic> Value<P> {
                 m.set_gauge(gauge);
             }
         }
+
+        m.set_timestamp_ms(self.timestamp_ms.get());
 
         m
     }

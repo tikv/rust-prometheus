@@ -86,6 +86,12 @@ impl<P: Atomic> GenericCounter<P> {
         self.v.get()
     }
 
+    /// Set timestamp in ms of the counter
+    #[inline]
+    pub fn set_timestamp_ms(&self, val: i64) {
+        self.v.set_timestamp_ms(val);
+    }
+
     /// Restart the counter, resetting its value back to 0.
     #[inline]
     pub fn reset(&self) {
