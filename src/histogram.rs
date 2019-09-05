@@ -238,11 +238,26 @@ impl HistogramCore {
     }
 }
 
+// We have to wrap libc::timespec in order to implement std::fmt::Debug.
+#[cfg(all(feature = "nightly", target_os = "linux"))]
+pub struct Timespec(libc::timespec);
+
+#[cfg(all(feature = "nightly", target_os = "linux"))]
+impl std::fmt::Debug for Timespec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Timespec {{ tv_sec: {}, tv_nsec: {} }}",
+            self.0.tv_sec, self.0.tv_nsec
+        )
+    }
+}
+
 #[derive(Debug)]
 enum Instant {
     Monotonic(StdInstant),
     #[cfg(all(feature = "nightly", target_os = "linux"))]
-    MonotonicCoarse(timespec),
+    MonotonicCoarse(Timespec),
 }
 
 impl Instant {
@@ -261,7 +276,7 @@ impl Instant {
     }
 
     fn elapsed(&self) -> Duration {
-        match *self {
+        match &*self {
             Instant::Monotonic(i) => i.elapsed(),
 
             // It is different from `Instant::Monotonic`, the resolution here is millisecond.
@@ -272,8 +287,8 @@ impl Instant {
             #[cfg(all(feature = "nightly", target_os = "linux"))]
             Instant::MonotonicCoarse(t) => {
                 let now = get_time_coarse();
-                let now_ms = now.tv_sec * MILLIS_PER_SEC + now.tv_nsec / NANOS_PER_MILLI;
-                let t_ms = t.tv_sec * MILLIS_PER_SEC + t.tv_nsec / NANOS_PER_MILLI;
+                let now_ms = now.0.tv_sec * MILLIS_PER_SEC + now.0.tv_nsec / NANOS_PER_MILLI;
+                let t_ms = t.0.tv_sec * MILLIS_PER_SEC + t.0.tv_nsec / NANOS_PER_MILLI;
                 let dur = now_ms - t_ms;
                 if dur >= 0 {
                     Duration::from_millis(dur as u64)
@@ -290,18 +305,22 @@ use self::coarse::*;
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 mod coarse {
+    use crate::histogram::Timespec;
     pub use libc::timespec;
     use libc::{clock_gettime, CLOCK_MONOTONIC_COARSE};
 
     pub const NANOS_PER_MILLI: i64 = 1_000_000;
     pub const MILLIS_PER_SEC: i64 = 1_000;
 
-    pub fn get_time_coarse() -> timespec {
-        let mut t = timespec {
+    pub fn get_time_coarse() -> Timespec {
+        let mut t = Timespec(timespec {
             tv_sec: 0,
             tv_nsec: 0,
-        };
-        assert_eq!(unsafe { clock_gettime(CLOCK_MONOTONIC_COARSE, &mut t) }, 0);
+        });
+        assert_eq!(
+            unsafe { clock_gettime(CLOCK_MONOTONIC_COARSE, &mut t.0) },
+            0
+        );
         t
     }
 }
