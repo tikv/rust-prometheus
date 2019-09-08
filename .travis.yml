@@ -25,6 +25,8 @@ matrix:
   fast_finish: true
   include:
   - rust: nightly
+  - rust: nightly
+    env: FEATURES="nightly protobuf push process"
   - rust: beta
   - rust: stable
     install:
