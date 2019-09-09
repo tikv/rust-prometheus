@@ -14,9 +14,9 @@
 use std::collections::HashMap;
 
 use proc_macro2::Span;
-use syn::buffer::Cursor;
+use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::synom::{PResult, Synom};
+use syn::token::*;
 use syn::*;
 
 /// Matches `label_enum` keyword.
@@ -24,18 +24,13 @@ struct LabelEnum {
     pub span: Span,
 }
 
-impl Synom for LabelEnum {
-    fn parse(tokens: Cursor) -> PResult<Self> {
-        if let Some((term, rest)) = tokens.term() {
-            if term.as_str() == "label_enum" {
-                return Ok((LabelEnum { span: term.span() }, rest));
-            }
+impl Parse for LabelEnum {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let ident: Ident = input.parse()?;
+        if &ident == "label_enum" {
+            return Ok(LabelEnum { span: ident.span() });
         }
-        parse_error()
-    }
-
-    fn description() -> Option<&'static str> {
-        Some("label_enum")
+        Err(input.error("Expected `label_enum`"))
     }
 }
 
@@ -46,13 +41,13 @@ struct MetricValueDefFull {
     value: LitStr,
 }
 
-impl Synom for MetricValueDefFull {
-    named!(parse -> Self, do_parse!(
-        name: syn!(Ident) >>
-        punct!(:) >>
-        value: syn!(LitStr) >>
-        (MetricValueDefFull { name, value })
-    ));
+impl Parse for MetricValueDefFull {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name = input.parse()?;
+        let _: Colon = input.parse()?;
+        let value = input.parse()?;
+        Ok(MetricValueDefFull { name, value })
+    }
 }
 
 /// Matches `... => { ... value ... }`
@@ -61,11 +56,12 @@ struct MetricValueDefShort {
     value: Ident,
 }
 
-impl Synom for MetricValueDefShort {
-    named!(parse -> Self, do_parse!(
-        value: syn!(Ident) >>
-        (MetricValueDefShort { value })
-    ));
+impl Parse for MetricValueDefShort {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(MetricValueDefShort {
+            value: input.parse()?,
+        })
+    }
 }
 
 /// Matches either `... => { ... name: value_string_literal ... }` or `... => { ... value ... }`
@@ -75,12 +71,16 @@ pub struct MetricValueDef {
     pub value: LitStr,
 }
 
-impl Synom for MetricValueDef {
-    named!(parse -> Self, alt!(
-        syn!(MetricValueDefFull) => { MetricValueDef::from }
-        |
-        syn!(MetricValueDefShort) => { MetricValueDef::from }
-    ));
+impl Parse for MetricValueDef {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek2(Colon) {
+            let full: MetricValueDefFull = input.parse()?;
+            Ok(full.into())
+        } else {
+            let short: MetricValueDefShort = input.parse()?;
+            Ok(short.into())
+        }
+    }
 }
 
 impl From<MetricValueDefFull> for MetricValueDef {
@@ -95,8 +95,8 @@ impl From<MetricValueDefFull> for MetricValueDef {
 impl From<MetricValueDefShort> for MetricValueDef {
     fn from(e: MetricValueDefShort) -> MetricValueDef {
         MetricValueDef {
+            value: LitStr::new(&e.value.to_string(), e.value.span()),
             name: e.value,
-            value: LitStr::new(e.value.as_ref(), e.value.span()),
         }
     }
 }
@@ -105,12 +105,13 @@ impl From<MetricValueDefShort> for MetricValueDef {
 #[derive(Debug)]
 pub struct MetricValueDefList(Vec<MetricValueDef>);
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
-impl Synom for MetricValueDefList {
-    named!(parse -> Self, do_parse!(
-        body: braces!(Punctuated::<MetricValueDef, Token![,]>::parse_terminated_nonempty)>>
-        (MetricValueDefList(body.1.into_iter().collect()))
-    ));
+impl Parse for MetricValueDefList {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let body;
+        let _ = braced!(body in input);
+        let p = Punctuated::<MetricValueDef, Token![,]>::parse_terminated(&body)?;
+        Ok(MetricValueDefList(p.into_iter().collect()))
+    }
 }
 
 impl MetricValueDefList {
@@ -135,18 +136,18 @@ pub struct MetricEnumDef {
     pub definitions: MetricValueDefList,
 }
 
-impl Synom for MetricEnumDef {
-    named!(parse -> Self, do_parse!(
-        visibility: syn!(Visibility) >>
-        syn!(LabelEnum) >>
-        enum_name: syn!(Ident) >>
-        definitions: syn!(MetricValueDefList) >>
-        (MetricEnumDef {
+impl Parse for MetricEnumDef {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let visibility = input.parse()?;
+        let _: LabelEnum = input.parse()?;
+        let enum_name = input.parse()?;
+        let definitions = input.parse()?;
+        Ok(MetricEnumDef {
             visibility,
             enum_name,
             definitions,
         })
-    ));
+    }
 }
 
 impl MetricEnumDef {
@@ -158,11 +159,11 @@ impl MetricEnumDef {
             .map(|v| {
                 let mut segments = Punctuated::new();
                 segments.push(PathSegment {
-                    ident: self.enum_name,
+                    ident: self.enum_name.clone(),
                     arguments: PathArguments::None,
                 });
                 segments.push(PathSegment {
-                    ident: v.name,
+                    ident: v.name.clone(),
                     arguments: PathArguments::None,
                 });
                 Path {
@@ -188,21 +189,17 @@ pub struct MetricLabelDef {
     arm: MetricLabelArm,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
-impl Synom for MetricLabelDef {
-    named!(parse -> Self, do_parse!(
-        label: syn!(LitStr) >>
-        punct!(=>) >>
-        arm: alt!(
-            syn!(MetricValueDefList) => { |values| MetricLabelArm::ValueDefinitionList(values) }
-            |
-            syn!(Ident) => { |ident| MetricLabelArm::EnumReference(ident) }
-        ) >>
-        (MetricLabelDef {
-            label_key: label,
-            arm,
-        })
-    ));
+impl Parse for MetricLabelDef {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let label_key = input.parse()?;
+        let _: FatArrow = input.parse()?;
+        let arm = if input.peek(Brace) {
+            MetricLabelArm::ValueDefinitionList(input.parse()?)
+        } else {
+            MetricLabelArm::EnumReference(input.parse()?)
+        };
+        Ok(MetricLabelDef { label_key, arm })
+    }
 }
 
 impl MetricLabelDef {
@@ -235,22 +232,26 @@ pub struct MetricDef {
     pub labels: Vec<MetricLabelDef>,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
-impl Synom for MetricDef {
-    named!(parse -> Self, do_parse!(
-        visibility: syn!(Visibility) >>
-        keyword!(struct) >>
-        struct_name: syn!(Ident) >>
-        punct!(:) >>
-        metric_type: syn!(Ident) >>
-        body: braces!(Punctuated::<MetricLabelDef, Token![,]>::parse_terminated_nonempty) >>
-        (MetricDef {
+impl Parse for MetricDef {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let visibility = input.parse()?;
+        let _: Struct = input.parse()?;
+        let struct_name = input.parse()?;
+        let _: Colon = input.parse()?;
+        let metric_type = input.parse()?;
+
+        let body;
+        let _ = braced!(body in input);
+        let p = Punctuated::<MetricLabelDef, Token![,]>::parse_terminated(&body)?;
+        let labels = p.into_iter().collect();
+
+        Ok(MetricDef {
             visibility,
             struct_name,
             metric_type,
-            labels: body.1.into_iter().collect(),
+            labels,
         })
-    ));
+    }
 }
 
 #[derive(Debug)]
@@ -259,19 +260,27 @@ pub enum StaticMetricMacroBodyItem {
     Enum(MetricEnumDef),
 }
 
+impl Parse for StaticMetricMacroBodyItem {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek2(Token!(struct)) || input.peek2(Token!(struct)) {
+            Ok(StaticMetricMacroBodyItem::Metric(input.parse()?))
+        } else {
+            Ok(StaticMetricMacroBodyItem::Enum(input.parse()?))
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct StaticMetricMacroBody {
     pub items: Vec<StaticMetricMacroBodyItem>,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
-impl Synom for StaticMetricMacroBody {
-    named!(parse -> Self, do_parse!(
-        items: many0!(alt!(
-            syn!(MetricDef) => { |m| StaticMetricMacroBodyItem::Metric(m) }
-            |
-            syn!(MetricEnumDef) => { |e| StaticMetricMacroBodyItem::Enum(e) }
-        )) >>
-        (StaticMetricMacroBody { items })
-    ));
+impl Parse for StaticMetricMacroBody {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut items = Vec::new();
+        while !input.is_empty() {
+            items.push(input.parse()?);
+        }
+        Ok(StaticMetricMacroBody { items })
+    }
 }
