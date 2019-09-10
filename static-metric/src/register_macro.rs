@@ -11,9 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use quote::Tokens;
+use proc_macro2::{Span, TokenStream as Tokens};
+use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::synom::Synom;
 use syn::*;
 
 /// Matches `register_static_xxx_vec!(static_struct_name, name, desc, labels, ...)`.
@@ -22,21 +22,26 @@ pub struct RegisterMethodInvoking {
     arguments: Vec<Expr>,
 }
 
-impl Synom for RegisterMethodInvoking {
-    named!(parse -> Self, do_parse!(
-        static_struct_name: syn!(Ident) >>
-        punct!(,) >>
-        arguments: call!(Punctuated::<Expr, Token![,]>::parse_terminated_nonempty) >>
-        (RegisterMethodInvoking {
+impl Parse for RegisterMethodInvoking {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let static_struct_name = input.parse()?;
+        let _: Token![,] = input.parse()?;
+        let p = Punctuated::<Expr, Token![,]>::parse_terminated(input)?;
+        let arguments = p.into_iter().collect();
+
+        Ok(RegisterMethodInvoking {
             static_struct_name,
-            arguments: arguments.into_iter().collect(),
+            arguments,
         })
-    ));
+    }
 }
 
 impl RegisterMethodInvoking {
     pub fn into_tokens(self, register_type: &str) -> Tokens {
-        let register_macro_name = Ident::from(format!("register_{}_vec", register_type));
+        let register_macro_name = Ident::new(
+            &format!("register_{}_vec", register_type),
+            Span::call_site(),
+        );
         let (static_struct_name, arguments) = (self.static_struct_name, self.arguments);
         quote! {
             {
