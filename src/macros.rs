@@ -124,7 +124,7 @@ macro_rules! opts {
 /// assert_eq!(opts.common_opts.const_labels.get("key").unwrap(), "value");
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! histogram_opts {
     ($NAME:expr, $HELP:expr) => {{
         $crate::HistogramOpts::new($NAME, $HELP)
@@ -156,7 +156,7 @@ macro_rules! histogram_opts {
 /// assert!(res2.is_ok());
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_counter {
     (@of_type $TYPE:ident, $OPTS:expr) => {{
         let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
@@ -175,7 +175,7 @@ macro_rules! register_counter {
 /// Create an [`IntCounter`](::IntCounter) and registers to default registry.
 ///
 /// View docs of `register_counter` for examples.
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_int_counter {
     ($OPTS:expr) => {{
         register_counter!(@of_type IntCounter, $OPTS)
@@ -210,7 +210,7 @@ macro_rules! __register_counter_vec {
 /// assert!(counter_vec.is_ok());
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_counter_vec {
     ($OPTS:expr, $LABELS_NAMES:expr) => {{
         __register_counter_vec!(CounterVec, $OPTS, $LABELS_NAMES)
@@ -224,7 +224,7 @@ macro_rules! register_counter_vec {
 /// Create an [`IntCounterVec`](::IntCounterVec) and registers to default registry.
 ///
 /// View docs of `register_counter_vec` for examples.
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_int_counter_vec {
     ($OPTS:expr, $LABELS_NAMES:expr) => {{
         __register_counter_vec!(IntCounterVec, $OPTS, $LABELS_NAMES)
@@ -259,7 +259,7 @@ macro_rules! __register_gauge {
 /// assert!(res2.is_ok());
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_gauge {
     ($OPTS:expr) => {{
         __register_gauge!(Gauge, $OPTS)
@@ -273,7 +273,7 @@ macro_rules! register_gauge {
 /// Create an [`IntGauge`](::IntGauge) and registers to default registry.
 ///
 /// View docs of `register_gauge` for examples.
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_int_gauge {
     ($OPTS:expr) => {{
         __register_gauge!(IntGauge, $OPTS)
@@ -308,7 +308,7 @@ macro_rules! __register_gauge_vec {
 /// assert!(gauge_vec.is_ok());
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_gauge_vec {
     ($OPTS:expr, $LABELS_NAMES:expr) => {{
         __register_gauge_vec!(GaugeVec, $OPTS, $LABELS_NAMES)
@@ -322,7 +322,7 @@ macro_rules! register_gauge_vec {
 /// Create an [`IntGaugeVec`](::IntGaugeVec) and registers to default registry.
 ///
 /// View docs of `register_gauge_vec` for examples.
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_int_gauge_vec {
     ($OPTS:expr, $LABELS_NAMES:expr) => {{
         __register_gauge_vec!(IntGaugeVec, $OPTS, $LABELS_NAMES)
@@ -353,7 +353,7 @@ macro_rules! register_int_gauge_vec {
 /// assert!(res3.is_ok());
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_histogram {
     ($NAME:expr, $HELP:expr) => {
         register_histogram!(histogram_opts!($NAME, $HELP))
@@ -391,7 +391,7 @@ macro_rules! register_histogram {
 /// assert!(histogram_vec.is_ok());
 /// # }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! register_histogram_vec {
     ($HOPTS:expr, $LABELS_NAMES:expr) => {{
         let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
