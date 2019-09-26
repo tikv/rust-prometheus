@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use proc_macro2::Span;
 use syn::Ident;
 
 pub fn is_local_metric(metric_type: Ident) -> bool {
@@ -20,14 +21,14 @@ pub fn is_local_metric(metric_type: Ident) -> bool {
 pub fn to_non_local_metric_type(metric_type: Ident) -> Ident {
     let metric_type_str = metric_type.to_string();
     if metric_type_str.starts_with("Local") {
-        Ident::from(&metric_type_str[5..])
+        Ident::new(&metric_type_str[5..], Span::call_site())
     } else {
         metric_type
     }
 }
 
 pub fn get_metric_vec_type(metric_type: Ident) -> Ident {
-    Ident::from(format!("{}Vec", metric_type))
+    Ident::new(&format!("{}Vec", metric_type), Span::call_site())
 }
 
 pub fn get_label_struct_name(struct_name: Ident, label_index: usize) -> Ident {
@@ -35,7 +36,7 @@ pub fn get_label_struct_name(struct_name: Ident, label_index: usize) -> Ident {
     if label_index > 0 {
         struct_name.push_str(&(label_index + 1).to_string());
     }
-    Ident::from(struct_name)
+    Ident::new(&struct_name, Span::call_site())
 }
 
 pub fn get_member_type(
