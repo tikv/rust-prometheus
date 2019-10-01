@@ -247,5 +247,4 @@ mod tests {
         assert!(vec.remove_label_values(&["v1"]).is_err());
         assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
     }
-
 }
