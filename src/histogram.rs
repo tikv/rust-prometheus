@@ -550,12 +550,9 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
         )));
     }
 
-    let mut next = start;
-    let mut buckets = Vec::with_capacity(count);
-    for _ in 0..count {
-        buckets.push(next);
-        next += width;
-    }
+    let buckets: Vec<_> = (0..count)
+        .map(|step| start + width * (step as f64))
+        .collect();
 
     Ok(buckets)
 }
