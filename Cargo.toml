@@ -20,7 +20,7 @@ features = ["nightly"]
 [features]
 default = ["protobuf"]
 nightly = ["libc"]
-push = ["reqwest", "libc"]
+push = ["reqwest", "libc", "protobuf"]
 process = ["libc", "procinfo"]
 gen = ["protobuf-codegen-pure"]
 
