@@ -363,7 +363,7 @@ impl TimerPrecision {
 pub struct HistogramTimer {
     /// An histogram for automatic recording of observations.
     histogram: Histogram,
-    /// Precise of this timer and default is [Second](TimerPrecision::Second)
+    /// Precision of this timer and default is [Second](TimerPrecision::Second)
     precision: TimerPrecision,
     /// Whether the timer has already been observed once.
     observed: bool,
@@ -682,7 +682,7 @@ impl Clone for LocalHistogram {
 pub struct LocalHistogramTimer {
     /// A local histogram for automatic recording of observations.
     local: LocalHistogram,
-    /// Precise of this timer and default is [Second](TimerPrecision::Second)
+    /// Precision of this timer and default is [Second](TimerPrecision::Second)
     precision: TimerPrecision,
     /// Whether the timer has already been observed once.
     observed: bool,
