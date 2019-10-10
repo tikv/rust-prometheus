@@ -206,7 +206,7 @@ pub use self::errors::{Error, Result};
 pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::DEFAULT_BUCKETS;
 pub use self::histogram::{exponential_buckets, linear_buckets};
-pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec, TimerPrecise};
+pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec, TimerPrecision};
 pub use self::metrics::Opts;
 #[cfg(feature = "push")]
 pub use self::push::{
