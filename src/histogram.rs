@@ -334,7 +334,7 @@ mod coarse {
 pub enum TimerPrecise {
     /// Second precise. means that a Duration::from_secs(1) can be represent as 1.0f64
     Second,
-    /// Millis is millisecond, means that Duration::from_millis(199) can be represent as 100.0f64.
+    /// Millis is millisecond, means that Duration::from_millis(199) can be represent as 199.0f64.
     Millis,
     /// Micros is microsecond, means that Duration::from_millis(199) can be represent as 199000.0f64.
     Micros,
@@ -996,7 +996,7 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
-        assert!(proto_histogram.get_sample_sum() > 1.5 * 1000.0 + EPSILON);
+        assert!(proto_histogram.get_sample_sum() > 1.499 * 1000.0 + EPSILON);
         assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
     }
 
