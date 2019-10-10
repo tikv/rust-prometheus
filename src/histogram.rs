@@ -325,6 +325,34 @@ mod coarse {
     }
 }
 
+/// TimerPrecise is the precise for HistogramTimer
+///
+/// Default start_timer has a precise of seconds, you can change it by using
+/// `start_timer_precise`.
+///
+#[derive(Debug, Clone, Copy)]
+pub enum TimerPrecise {
+    /// Second precise. means that a Duration::from_secs(1) can be represent as 1.0f64
+    Second,
+    /// Millis is millisecond, means that Duration::from_millis(199) can be represent as 100.0f64.
+    Millis,
+    /// Micros is microsecond, means that Duration::from_millis(199) can be represent as 199000.0f64.
+    Micros,
+    /// Nanos is nanosecond, means taht Duration::from_millis(199) can be represent as 199000000.0f64
+    Nanos,
+}
+
+impl TimerPrecise {
+    fn as_f64(&self) -> f64 {
+        match self {
+            TimerPrecise::Second => 1.0f64,
+            TimerPrecise::Millis => 1e3f64,
+            TimerPrecise::Micros => 1e6f64,
+            TimerPrecise::Nanos => 1e9f64,
+        }
+    }
+}
+
 /// Timer to measure and record the duration of an event.
 ///
 /// This timer can be stopped and observed at most once, either automatically (when it
@@ -335,6 +363,8 @@ mod coarse {
 pub struct HistogramTimer {
     /// An histogram for automatic recording of observations.
     histogram: Histogram,
+    /// Precise of this timer and default is [Second](TimerPrecise::Second)
+    precise: TimerPrecise,
     /// Whether the timer has already been observed once.
     observed: bool,
     /// Starting instant for the timer.
@@ -342,18 +372,20 @@ pub struct HistogramTimer {
 }
 
 impl HistogramTimer {
-    fn new(histogram: Histogram) -> Self {
+    fn new(histogram: Histogram, precise: TimerPrecise) -> Self {
         Self {
             histogram,
+            precise,
             observed: false,
             start: Instant::now(),
         }
     }
 
     #[cfg(feature = "nightly")]
-    fn new_coarse(histogram: Histogram) -> Self {
+    fn new_coarse(histogram: Histogram, precise: TimerPrecise) -> Self {
         HistogramTimer {
             histogram,
+            precise,
             observed: false,
             start: Instant::now_coarse(),
         }
@@ -386,7 +418,7 @@ impl HistogramTimer {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = duration_to_precise(self.start.elapsed(), self.precise);
         self.observed = true;
         if record {
             self.histogram.observe(v);
@@ -445,16 +477,28 @@ impl Histogram {
         self.core.observe(v)
     }
 
+    /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration with precise.
+    pub fn start_timer_precise(&self, precise: TimerPrecise) -> HistogramTimer {
+        HistogramTimer::new(self.clone(), precise)
+    }
+
     /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
     pub fn start_timer(&self) -> HistogramTimer {
-        HistogramTimer::new(self.clone())
+        HistogramTimer::new(self.clone(), TimerPrecise::Second)
+    }
+
+    /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
+    /// It is faster but less precise.
+    #[cfg(feature = "nightly")]
+    pub fn start_coarse_timer_precise(&self, precise: TimerPrecise) -> HistogramTimer {
+        HistogramTimer::new_coarse(self.clone(), precise)
     }
 
     /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
     /// It is faster but less precise.
     #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> HistogramTimer {
-        HistogramTimer::new_coarse(self.clone())
+        HistogramTimer::new_coarse(self.clone(), TimerPrecise::Second)
     }
 
     /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
@@ -597,6 +641,11 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
     Ok(buckets)
 }
 
+#[inline]
+fn duration_to_precise(d: Duration, p: TimerPrecise) -> f64 {
+    duration_to_seconds(d) * p.as_f64()
+}
+
 /// `duration_to_seconds` converts Duration to seconds.
 #[inline]
 fn duration_to_seconds(d: Duration) -> f64 {
@@ -633,6 +682,8 @@ impl Clone for LocalHistogram {
 pub struct LocalHistogramTimer {
     /// A local histogram for automatic recording of observations.
     local: LocalHistogram,
+    /// Precise of this timer and default is [Second](TimerPrecise::Second)
+    precise: TimerPrecise,
     /// Whether the timer has already been observed once.
     observed: bool,
     /// Starting instant for the timer.
@@ -640,18 +691,20 @@ pub struct LocalHistogramTimer {
 }
 
 impl LocalHistogramTimer {
-    fn new(histogram: LocalHistogram) -> Self {
+    fn new(histogram: LocalHistogram, precise: TimerPrecise) -> Self {
         Self {
             local: histogram,
+            precise,
             observed: false,
             start: Instant::now(),
         }
     }
 
     #[cfg(feature = "nightly")]
-    fn new_coarse(histogram: LocalHistogram) -> Self {
+    fn new_coarse(histogram: LocalHistogram, precise: TimerPrecise) -> Self {
         Self {
             local: histogram,
+            precise,
             observed: false,
             start: Instant::now_coarse(),
         }
@@ -684,7 +737,7 @@ impl LocalHistogramTimer {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = duration_to_precise(self.start.elapsed(), self.precise);
         self.observed = true;
         if record {
             self.local.observe(v);
@@ -775,16 +828,28 @@ impl LocalHistogram {
         self.core.borrow_mut().observe(v);
     }
 
+    /// Return a `LocalHistogramTimer` to track a duration with precise.
+    pub fn start_timer_precise(&self, precise: TimerPrecise) -> LocalHistogramTimer {
+        LocalHistogramTimer::new(self.clone(), precise)
+    }
+
+    /// Return a `LocalHistogramTimer` to track a duration.
+    /// It is faster but less precise.
+    #[cfg(feature = "nightly")]
+    pub fn start_coarse_timer_precise(&self, precise: TimerPrecise) -> LocalHistogramTimer {
+        LocalHistogramTimer::new_coarse(self.clone(), precise)
+    }
+
     /// Return a `LocalHistogramTimer` to track a duration.
     pub fn start_timer(&self) -> LocalHistogramTimer {
-        LocalHistogramTimer::new(self.clone())
+        LocalHistogramTimer::new(self.clone(), TimerPrecise::Second)
     }
 
     /// Return a `LocalHistogramTimer` to track a duration.
     /// It is faster but less precise.
     #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
-        LocalHistogramTimer::new_coarse(self.clone())
+        LocalHistogramTimer::new_coarse(self.clone(), TimerPrecise::Second)
     }
 
     /// Clear the local metric.
@@ -905,6 +970,37 @@ mod tests {
     }
 
     #[test]
+    fn test_histogram_precise() {
+        let opts = HistogramOpts::new("test1", "test help")
+            .const_label("a", "1")
+            .const_label("b", "2");
+        let histogram = Histogram::with_opts(opts).unwrap();
+        histogram.observe(1000.0);
+
+        let timer = histogram.start_timer_precise(TimerPrecise::Millis);
+        thread::sleep(Duration::from_millis(100));
+        timer.observe_duration();
+
+        let timer = histogram.start_timer_precise(TimerPrecise::Millis);
+        let handler = thread::spawn(move || {
+            let _timer = timer;
+            thread::sleep(Duration::from_millis(400));
+        });
+        assert!(handler.join().is_ok());
+
+        let mut mfs = histogram.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
+        let m = mf.get_metric().get(0).unwrap();
+        assert_eq!(m.get_label().len(), 2);
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 3);
+        assert!(proto_histogram.get_sample_sum() > 1.5 * 1000.0 + EPSILON);
+        assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
+    }
+
+    #[test]
     #[cfg(feature = "nightly")]
     fn test_histogram_coarse_timer() {
         let opts = HistogramOpts::new("test1", "test help");
@@ -929,6 +1025,33 @@ mod tests {
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 2);
         assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
+    }
+
+    #[test]
+    #[cfg(feature = "nightly")]
+    fn test_histogram_coarse_timer_precise() {
+        let opts = HistogramOpts::new("test1", "test help");
+        let histogram = Histogram::with_opts(opts).unwrap();
+
+        let timer = histogram.start_coarse_timer_precise(TimerPrecise::Millis);
+        thread::sleep(Duration::from_millis(100));
+        timer.observe_duration();
+
+        let timer = histogram.start_coarse_timer_precise(TimerPrecise::Millis);
+        let handler = thread::spawn(move || {
+            let _timer = timer;
+            thread::sleep(Duration::from_millis(400));
+        });
+        assert!(handler.join().is_ok());
+
+        let mut mfs = histogram.collect();
+        assert_eq!(mfs.len(), 1);
+
+        let mf = mfs.pop().unwrap();
+        let m = mf.get_metric().get(0).unwrap();
+        let proto_histogram = m.get_histogram();
+        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert!((proto_histogram.get_sample_sum() - 0.0).abs() > 0.499 * 1000.0 + EPSILON);
     }
 
     #[test]
@@ -1008,6 +1131,18 @@ mod tests {
             let d = Duration::from_millis(millis);
             let v = duration_to_seconds(d);
             assert!((v - seconds).abs() < EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_duration_to_previse() {
+        let tbls = vec![1000, 1100, 100_111];
+        for millis in tbls {
+            let d = Duration::from_millis(millis);
+            let v = duration_to_seconds(d);
+            let v2 = duration_to_precise(d, TimerPrecise::Second);
+            assert_eq!(v, v2);
+            assert_eq!((v - v2).abs(), 0.0);
         }
     }
 
