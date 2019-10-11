@@ -343,7 +343,7 @@ pub enum TimerPrecision {
 }
 
 impl TimerPrecision {
-    fn as_f64(&self) -> f64 {
+    fn into_f64(self) -> f64 {
         match self {
             TimerPrecision::Second => 1.0f64,
             TimerPrecision::Millis => 1e3f64,
@@ -643,7 +643,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 
 #[inline]
 fn duration_to_precision(d: Duration, p: TimerPrecision) -> f64 {
-    duration_to_seconds(d) * p.as_f64()
+    duration_to_seconds(d) * p.into_f64()
 }
 
 /// `duration_to_seconds` converts Duration to seconds.
