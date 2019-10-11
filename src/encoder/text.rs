@@ -15,8 +15,7 @@ use std::io::Write;
 
 use crate::errors::Result;
 use crate::histogram::BUCKET_LABEL;
-use crate::proto::MetricFamily;
-use crate::proto::{self, MetricType};
+use crate::proto::{self, MetricFamily, MetricType};
 
 use super::{check_metric_family, Encoder};
 

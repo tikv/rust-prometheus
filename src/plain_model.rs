@@ -3,8 +3,6 @@
 
 #![allow(missing_docs)]
 
-use std::default::Default;
-
 #[derive(PartialEq, Clone, Default, Debug)]
 pub struct LabelPair {
     name: String,

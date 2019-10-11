@@ -173,9 +173,10 @@ impl<P: Atomic> GenericGaugeVec<P> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::metrics::{Collector, Opts};
-    use std::collections::HashMap;
 
     #[test]
     fn test_gauge() {

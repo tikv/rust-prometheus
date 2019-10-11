@@ -39,7 +39,7 @@ pub const DEFAULT_BUCKETS: &[f64; 11] = &[
 pub const BUCKET_LABEL: &str = "le";
 
 #[inline]
-fn check_bucket_lable(label: &str) -> Result<()> {
+fn check_bucket_label(label: &str) -> Result<()> {
     if label == BUCKET_LABEL {
         return Err(Error::Msg(
             "`le` is not allowed as label name in histograms".to_owned(),
@@ -179,10 +179,10 @@ impl HistogramCore {
         let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
-            check_bucket_lable(name)?;
+            check_bucket_label(name)?;
         }
         for pair in &desc.const_label_pairs {
-            check_bucket_lable(pair.get_name())?;
+            check_bucket_label(pair.get_name())?;
         }
         let pairs = make_label_pairs(&desc, label_values);
 
@@ -851,13 +851,12 @@ impl Clone for LocalHistogramVec {
 
 #[cfg(test)]
 mod tests {
-
-    use super::*;
-    use crate::metrics::Collector;
-    use crate::metrics::Metric;
     use std::f64::{EPSILON, INFINITY};
     use std::thread;
     use std::time::Duration;
+
+    use super::*;
+    use crate::metrics::{Collector, Metric};
 
     #[test]
     fn test_histogram() {

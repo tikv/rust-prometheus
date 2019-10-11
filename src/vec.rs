@@ -219,7 +219,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     ///
     /// Keeping the [`Metric`](::core::Metric) for later use is possible (and should be considered
     /// if performance is critical), but keep in mind that Reset, DeleteLabelValues and Delete can
-    /// be used to delete the [`Metric`](::core::Metric) from the MetricVec. In thatcase, the
+    /// be used to delete the [`Metric`](::core::Metric) from the MetricVec. In that case, the
     /// [`Metric`](::core::Metric) will still exist, but it will not be exported anymore, even if a
     /// [`Metric`](::core::Metric) with the same label values is created later. See also the
     /// CounterVec example.
@@ -312,11 +312,11 @@ impl<T: MetricVecBuilder> Collector for MetricVec<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
 
     use crate::counter::CounterVec;
     use crate::gauge::GaugeVec;
     use crate::metrics::{Metric, Opts};
-    use std::collections::HashMap;
 
     #[test]
     fn test_counter_vec_with_labels() {
