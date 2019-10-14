@@ -236,6 +236,18 @@ impl HistogramCore {
 
         h
     }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn sample_sum(&self) -> f64 {
+        self.sum.get() as f64
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn sample_count(&self) -> u64 {
+        self.count.get() as u64
+    }
 }
 
 // We have to wrap libc::timespec in order to implement std::fmt::Debug.
