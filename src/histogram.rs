@@ -236,6 +236,14 @@ impl HistogramCore {
 
         h
     }
+
+    fn sample_sum(&self) -> f64 {
+        self.sum.get() as f64
+    }
+
+    fn sample_count(&self) -> u64 {
+        self.count.get() as u64
+    }
 }
 
 // We have to wrap libc::timespec in order to implement std::fmt::Debug.
@@ -460,6 +468,16 @@ impl Histogram {
     /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
     pub fn local(&self) -> LocalHistogram {
         LocalHistogram::new(self.clone())
+    }
+
+    /// Return accumulated sum of all samples.
+    pub fn get_sample_sum(&self) -> f64 {
+        self.core.sample_sum()
+    }
+
+    /// Return count of all samples.
+    pub fn get_sample_count(&self) -> u64 {
+        self.core.sample_count()
     }
 }
 
@@ -760,6 +778,14 @@ impl LocalHistogramCore {
 
         self.clear()
     }
+
+    fn sample_sum(&self) -> f64 {
+        self.sum
+    }
+
+    fn sample_count(&self) -> u64 {
+        self.count
+    }
 }
 
 impl LocalHistogram {
@@ -795,6 +821,16 @@ impl LocalHistogram {
     /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
     pub fn flush(&self) {
         self.core.borrow_mut().flush();
+    }
+
+    /// Return accumulated sum of local samples.
+    pub fn get_sample_sum(&self) -> f64 {
+        self.core.borrow().sample_sum()
+    }
+
+    /// Return count of local samples.
+    pub fn get_sample_count(&self) -> u64 {
+        self.core.borrow().sample_count()
     }
 }
 
