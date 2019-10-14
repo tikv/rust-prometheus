@@ -237,15 +237,11 @@ impl HistogramCore {
         h
     }
 
-    #[inline]
-    #[allow(dead_code)]
-    pub fn sample_sum(&self) -> f64 {
+    fn sample_sum(&self) -> f64 {
         self.sum.get() as f64
     }
 
-    #[inline]
-    #[allow(dead_code)]
-    pub fn sample_count(&self) -> u64 {
+    fn sample_count(&self) -> u64 {
         self.count.get() as u64
     }
 }
@@ -472,6 +468,16 @@ impl Histogram {
     /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
     pub fn local(&self) -> LocalHistogram {
         LocalHistogram::new(self.clone())
+    }
+
+    /// Return accumulated sum of all samples.
+    pub fn get_sample_sum(&self) -> f64 {
+        self.core.sample_sum()
+    }
+
+    /// Return count of all samples.
+    pub fn get_sample_count(&self) -> u64 {
+        self.core.sample_count()
     }
 }
 
