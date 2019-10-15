@@ -110,10 +110,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
     pub(crate) fn hash_label_values(&self, vals: &[&str]) -> Result<u64> {
         if vals.len() != self.desc.variable_labels.len() {
-            return Err(Error::InconsistentCardinality(
-                self.desc.variable_labels.len(),
-                vals.len(),
-            ));
+            return Err(Error::InconsistentCardinality {
+                expect: self.desc.variable_labels.len(),
+                got: vals.len(),
+            });
         }
 
         let mut h = FnvHasher::default();
@@ -126,10 +126,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
     fn hash_labels(&self, labels: &HashMap<&str, &str>) -> Result<u64> {
         if labels.len() != self.desc.variable_labels.len() {
-            return Err(Error::InconsistentCardinality(
-                self.desc.variable_labels.len(),
-                labels.len(),
-            ));
+            return Err(Error::InconsistentCardinality {
+                expect: self.desc.variable_labels.len(),
+                got: labels.len(),
+            });
         }
 
         let mut h = FnvHasher::default();

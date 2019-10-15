@@ -56,10 +56,10 @@ impl<P: Atomic> Value<P> {
     ) -> Result<Self> {
         let desc = describer.describe()?;
         if desc.variable_labels.len() != label_values.len() {
-            return Err(Error::InconsistentCardinality(
-                desc.variable_labels.len(),
-                label_values.len(),
-            ));
+            return Err(Error::InconsistentCardinality {
+                expect: desc.variable_labels.len(),
+                got: label_values.len(),
+            });
         }
 
         let label_pairs = make_label_pairs(&desc, label_values);

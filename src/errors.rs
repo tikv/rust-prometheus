@@ -20,8 +20,13 @@ pub enum Error {
     #[error("Duplicate metrics collector registration attempted")]
     AlreadyReg,
     /// The label cardinality was inconsistent.
-    #[error("Inconsistent label cardinality, expect {0} label values, but got {1}")]
-    InconsistentCardinality(usize, usize),
+    #[error("Inconsistent label cardinality, expect {expect} label values, but got {got}")]
+    InconsistentCardinality {
+        /// The expected number of labels.
+        expect: usize,
+        /// The actual number of labels.
+        got: usize,
+    },
     /// An error message which is only a string.
     #[error("Error: {0}")]
     Msg(String),
