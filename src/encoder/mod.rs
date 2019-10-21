@@ -11,20 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Write;
-
-use crate::errors::{Error, Result};
-
 #[cfg(feature = "protobuf")]
 mod pb;
-
 mod text;
 
 #[cfg(feature = "protobuf")]
 pub use self::pb::{ProtobufEncoder, PROTOBUF_FORMAT};
-
 pub use self::text::{TextEncoder, TEXT_FORMAT};
 
+use std::io::Write;
+
+use crate::errors::{Error, Result};
 use crate::proto::MetricFamily;
 
 /// An interface for encoding metric families into an underlying wire protocol.

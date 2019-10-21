@@ -361,14 +361,14 @@ pub fn gather() -> Vec<proto::MetricFamily> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+    use std::thread;
 
     use super::*;
     use crate::counter::{Counter, CounterVec};
     use crate::desc::Desc;
     use crate::metrics::{Collector, Opts};
     use crate::proto;
-    use std::collections::HashMap;
-    use std::thread;
 
     #[test]
     fn test_registry() {

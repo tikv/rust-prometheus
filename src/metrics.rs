@@ -198,9 +198,10 @@ fn build_fq_name(namespace: &str, subsystem: &str, name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::{Ord, Ordering};
+
     use super::*;
     use crate::proto::LabelPair;
-    use std::cmp::{Ord, Ordering};
 
     fn new_label_pair(name: &str, value: &str) -> LabelPair {
         let mut l = LabelPair::default();
