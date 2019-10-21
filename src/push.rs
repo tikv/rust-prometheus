@@ -262,10 +262,8 @@ pub fn hostname_grouping_key() -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-    use proto;
-    use std::error::Error;
+    use crate::proto;
 
     #[test]
     fn test_hostname_grouping_key() {
@@ -290,7 +288,7 @@ mod tests {
             let mut mf = proto::MetricFamily::new();
             mf.set_metric(from_vec!(vec![m]));
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
-            assert!(res.unwrap_err().description().contains(case.1));
+            assert!(format!("{}", res.unwrap_err()).contains(case.1));
         }
     }
 }

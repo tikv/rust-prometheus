@@ -13,9 +13,10 @@
 
 use std::io::Write;
 
+use protobuf::Message;
+
 use crate::errors::Result;
 use crate::proto::MetricFamily;
-use protobuf::Message;
 
 use super::{check_metric_family, Encoder};
 

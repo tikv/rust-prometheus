@@ -11,76 +11,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Error as IoError;
-use std::result;
+use thiserror::Error;
 
-#[cfg(feature = "protobuf")]
-use protobuf::error::ProtobufError;
-
-#[cfg(feature = "protobuf")]
-quick_error! {
-    /// The error types for prometheus.
-    #[derive(Debug)]
-    pub enum Error {
-        /// A duplicate metric collector has already been registered.
-        AlreadyReg {
-            description("duplicate metrics collector registration attempted")
-        }
-        /// The label cardinality was inconsistent.
-        InconsistentCardinality(expect: usize, got: usize) {
-            description("inconsistent label cardinality")
-            display("expect {} label values, but got {}", expect, got)
-        }
-        /// An error message which is only a string.
-        Msg(msg: String) {
-            description(msg)
-            display("Error: {}", msg)
-        }
-        /// An error containing a [`std::io::Error`].
-        Io(err: IoError) {
-            from()
-            cause(err)
-            description(err.description())
-            display("Io {}", err)
-        }
-        /// An error containing a [`protobuf::Error`].
-        Protobuf(err: ProtobufError) {
-            from()
-            cause(err)
-            description(err.description())
-            display("Protobuf {}", err)
-        }
-    }
-}
-
-#[cfg(not(feature = "protobuf"))]
-quick_error! {
-    /// The error types for prometheus.
-    #[derive(Debug)]
-    pub enum Error {
-        /// A duplicate metric collector has already been registered.
-        AlreadyReg {
-            description("duplicate metrics collector registration attempted")
-        }
-        /// The label cardinality was inconsistent.
-        InconsistentCardinality(expect: usize, got: usize) {
-            description("inconsistent label cardinality")
-            display("expect {} label values, but got {}", expect, got)
-        }
-        /// An error message which is only a string.
-        Msg(msg: String) {
-            description(msg)
-            display("Error: {}", msg)
-        }
-        /// An error containing a [`std::io::Error`].
-        Io(err: IoError) {
-            from()
-            cause(err)
-            description(err.description())
-            display("Io {}", err)
-        }
-    }
+/// The error types for prometheus.
+#[derive(Debug, Error)]
+pub enum Error {
+    /// A duplicate metric collector has already been registered.
+    #[error("Duplicate metrics collector registration attempted")]
+    AlreadyReg,
+    /// The label cardinality was inconsistent.
+    #[error("Inconsistent label cardinality, expect {expect} label values, but got {got}")]
+    InconsistentCardinality {
+        /// The expected number of labels.
+        expect: usize,
+        /// The actual number of labels.
+        got: usize,
+    },
+    /// An error message which is only a string.
+    #[error("Error: {0}")]
+    Msg(String),
+    /// An error containing a [`std::io::Error`].
+    #[error("Io error: {0}")]
+    Io(#[from] std::io::Error),
+    /// An error containing a [`protobuf::Error`].
+    #[cfg(feature = "protobuf")]
+    #[error("Protobuf error: {0}")]
+    Protobuf(#[from] protobuf::error::ProtobufError),
 }
 
 /// A specialized Result type for prometheus.
-pub type Result<T> = result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;

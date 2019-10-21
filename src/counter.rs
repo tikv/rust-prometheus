@@ -307,10 +307,11 @@ impl<P: Atomic> Clone for GenericLocalCounterVec<P> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::metrics::{Collector, Opts};
     use std::collections::HashMap;
     use std::f64::EPSILON;
+
+    use super::*;
+    use crate::metrics::{Collector, Opts};
 
     #[test]
     fn test_counter() {

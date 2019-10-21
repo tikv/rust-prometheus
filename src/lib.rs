@@ -60,7 +60,7 @@ use prometheus::{self, IntCounter, TextEncoder, Encoder};
 
 lazy_static! {
     static ref HIGH_FIVE_COUNTER: IntCounter =
-        register_int_counter!("highfives", "Number of high fives recieved").unwrap();
+        register_int_counter!("highfives", "Number of high fives received").unwrap();
 }
 
 HIGH_FIVE_COUNTER.inc();
@@ -80,7 +80,7 @@ use prometheus::{self, TextEncoder, Encoder};
 // Register & measure some metrics.
 # lazy_static! {
 #     static ref HIGH_FIVE_COUNTER: IntCounter =
-#        register_int_counter!("highfives", "Number of high fives recieved").unwrap();
+#        register_int_counter!("highfives", "Number of high fives received").unwrap();
 # }
 # HIGH_FIVE_COUNTER.inc();
 
@@ -93,7 +93,7 @@ let metric_families = prometheus::gather();
 encoder.encode(&metric_families, &mut buffer).unwrap();
 
 let output = String::from_utf8(buffer.clone()).unwrap();
-const EXPECTED_OUTPUT: &'static str = "# HELP highfives Number of high fives recieved\n# TYPE highfives counter\nhighfives 1\n";
+const EXPECTED_OUTPUT: &'static str = "# HELP highfives Number of high fives received\n# TYPE highfives counter\nhighfives 1\n";
 assert!(output.starts_with(EXPECTED_OUTPUT));
 ```
 
@@ -143,16 +143,14 @@ macro_rules! from_vec {
 extern crate cfg_if;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate quick_error;
 
-mod encoder;
-mod errors;
 #[macro_use]
 mod macros;
 mod atomic64;
 mod counter;
 mod desc;
+mod encoder;
+mod errors;
 mod gauge;
 mod histogram;
 mod metrics;

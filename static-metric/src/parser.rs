@@ -119,11 +119,11 @@ impl MetricValueDefList {
         &self.0
     }
 
-    pub fn get_names<'a>(&'a self) -> Vec<&'a Ident> {
+    pub fn get_names(&self) -> Vec<&Ident> {
         self.0.iter().map(|v| &v.name).collect()
     }
 
-    pub fn get_values<'a>(&'a self) -> Vec<&'a LitStr> {
+    pub fn get_values(&self) -> Vec<&LitStr> {
         self.0.iter().map(|v| &v.value).collect()
     }
 }
