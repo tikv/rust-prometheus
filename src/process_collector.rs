@@ -19,7 +19,6 @@ use std::fs;
 use std::io::Read;
 use std::sync::Mutex;
 
-use libc;
 use procinfo::pid as pid_info;
 
 use crate::counter::Counter;
@@ -271,11 +270,11 @@ lazy_static! {
 
 #[cfg(test)]
 mod tests {
+    use std::f64::EPSILON;
 
     use super::*;
     use crate::metrics::Collector;
     use crate::registry;
-    use std::f64::EPSILON;
 
     #[test]
     fn test_process_collector() {

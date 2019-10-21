@@ -214,10 +214,10 @@ pub trait Describer {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
 
     use crate::desc::{is_valid_label_name, is_valid_metric_name, Desc};
     use crate::errors::Error;
-    use std::collections::HashMap;
 
     #[test]
     fn test_is_valid_metric_name() {

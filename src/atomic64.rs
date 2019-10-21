@@ -210,9 +210,10 @@ impl Atomic for AtomicU64 {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::f64::consts::PI;
     use std::f64::{self, EPSILON};
+
+    use super::*;
 
     #[test]
     fn test_atomic_f64() {

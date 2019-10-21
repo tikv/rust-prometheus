@@ -17,9 +17,9 @@ include = [
 proc-macro = true
 
 [dependencies]
-syn = { version = "0.15", features = ["full", "extra-traits"] }
-proc-macro2 = "0.4"
-quote = "0.6"
+syn = { version = "1.0", features = ["full", "extra-traits"] }
+proc-macro2 = "1.0"
+quote = "1.0"
 lazy_static = "1.0"
 
 [dev-dependencies]

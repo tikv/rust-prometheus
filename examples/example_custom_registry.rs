@@ -18,8 +18,9 @@
 extern crate lazy_static;
 extern crate prometheus;
 
-use prometheus::{Encoder, IntCounter, Registry};
 use std::collections::HashMap;
+
+use prometheus::{Encoder, IntCounter, Registry};
 
 lazy_static! {
     static ref DEFAULT_COUNTER: IntCounter = IntCounter::new("default", "generic counter").unwrap();

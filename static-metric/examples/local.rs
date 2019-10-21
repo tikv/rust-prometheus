@@ -17,9 +17,9 @@ extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
-use coarsetime::Instant;
 use std::cell::Cell;
 
+use coarsetime::Instant;
 use prometheus::*;
 use prometheus_static_metric::make_static_metric;
 
