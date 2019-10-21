@@ -172,6 +172,7 @@ fn push<S: BuildHasher>(
 
     match response.status() {
         StatusCode::ACCEPTED => Ok(()),
+        StatusCode::OK => Ok(()),
         _ => Err(Error::Msg(format!(
             "unexpected status code {} while pushing to {}",
             response.status(),
