@@ -21,7 +21,7 @@ features = ["nightly"]
 default = ["protobuf"]
 nightly = ["libc"]
 push = ["reqwest", "libc", "protobuf"]
-process = ["libc", "procinfo"]
+process = ["libc", "procfs"]
 gen = ["protobuf-codegen-pure"]
 
 [dependencies]
@@ -35,7 +35,7 @@ spin = "0.5.2"
 reqwest = { version = "0.9.5", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-procinfo = { version = "0.4", optional = true }
+procfs = { version = "0.7", optional = true, default-features = false }
 
 [dev-dependencies]
 getopts = "0.2"
