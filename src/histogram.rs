@@ -15,10 +15,11 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::{Duration, Instant as StdInstant};
 
-use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
+use crate::atomic64::{Atomic, AtomicF64, AtomicU64, Number};
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
 use crate::metrics::{Collector, Metric, Opts};
@@ -163,19 +164,23 @@ impl From<Opts> for HistogramOpts {
 }
 
 #[derive(Debug)]
-pub struct HistogramCore {
+pub struct HistogramCore<S, C>
+where
+    S: Atomic,
+    C: Atomic,
+{
     desc: Desc,
     label_pairs: Vec<proto::LabelPair>,
 
-    sum: AtomicF64,
-    count: AtomicU64,
+    sum: S,
+    count: C,
 
     upper_bounds: Vec<f64>,
-    counts: Vec<AtomicU64>,
+    counts: Vec<C>,
 }
 
-impl HistogramCore {
-    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore> {
+impl<S: Atomic, C: Atomic> HistogramCore<S, C> {
+    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore<S, C>> {
         let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
@@ -190,43 +195,43 @@ impl HistogramCore {
 
         let mut counts = Vec::new();
         for _ in 0..buckets.len() {
-            counts.push(AtomicU64::new(0));
+            counts.push(C::new(C::T::from_i64(0)));
         }
 
         Ok(HistogramCore {
             desc,
             label_pairs: pairs,
-            sum: AtomicF64::new(0.0),
-            count: AtomicU64::new(0),
+            sum: S::new(S::T::from_i64(0)),
+            count: C::new(C::T::from_i64(0)),
             upper_bounds: buckets,
             counts,
         })
     }
 
-    pub fn observe(&self, v: f64) {
+    pub fn observe(&self, v: S::T) {
         // Try find the bucket.
         let mut iter = self
             .upper_bounds
             .iter()
             .enumerate()
-            .filter(|&(_, f)| v <= *f);
+            .filter(|&(_, f)| v.into_f64() <= *f);
         if let Some((i, _)) = iter.next() {
-            self.counts[i].inc_by(1);
+            self.counts[i].inc_by(C::T::from_i64(1));
         }
 
-        self.count.inc_by(1);
+        self.count.inc_by(C::T::from_i64(1));
         self.sum.inc_by(v);
     }
 
     pub fn proto(&self) -> proto::Histogram {
         let mut h = proto::Histogram::default();
-        h.set_sample_sum(self.sum.get());
-        h.set_sample_count(self.count.get() as u64);
+        h.set_sample_sum(self.sum.get().into_f64());
+        h.set_sample_count(self.count.get().into_f64() as u64);
 
         let mut count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
-            count += self.counts[i].get();
+            count += self.counts[i].get().into_f64() as u64;
             let mut b = proto::Bucket::default();
             b.set_cumulative_count(count as u64);
             b.set_upper_bound(*upper_bound);
@@ -237,12 +242,12 @@ impl HistogramCore {
         h
     }
 
-    fn sample_sum(&self) -> f64 {
-        self.sum.get() as f64
+    fn sample_sum(&self) -> S::T {
+        self.sum.get()
     }
 
-    fn sample_count(&self) -> u64 {
-        self.count.get() as u64
+    fn sample_count(&self) -> C::T {
+        self.count.get()
     }
 }
 
@@ -333,25 +338,31 @@ mod coarse {
     }
 }
 
-/// Timer to measure and record the duration of an event.
-///
-/// This timer can be stopped and observed at most once, either automatically (when it
-/// goes out of scope) or manually.
-/// Alternatively, it can be manually stopped and discarded in order to not record its value.
+/// The underlying implementation for [`HistogramTimer`](::HistogramTimer) and [`IntHistogramTimer`](::IntHistogramTimer).
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
 #[derive(Debug)]
-pub struct HistogramTimer {
+pub struct GenericHistogramTimer<S: Atomic, C: Atomic> {
     /// An histogram for automatic recording of observations.
-    histogram: Histogram,
+    histogram: GenericHistogram<S, C>,
     /// Whether the timer has already been observed once.
     observed: bool,
     /// Starting instant for the timer.
     start: Instant,
 }
 
-impl HistogramTimer {
-    fn new(histogram: Histogram) -> Self {
-        Self {
+/// Timer to measure and record the duration of an event.
+///
+/// This timer can be stopped and observed at most once, either automatically (when it
+/// goes out of scope) or manually.
+/// Alternatively, it can be manually stopped and discarded in order to not record its value.
+pub type HistogramTimer = GenericHistogramTimer<AtomicF64, AtomicU64>;
+
+/// Int version of HistogramTimer
+pub type IntHistogramTimer = GenericHistogramTimer<AtomicU64, AtomicU64>;
+
+impl<S: Atomic, C: Atomic> GenericHistogramTimer<S, C> {
+    fn new(histogram: GenericHistogram<S, C>) -> Self {
+        GenericHistogramTimer {
             histogram,
             observed: false,
             start: Instant::now(),
@@ -397,13 +408,15 @@ impl HistogramTimer {
         let v = duration_to_seconds(self.start.elapsed());
         self.observed = true;
         if record {
-            self.histogram.observe(v);
+            // FIXME: 精度丢失
+            dbg!(v, v as i64);
+            self.histogram.observe(S::T::from_i64(v as i64));
         }
         v
     }
 }
 
-impl Drop for HistogramTimer {
+impl<S: Atomic, C: Atomic> Drop for GenericHistogramTimer<S, C> {
     fn drop(&mut self) {
         if !self.observed {
             self.observe(true);
@@ -411,7 +424,13 @@ impl Drop for HistogramTimer {
     }
 }
 
-/// A [`Metric`](::core::Metric) counts individual observations from an event or sample stream in
+/// The underlying implementation for [`Histogram`](::Histogram) and [`IntHistogram`](::IntHistogram).
+#[derive(Debug)]
+pub struct GenericHistogram<S: Atomic, C: Atomic> {
+    core: Arc<HistogramCore<S, C>>,
+}
+
+/// /// A [`Metric`](::core::Metric) counts individual observations from an event or sample stream in
 /// configurable buckets. Similar to a summary, it also provides a sum of
 /// observations and an observation count.
 ///
@@ -424,38 +443,47 @@ impl Drop for HistogramTimer {
 /// buckets, and they are in general less accurate. The Observe method of a
 /// [`Histogram`](::Histogram) has a very low performance overhead in comparison with the Observe
 /// method of a Summary.
-#[derive(Clone, Debug)]
-pub struct Histogram {
-    core: Arc<HistogramCore>,
+pub type Histogram = GenericHistogram<AtomicF64, AtomicU64>;
+
+/// The integer version of [`Histogram`](::Histogram). Provides better performance if metric values
+/// are all integers.
+pub type IntHistogram = GenericHistogram<AtomicU64, AtomicU64>;
+
+impl<S: Atomic, C: Atomic> Clone for GenericHistogram<S, C> {
+    fn clone(&self) -> Self {
+        GenericHistogram {
+            core: Arc::clone(&self.core),
+        }
+    }
 }
 
-impl Histogram {
+impl<S: Atomic, C: Atomic> GenericHistogram<S, C> {
     /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
-    pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(&opts, &[])
+    pub fn with_opts(opts: HistogramOpts) -> Result<GenericHistogram<S, C>> {
+        GenericHistogram::with_opts_and_label_values(&opts, &[])
     }
 
     fn with_opts_and_label_values(
         opts: &HistogramOpts,
         label_values: &[&str],
-    ) -> Result<Histogram> {
+    ) -> Result<GenericHistogram<S, C>> {
         let core = HistogramCore::new(opts, label_values)?;
 
-        Ok(Histogram {
+        Ok(GenericHistogram {
             core: Arc::new(core),
         })
     }
 }
 
-impl Histogram {
+impl<S: Atomic, C: Atomic> GenericHistogram<S, C> {
     /// Add a single observation to the [`Histogram`](::Histogram).
-    pub fn observe(&self, v: f64) {
+    pub fn observe(&self, v: S::T) {
         self.core.observe(v)
     }
 
     /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
-    pub fn start_timer(&self) -> HistogramTimer {
-        HistogramTimer::new(self.clone())
+    pub fn start_timer(&self) -> GenericHistogramTimer<S, C> {
+        GenericHistogramTimer::new(self.clone())
     }
 
     /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
@@ -466,22 +494,22 @@ impl Histogram {
     }
 
     /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
-    pub fn local(&self) -> LocalHistogram {
-        LocalHistogram::new(self.clone())
+    pub fn local(&self) -> GenericLocalHistogram<S, C> {
+        GenericLocalHistogram::new(self.clone())
     }
 
     /// Return accumulated sum of all samples.
-    pub fn get_sample_sum(&self) -> f64 {
+    pub fn get_sample_sum(&self) -> S::T {
         self.core.sample_sum()
     }
 
     /// Return count of all samples.
-    pub fn get_sample_count(&self) -> u64 {
+    pub fn get_sample_count(&self) -> C::T {
         self.core.sample_count()
     }
 }
 
-impl Metric for Histogram {
+impl<S: Atomic, C: Atomic> Metric for GenericHistogram<S, C> {
     fn metric(&self) -> proto::Metric {
         let mut m = proto::Metric::default();
         m.set_label(from_vec!(self.core.label_pairs.clone()));
@@ -493,7 +521,7 @@ impl Metric for Histogram {
     }
 }
 
-impl Collector for Histogram {
+impl<S: Atomic, C: Atomic> Collector for GenericHistogram<S, C> {
     fn desc(&self) -> Vec<&Desc> {
         vec![&self.core.desc]
     }
@@ -509,41 +537,65 @@ impl Collector for Histogram {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct HistogramVecBuilder {}
+#[derive(Debug)]
+pub struct HistogramVecBuilder<S: Atomic, C: Atomic> {
+    _phantom_sum: PhantomData<S>,
+    _phantom_count: PhantomData<C>,
+}
 
-impl MetricVecBuilder for HistogramVecBuilder {
-    type M = Histogram;
-    type P = HistogramOpts;
-
-    fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(opts, vals)
+impl<S: Atomic, C: Atomic> HistogramVecBuilder<S, C> {
+    pub fn new() -> Self {
+        HistogramVecBuilder {
+            _phantom_sum: PhantomData,
+            _phantom_count: PhantomData,
+        }
     }
 }
+
+impl<S: Atomic, C: Atomic> Clone for HistogramVecBuilder<S, C> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<S: Atomic, C: Atomic> MetricVecBuilder for HistogramVecBuilder<S, C> {
+    type M = GenericHistogram<S, C>;
+    type P = HistogramOpts;
+
+    fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Self::M> {
+        GenericHistogram::with_opts_and_label_values(opts, vals)
+    }
+}
+
+/// The underlying implementation for [`HistogramVec`](::HistogramVec) and [`IntHistogramVec`](::IntHistogramVec).
+pub type GenericHistogramVec<S, C> = MetricVec<HistogramVecBuilder<S, C>>;
 
 /// A [`Collector`](::core::Collector) that bundles a set of Histograms that all share the
 /// same [`Desc`](::core::Desc), but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
-pub type HistogramVec = MetricVec<HistogramVecBuilder>;
+pub type HistogramVec = GenericHistogramVec<AtomicF64, AtomicU64>;
 
-impl HistogramVec {
+impl<S: Atomic, C: Atomic> GenericHistogramVec<S, C> {
     /// Create a new [`HistogramVec`](::HistogramVec) based on the provided
     /// [`HistogramOpts`](::HistogramOpts) and partitioned by the given label names. At least
     /// one label name must be provided.
-    pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
+    pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
-        let metric_vec =
-            MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
+        let metric_vec = MetricVec::create(
+            proto::MetricType::HISTOGRAM,
+            HistogramVecBuilder::new(),
+            opts,
+        )?;
 
-        Ok(metric_vec as HistogramVec)
+        Ok(metric_vec as Self)
     }
 
     /// Return a `LocalHistogramVec` for single thread usage.
-    pub fn local(&self) -> LocalHistogramVec {
+    pub fn local(&self) -> GenericLocalHistogramVec<S, C> {
         let vec = self.clone();
-        LocalHistogramVec::new(vec)
+        GenericLocalHistogramVec::new(vec)
     }
 }
 
@@ -622,44 +674,70 @@ fn duration_to_seconds(d: Duration) -> f64 {
     d.as_secs() as f64 + nanos
 }
 
-#[derive(Clone, Debug)]
-pub struct LocalHistogramCore {
-    histogram: Histogram,
+#[derive(Debug)]
+pub struct GenericLocalHistogramCore<S: Atomic, C: Atomic> {
+    histogram: GenericHistogram<S, C>,
     counts: Vec<u64>,
-    count: u64,
-    sum: f64,
+    count: C::T,
+    sum: S::T,
+}
+
+impl<S: Atomic, C: Atomic> Clone for GenericLocalHistogramCore<S, C> {
+    fn clone(&self) -> Self {
+        GenericLocalHistogramCore {
+            histogram: self.histogram.clone(),
+            counts: self.counts.clone(),
+            count: self.count,
+            sum: self.sum,
+        }
+    }
+}
+
+/// The underlying implementation for [`LocalHistogram`](::LocalHistogram) and [`IntLocalHistogram`](::IntLocalHistogram).
+pub struct GenericLocalHistogram<S: Atomic, C: Atomic> {
+    core: RefCell<GenericLocalHistogramCore<S, C>>,
+}
+
+impl<S: Atomic, C: Atomic> std::fmt::Debug for GenericLocalHistogram<S, C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "GenericLocalHistogram {{ core }}")
+    }
 }
 
 /// An unsync [`Histogram`](::Histogram).
-#[derive(Debug)]
-pub struct LocalHistogram {
-    core: RefCell<LocalHistogramCore>,
-}
+pub type LocalHistogram = GenericLocalHistogram<AtomicF64, AtomicU64>;
+/// An unsync [`IntHistogram`](::IntHistogram).
+pub type IntLocalHistogram = GenericLocalHistogram<AtomicU64, AtomicU64>;
 
-impl Clone for LocalHistogram {
-    fn clone(&self) -> LocalHistogram {
+impl<S: Atomic, C: Atomic> Clone for GenericLocalHistogram<S, C> {
+    fn clone(&self) -> GenericLocalHistogram<S, C> {
         let core = self.core.clone();
-        let lh = LocalHistogram { core };
+        let lh = GenericLocalHistogram { core };
         lh.clear();
         lh
     }
 }
 
-/// An unsync [`HistogramTimer`](::HistogramTimer).
+/// The underlying implementation for [`LocalHistogramTimer`](::LocalHistogramTimer) and [`IntLocalHistogramTimer`](::IntLocalHistogramTimer).
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
 #[derive(Debug)]
-pub struct LocalHistogramTimer {
+pub struct GenericLocalHistogramTimer<S: Atomic, C: Atomic> {
     /// A local histogram for automatic recording of observations.
-    local: LocalHistogram,
+    local: GenericLocalHistogram<S, C>,
     /// Whether the timer has already been observed once.
     observed: bool,
     /// Starting instant for the timer.
     start: Instant,
 }
 
-impl LocalHistogramTimer {
-    fn new(histogram: LocalHistogram) -> Self {
-        Self {
+/// An unsync [`HistogramTimer`](::HistogramTimer).
+pub type LocalHistogramTimer = GenericLocalHistogramTimer<AtomicF64, AtomicU64>;
+/// An unsync [`IntHistogramTimer`](::IntHistogramTimer).
+pub type IntLocalHistogramTimer = GenericLocalHistogramTimer<AtomicF64, AtomicU64>;
+
+impl<S: Atomic, C: Atomic> GenericLocalHistogramTimer<S, C> {
+    fn new(histogram: GenericLocalHistogram<S, C>) -> Self {
+        GenericLocalHistogramTimer {
             local: histogram,
             observed: false,
             start: Instant::now(),
@@ -667,7 +745,7 @@ impl LocalHistogramTimer {
     }
 
     #[cfg(feature = "nightly")]
-    fn new_coarse(histogram: LocalHistogram) -> Self {
+    fn new_coarse(histogram: LocalHistogram<S, C>) -> Self {
         Self {
             local: histogram,
             observed: false,
@@ -705,13 +783,14 @@ impl LocalHistogramTimer {
         let v = duration_to_seconds(self.start.elapsed());
         self.observed = true;
         if record {
-            self.local.observe(v);
+            // FIXME
+            self.local.observe(S::T::from_i64(v as i64));
         }
         v
     }
 }
 
-impl Drop for LocalHistogramTimer {
+impl<S: Atomic, C: Atomic> Drop for GenericLocalHistogramTimer<S, C> {
     fn drop(&mut self) {
         if !self.observed {
             self.observe(true);
@@ -719,19 +798,19 @@ impl Drop for LocalHistogramTimer {
     }
 }
 
-impl LocalHistogramCore {
-    fn new(histogram: Histogram) -> LocalHistogramCore {
+impl<S: Atomic, C: Atomic> GenericLocalHistogramCore<S, C> {
+    fn new(histogram: GenericHistogram<S, C>) -> GenericLocalHistogramCore<S, C> {
         let counts = vec![0; histogram.core.counts.len()];
 
-        LocalHistogramCore {
+        GenericLocalHistogramCore {
             histogram,
             counts,
-            count: 0,
-            sum: 0.0,
+            count: C::T::from_i64(0),
+            sum: S::T::from_i64(0),
         }
     }
 
-    pub fn observe(&mut self, v: f64) {
+    pub fn observe(&mut self, v: S::T) {
         // Try find the bucket.
         let mut iter = self
             .histogram
@@ -739,12 +818,12 @@ impl LocalHistogramCore {
             .upper_bounds
             .iter()
             .enumerate()
-            .filter(|&(_, f)| v <= *f);
+            .filter(|&(_, f)| v.into_f64() <= *f);
         if let Some((i, _)) = iter.next() {
             self.counts[i] += 1;
         }
 
-        self.count += 1;
+        self.count += C::T::from_i64(1);
         self.sum += v;
     }
 
@@ -753,13 +832,13 @@ impl LocalHistogramCore {
             *v = 0
         }
 
-        self.count = 0;
-        self.sum = 0.0;
+        self.count = C::T::from_i64(0);
+        self.sum = S::T::from_i64(0);
     }
 
     pub fn flush(&mut self) {
         // No cached metric, return.
-        if self.count == 0 {
+        if self.count == C::T::from_i64(0) {
             return;
         }
 
@@ -768,7 +847,7 @@ impl LocalHistogramCore {
 
             for (i, v) in self.counts.iter().enumerate() {
                 if *v > 0 {
-                    h.core.counts[i].inc_by(*v);
+                    h.core.counts[i].inc_by(C::T::from_i64(*v as i64));
                 }
             }
 
@@ -779,37 +858,37 @@ impl LocalHistogramCore {
         self.clear()
     }
 
-    fn sample_sum(&self) -> f64 {
+    fn sample_sum(&self) -> S::T {
         self.sum
     }
 
-    fn sample_count(&self) -> u64 {
+    fn sample_count(&self) -> C::T {
         self.count
     }
 }
 
-impl LocalHistogram {
-    fn new(histogram: Histogram) -> LocalHistogram {
-        let core = LocalHistogramCore::new(histogram);
-        LocalHistogram {
+impl<S: Atomic, C: Atomic> GenericLocalHistogram<S, C> {
+    fn new(histogram: GenericHistogram<S, C>) -> GenericLocalHistogram<S, C> {
+        let core = GenericLocalHistogramCore::new(histogram);
+        GenericLocalHistogram {
             core: RefCell::new(core),
         }
     }
 
     /// Add a single observation to the [`Histogram`](::Histogram).
-    pub fn observe(&self, v: f64) {
+    pub fn observe(&self, v: S::T) {
         self.core.borrow_mut().observe(v);
     }
 
     /// Return a `LocalHistogramTimer` to track a duration.
-    pub fn start_timer(&self) -> LocalHistogramTimer {
-        LocalHistogramTimer::new(self.clone())
+    pub fn start_timer(&self) -> GenericLocalHistogramTimer<S, C> {
+        GenericLocalHistogramTimer::new(self.clone())
     }
 
     /// Return a `LocalHistogramTimer` to track a duration.
     /// It is faster but less precise.
     #[cfg(feature = "nightly")]
-    pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
+    pub fn start_coarse_timer(&self) -> LocalHistogramTimer<S, C> {
         LocalHistogramTimer::new_coarse(self.clone())
     }
 
@@ -824,38 +903,44 @@ impl LocalHistogram {
     }
 
     /// Return accumulated sum of local samples.
-    pub fn get_sample_sum(&self) -> f64 {
+    pub fn get_sample_sum(&self) -> S::T {
         self.core.borrow().sample_sum()
     }
 
     /// Return count of local samples.
-    pub fn get_sample_count(&self) -> u64 {
+    pub fn get_sample_count(&self) -> C::T {
         self.core.borrow().sample_count()
     }
 }
 
-impl Drop for LocalHistogram {
+impl<S: Atomic, C: Atomic> Drop for GenericLocalHistogram<S, C> {
     fn drop(&mut self) {
         self.flush()
     }
 }
 
-/// An unsync [`HistogramVec`](::HistogramVec).
+/// The underlying implementation for [`HistogramTimer`](::HistogramTimer) and [`IntHistogramTimer`](::IntHistogramTimer).
 #[derive(Debug)]
-pub struct LocalHistogramVec {
-    vec: HistogramVec,
-    local: HashMap<u64, LocalHistogram>,
+pub struct GenericLocalHistogramVec<S: Atomic, C: Atomic> {
+    vec: GenericHistogramVec<S, C>,
+    local: HashMap<u64, GenericLocalHistogram<S, C>>,
 }
 
-impl LocalHistogramVec {
-    fn new(vec: HistogramVec) -> LocalHistogramVec {
+/// An unsync [`HistogramVec`](::HistogramVec).
+pub type LocalHistogramVec = GenericLocalHistogram<AtomicF64, AtomicU64>;
+
+/// An unsync [`IntHistogramVec`](::IntHistogramVec).
+pub type IntLocalHistogramVec = GenericLocalHistogram<AtomicU64, AtomicU64>;
+
+impl<S: Atomic, C: Atomic> GenericLocalHistogramVec<S, C> {
+    fn new(vec: GenericHistogramVec<S, C>) -> GenericLocalHistogramVec<S, C> {
         let local = HashMap::with_capacity(vec.v.children.read().len());
-        LocalHistogramVec { vec, local }
+        GenericLocalHistogramVec { vec, local }
     }
 
     /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
+    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a GenericLocalHistogram<S, C> {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
         self.local
@@ -879,9 +964,9 @@ impl LocalHistogramVec {
     }
 }
 
-impl Clone for LocalHistogramVec {
-    fn clone(&self) -> LocalHistogramVec {
-        LocalHistogramVec::new(self.vec.clone())
+impl<S: Atomic, C: Atomic> Clone for GenericLocalHistogramVec<S, C> {
+    fn clone(&self) -> GenericLocalHistogramVec<S, C> {
+        GenericLocalHistogramVec::new(self.vec.clone())
     }
 }
 
@@ -921,6 +1006,7 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
+        dbg!(proto_histogram.get_sample_sum());
         assert!(proto_histogram.get_sample_sum() >= 1.5);
         assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
 
