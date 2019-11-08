@@ -15,15 +15,10 @@
 //!
 //! This module only supports **Linux** platform.
 
-use std::fs;
-use std::io::Read;
 use std::sync::Mutex;
-
-use procinfo::pid as pid_info;
 
 use crate::counter::Counter;
 use crate::desc::Desc;
-use crate::errors::{Error, Result};
 use crate::gauge::Gauge;
 use crate::metrics::{Collector, Opts};
 use crate::proto;
@@ -139,38 +134,42 @@ impl Collector for ProcessCollector {
     }
 
     fn collect(&self) -> Vec<proto::MetricFamily> {
+        let p = match procfs::process::Process::new(self.pid) {
+            Ok(p) => p,
+            Err(..) => {
+                // we can't construct a Process object, so there's no stats to gather
+                return Vec::new();
+            }
+        };
+
         // file descriptors
-        if let Ok(num) = open_fds(self.pid) {
-            self.open_fds.set(num as f64);
+        if let Ok(fd_list) = p.fd() {
+            self.open_fds.set(fd_list.len() as f64);
         }
-        if let Ok(max) = max_fds(self.pid) {
-            self.max_fds.set(max)
+        if let Ok(limits) = p.limits() {
+            if let procfs::process::LimitValue::Value(max) = limits.max_open_files.soft_limit {
+                self.max_fds.set(max as f64)
+            }
         }
 
         // memory
-        if let Ok(statm) = pid_info::statm(self.pid) {
-            self.vsize.set(statm.size as f64 * *PAGESIZE);
-            self.rss.set(statm.resident as f64 * *PAGESIZE);
-        }
-
-        let pid_stat = pid_info::stat(self.pid);
+        self.vsize.set(p.stat.vsize as f64);
+        self.rss.set(p.stat.rss as f64 * *PAGESIZE);
 
         // proc_start_time
-        if let (&Ok(ref stat), Some(boot_time)) = (&pid_stat, *BOOT_TIME) {
+        if let Some(boot_time) = *BOOT_TIME {
             self.start_time
-                .set(stat.start_time as f64 / *CLK_TCK + boot_time);
+                .set(p.stat.starttime as f64 / *CLK_TCK + boot_time);
         }
 
         // cpu
         let cpu_total_mfs = {
             let cpu_total = self.cpu_total.lock().unwrap();
-            if let Ok(stat) = pid_stat {
-                let total = (stat.utime + stat.stime) as f64 / *CLK_TCK;
-                let past = cpu_total.get();
-                let delta = total - past;
-                if delta > 0.0 {
-                    cpu_total.inc_by(delta);
-                }
+            let total = (p.stat.utime + p.stat.stime) as f64 / *CLK_TCK;
+            let past = cpu_total.get();
+            let delta = total - past;
+            if delta > 0.0 {
+                cpu_total.inc_by(delta);
             }
 
             cpu_total.collect()
@@ -186,57 +185,6 @@ impl Collector for ProcessCollector {
         mfs.extend(self.start_time.collect());
         mfs
     }
-}
-
-fn open_fds(pid: pid_t) -> Result<usize> {
-    let path = format!("/proc/{}/fd", pid);
-    fs::read_dir(path)?.fold(Ok(0), |acc, i| {
-        let mut acc = acc?;
-        let ty = i?.file_type()?;
-        if !ty.is_dir() {
-            acc += 1;
-        }
-
-        Ok(acc)
-    })
-}
-
-// `find_statistic` matches lines in pattern pat, it takes the first matching line,
-// and parses the first number literal in the matching line.
-//
-// Example:
-//  * all:
-// ```
-// ctxt 789298306
-// btime 1477460662
-// processes 302136
-// procs_running 1
-// procs_blocked 0
-// ```
-//  * pat: "btime"
-//
-// then it returns `Ok(1477460662.0)`
-fn find_statistic(all: &str, pat: &str) -> Result<f64> {
-    if let Some(idx) = all.find(pat) {
-        let mut iter = (all[idx + pat.len()..]).split_whitespace();
-        if let Some(v) = iter.next() {
-            return v
-                .parse()
-                .map_err(|e| Error::Msg(format!("read statistic {} failed: {}", pat, e)));
-        }
-    }
-
-    Err(Error::Msg(format!("read statistic {} failed", pat)))
-}
-
-const MAXFD_PATTERN: &str = "Max open files";
-
-fn max_fds(pid: pid_t) -> Result<f64> {
-    let mut buffer = String::new();
-    fs::File::open(&format!("/proc/{}/limits", pid))
-        .and_then(|mut f| f.read_to_string(&mut buffer))?;
-
-    find_statistic(&buffer, MAXFD_PATTERN)
 }
 
 lazy_static! {
@@ -255,23 +203,12 @@ lazy_static! {
     };
 }
 
-// See more `man 5 proc`, `/proc/stat`
-const BOOT_TIME_PATTERN: &str = "btime";
-
 lazy_static! {
-    static ref BOOT_TIME: Option<f64> = {
-        let mut buffer = String::new();
-        fs::File::open("/proc/stat")
-            .and_then(|mut f| f.read_to_string(&mut buffer))
-            .ok()
-            .and_then(|_| find_statistic(&buffer, BOOT_TIME_PATTERN).ok())
-    };
+    static ref BOOT_TIME: Option<f64> = procfs::boot_time_secs().ok().map(|i| i as f64);
 }
 
 #[cfg(test)]
 mod tests {
-    use std::f64::EPSILON;
-
     use super::*;
     use crate::metrics::Collector;
     use crate::registry;
@@ -290,95 +227,5 @@ mod tests {
         let r = registry::Registry::new();
         let res = r.register(Box::new(pc));
         assert!(res.is_ok());
-    }
-
-    const STATUS_LITERAL: &str = r#"Name:	compiz
-State:	S (sleeping)
-Tgid:	3124
-Ngid:	0
-Pid:	3124
-PPid:	3038
-TracerPid:	0
-Uid:	1000	1000	1000	1000
-Gid:	1000	1000	1000	1000
-FDSize:	64
-Groups:	4 24 27 30 46 108 124 126 999 1000
-NStgid:	3124
-NSpid:	3124
-NSpgid:	3038
-NSsid:	3038
-VmPeak:	 1452388 kB
-VmSize:	 1362696 kB
-VmLck:	       0 kB
-VmPin:	       0 kB
-VmHWM:	  134316 kB
-VmRSS:	  112884 kB
-VmData:	  780020 kB
-VmStk:	     152 kB
-VmExe:	      12 kB
-VmLib:	   77504 kB
-VmPTE:	    1116 kB
-VmPMD:	      16 kB
-VmSwap:	       0 kB
-HugetlbPages:	       0 kB
-Threads:	8
-SigQ:	0/31457
-SigPnd:	0000000000000000
-ShdPnd:	0000000000000000
-SigBlk:	0000000000000000
-SigIgn:	0000000000001000
-SigCgt:	0000000180014003
-CapInh:	0000000000000000
-CapPrm:	0000000000000000
-CapEff:	0000000000000000
-CapBnd:	0000003fffffffff
-CapAmb:	0000000000000000
-Seccomp:	0
-Cpus_allowed:	f
-Cpus_allowed_list:	0-3
-Mems_allowed:	00000000,00000001
-Mems_allowed_list:	0
-voluntary_ctxt_switches:	1713183
-nonvoluntary_ctxt_switches:	68606
-"#;
-
-    const VM_SIZE_PATTERN: &str = "VmSize:";
-    const VM_RSS_PATTERN: &str = "VmRSS:";
-    const VM_RSS: f64 = 112884.0;
-    const VM_SIZE: f64 = 1362696.0;
-
-    const LIMITS_LITERAL: &str = r#"
-Limit                     Soft Limit           Hard Limit           Units
-Max cpu time              unlimited            unlimited            seconds
-Max file size             unlimited            unlimited            bytes
-Max data size             unlimited            unlimited            bytes
-Max stack size            8388608              unlimited            bytes
-Max core file size        0                    unlimited            bytes
-Max resident set          unlimited            unlimited            bytes
-Max processes             31454                31454                processes
-Max open files            1024                 4096                 files
-Max locked memory         65536                65536                bytes
-Max address space         unlimited            unlimited            bytes
-Max file locks            unlimited            unlimited            locks
-Max pending signals       31454                31454                signals
-Max msgqueue size         819200               819200               bytes
-Max nice priority         0                    0
-Max realtime priority     0                    0
-Max realtime timeout      unlimited            unlimited            us "#;
-
-    const MAXFD: f64 = 1024.0;
-
-    #[test]
-    fn test_find_statistic() {
-        let rss = super::find_statistic(STATUS_LITERAL, VM_RSS_PATTERN);
-        assert!(rss.is_ok());
-        assert!((rss.unwrap() - VM_RSS) < EPSILON);
-
-        let size = super::find_statistic(STATUS_LITERAL, VM_SIZE_PATTERN);
-        assert!(size.is_ok());
-        assert!((size.unwrap() - VM_SIZE) < EPSILON);
-
-        let maxfd = super::find_statistic(LIMITS_LITERAL, super::MAXFD_PATTERN).unwrap();
-        assert!((maxfd - MAXFD) < EPSILON);
     }
 }
