@@ -164,7 +164,7 @@ impl From<Opts> for HistogramOpts {
 }
 
 #[derive(Debug)]
-pub struct HistogramCore<S, C>
+pub struct GenericHistogramCore<S, C>
 where
     S: Atomic,
     C: Atomic,
@@ -179,8 +179,8 @@ where
     counts: Vec<C>,
 }
 
-impl<S: Atomic, C: Atomic> HistogramCore<S, C> {
-    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore<S, C>> {
+impl<S: Atomic, C: Atomic> GenericHistogramCore<S, C> {
+    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<GenericHistogramCore<S, C>> {
         let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
@@ -198,7 +198,7 @@ impl<S: Atomic, C: Atomic> HistogramCore<S, C> {
             counts.push(C::new(C::T::from_i64(0)));
         }
 
-        Ok(HistogramCore {
+        Ok(GenericHistogramCore {
             desc,
             label_pairs: pairs,
             sum: S::new(S::T::from_i64(0)),
@@ -425,10 +425,10 @@ impl<S: Atomic, C: Atomic> Drop for GenericHistogramTimer<S, C> {
 /// The underlying implementation for [`Histogram`](::Histogram) and [`IntHistogram`](::IntHistogram).
 #[derive(Debug)]
 pub struct GenericHistogram<S: Atomic, C: Atomic> {
-    core: Arc<HistogramCore<S, C>>,
+    core: Arc<GenericHistogramCore<S, C>>,
 }
 
-/// /// A [`Metric`](::core::Metric) counts individual observations from an event or sample stream in
+/// A [`Metric`](::core::Metric) counts individual observations from an event or sample stream in
 /// configurable buckets. Similar to a summary, it also provides a sum of
 /// observations and an observation count.
 ///
@@ -465,7 +465,7 @@ impl<S: Atomic, C: Atomic> GenericHistogram<S, C> {
         opts: &HistogramOpts,
         label_values: &[&str],
     ) -> Result<GenericHistogram<S, C>> {
-        let core = HistogramCore::new(opts, label_values)?;
+        let core = GenericHistogramCore::new(opts, label_values)?;
 
         Ok(GenericHistogram {
             core: Arc::new(core),
@@ -573,6 +573,9 @@ pub type GenericHistogramVec<S, C> = MetricVec<HistogramVecBuilder<S, C>>;
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
 pub type HistogramVec = GenericHistogramVec<AtomicF64, AtomicU64>;
+
+/// Int version of HistogramVec
+pub type IntHistogramVec = GenericHistogramVec<AtomicU64, AtomicU64>;
 
 impl<S: Atomic, C: Atomic> GenericHistogramVec<S, C> {
     /// Create a new [`HistogramVec`](::HistogramVec) based on the provided
@@ -704,7 +707,7 @@ impl<S: Atomic, C: Atomic> std::fmt::Debug for GenericLocalHistogram<S, C> {
 /// An unsync [`Histogram`](::Histogram).
 pub type LocalHistogram = GenericLocalHistogram<AtomicF64, AtomicU64>;
 /// An unsync [`IntHistogram`](::IntHistogram).
-pub type IntLocalHistogram = GenericLocalHistogram<AtomicU64, AtomicU64>;
+pub type LocalIntHistogram = GenericLocalHistogram<AtomicU64, AtomicU64>;
 
 impl<S: Atomic, C: Atomic> Clone for GenericLocalHistogram<S, C> {
     fn clone(&self) -> GenericLocalHistogram<S, C> {
@@ -730,7 +733,7 @@ pub struct GenericLocalHistogramTimer<S: Atomic, C: Atomic> {
 /// An unsync [`HistogramTimer`](::HistogramTimer).
 pub type LocalHistogramTimer = GenericLocalHistogramTimer<AtomicF64, AtomicU64>;
 /// An unsync [`IntHistogramTimer`](::IntHistogramTimer).
-pub type IntLocalHistogramTimer = GenericLocalHistogramTimer<AtomicF64, AtomicU64>;
+pub type LocalIntHistogramTimer = GenericLocalHistogramTimer<AtomicU64, AtomicU64>;
 
 impl<S: Atomic, C: Atomic> GenericLocalHistogramTimer<S, C> {
     fn new(histogram: GenericLocalHistogram<S, C>) -> Self {
@@ -926,7 +929,7 @@ pub struct GenericLocalHistogramVec<S: Atomic, C: Atomic> {
 pub type LocalHistogramVec = GenericLocalHistogram<AtomicF64, AtomicU64>;
 
 /// An unsync [`IntHistogramVec`](::IntHistogramVec).
-pub type IntLocalHistogramVec = GenericLocalHistogram<AtomicU64, AtomicU64>;
+pub type LocalIntHistogramVec = GenericLocalHistogram<AtomicU64, AtomicU64>;
 
 impl<S: Atomic, C: Atomic> GenericLocalHistogramVec<S, C> {
     fn new(vec: GenericHistogramVec<S, C>) -> GenericLocalHistogramVec<S, C> {

@@ -173,7 +173,10 @@ pub mod local {
     // TODO: define a trait and implement the trait for metrics.
 
     pub use super::counter::{LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec};
-    pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};
+    pub use super::histogram::{
+        LocalHistogram, LocalHistogramTimer, LocalHistogramVec, LocalIntHistogram,
+        LocalIntHistogramTimer, LocalIntHistogramVec,
+    };
 }
 
 pub mod core {
@@ -204,7 +207,10 @@ pub use self::errors::{Error, Result};
 pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::DEFAULT_BUCKETS;
 pub use self::histogram::{exponential_buckets, linear_buckets};
-pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
+pub use self::histogram::{
+    Histogram, HistogramOpts, HistogramTimer, HistogramVec, IntHistogram, IntHistogramTimer,
+    IntHistogramVec,
+};
 pub use self::metrics::Opts;
 #[cfg(feature = "push")]
 pub use self::push::{
