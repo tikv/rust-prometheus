@@ -28,11 +28,11 @@ use crate::value::make_label_pairs;
 use crate::vec::{MetricVec, MetricVecBuilder};
 
 /// The default [`Histogram`](::Histogram) buckets. The default buckets are
-/// tailored to broadly measure the response time (in seconds) of a
+/// tailored to broadly measure the response time (in milliseconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
 pub const DEFAULT_BUCKETS: &[f64; 11] = &[
-    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+    5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0,
 ];
 
 /// Used for the label that defines the upper bound of a
@@ -378,7 +378,7 @@ impl<S: Atomic, C: Atomic> GenericHistogramTimer<S, C> {
         }
     }
 
-    /// Observe and record timer duration (in seconds).
+    /// Observe and record timer duration (in milliseconds).
     ///
     /// It observes the floating-point number of seconds elapsed since the timer
     /// started, and it records that value to the attached histogram.
@@ -386,7 +386,7 @@ impl<S: Atomic, C: Atomic> GenericHistogramTimer<S, C> {
         self.stop_and_record();
     }
 
-    /// Observe, record and return timer duration (in seconds).
+    /// Observe, record and return timer duration (in milliseconds).
     ///
     /// It observes and returns a floating-point number for seconds elapsed since
     /// the timer started, recording that value to the attached histogram.
@@ -395,7 +395,7 @@ impl<S: Atomic, C: Atomic> GenericHistogramTimer<S, C> {
         timer.observe(true)
     }
 
-    /// Observe and return timer duration (in seconds).
+    /// Observe and return timer duration (in milliseconds).
     ///
     /// It returns a floating-point number of seconds elapsed since the timer started,
     /// without recording to any histogram.
@@ -405,11 +405,9 @@ impl<S: Atomic, C: Atomic> GenericHistogramTimer<S, C> {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = duration_to_milliseconds(self.start.elapsed());
         self.observed = true;
         if record {
-            // FIXME: 精度丢失
-            dbg!(v, v as i64);
             self.histogram.observe(S::T::from_i64(v as i64));
         }
         v
@@ -667,11 +665,10 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
     Ok(buckets)
 }
 
-/// `duration_to_seconds` converts Duration to seconds.
+/// `duration_to_milliseconds` converts Duration to seconds.
 #[inline]
-fn duration_to_seconds(d: Duration) -> f64 {
-    let nanos = f64::from(d.subsec_nanos()) / 1e9;
-    d.as_secs() as f64 + nanos
+fn duration_to_milliseconds(d: Duration) -> f64 {
+    d.as_millis() as f64
 }
 
 #[derive(Debug)]
@@ -753,7 +750,7 @@ impl<S: Atomic, C: Atomic> GenericLocalHistogramTimer<S, C> {
         }
     }
 
-    /// Observe and record timer duration (in seconds).
+    /// Observe and record timer duration (in milliseconds).
     ///
     /// It observes the floating-point number of seconds elapsed since the timer
     /// started, and it records that value to the attached histogram.
@@ -761,7 +758,7 @@ impl<S: Atomic, C: Atomic> GenericLocalHistogramTimer<S, C> {
         self.stop_and_record();
     }
 
-    /// Observe, record and return timer duration (in seconds).
+    /// Observe, record and return timer duration (in milliseconds).
     ///
     /// It observes and returns a floating-point number for seconds elapsed since
     /// the timer started, recording that value to the attached histogram.
@@ -780,10 +777,9 @@ impl<S: Atomic, C: Atomic> GenericLocalHistogramTimer<S, C> {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = duration_to_milliseconds(self.start.elapsed());
         self.observed = true;
         if record {
-            // FIXME
             self.local.observe(S::T::from_i64(v as i64));
         }
         v
@@ -985,7 +981,7 @@ mod tests {
             .const_label("a", "1")
             .const_label("b", "2");
         let histogram = Histogram::with_opts(opts).unwrap();
-        histogram.observe(1.0);
+        histogram.observe(1000.0);
 
         let timer = histogram.start_timer();
         thread::sleep(Duration::from_millis(100));
@@ -1006,8 +1002,7 @@ mod tests {
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
-        dbg!(proto_histogram.get_sample_sum());
-        assert!(proto_histogram.get_sample_sum() >= 1.5);
+        assert!(proto_histogram.get_sample_sum() >= 1500.0);
         assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
 
         let buckets = vec![1.0, 2.0, 3.0];
@@ -1127,8 +1122,8 @@ mod tests {
         let tbls = vec![(1000, 1.0), (1100, 1.1), (100_111, 100.111)];
         for (millis, seconds) in tbls {
             let d = Duration::from_millis(millis);
-            let v = duration_to_seconds(d);
-            assert!((v - seconds).abs() < EPSILON);
+            let v = duration_to_milliseconds(d);
+            assert!((v - seconds * 1000.0).abs() < EPSILON);
         }
     }
 
@@ -1141,7 +1136,7 @@ mod tests {
         .unwrap();
 
         assert!(vec.remove_label_values(&["v1", "v2"]).is_err());
-        vec.with_label_values(&["v1", "v2"]).observe(1.0);
+        vec.with_label_values(&["v1", "v2"]).observe(1000.0);
         assert!(vec.remove_label_values(&["v1", "v2"]).is_ok());
 
         assert!(vec.remove_label_values(&["v1"]).is_err());
@@ -1160,14 +1155,14 @@ mod tests {
         .unwrap();
 
         let histogram = vec.with_label_values(&["v1", "v2"]);
-        histogram.observe(1.0);
+        histogram.observe(1000.0);
 
         let m = histogram.metric();
         assert_eq!(m.get_label().len(), labels.len());
 
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 1);
-        assert!((proto_histogram.get_sample_sum() - 1.0) < EPSILON);
+        assert!((proto_histogram.get_sample_sum() - 1000.0) < EPSILON);
         assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
     }
 
@@ -1186,20 +1181,20 @@ mod tests {
             assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
         };
 
-        local.observe(1.0);
-        local.observe(4.0);
+        local.observe(1000.0);
+        local.observe(4000.0);
         check(0, 0.0);
 
         local.flush();
-        check(2, 5.0);
+        check(2, 5000.0);
 
-        local.observe(2.0);
+        local.observe(2000.0);
         local.clear();
-        check(2, 5.0);
+        check(2, 5000.0);
 
-        local.observe(2.0);
+        local.observe(2000.0);
         drop(local);
-        check(3, 7.0);
+        check(3, 7000.0);
     }
 
     #[test]
@@ -1224,25 +1219,25 @@ mod tests {
         {
             // Flush LocalHistogram
             let h = local_vec.with_label_values(&["v1", "v2"]);
-            h.observe(1.0);
+            h.observe(1000.0);
             h.flush();
-            check(1, 1.0);
+            check(1, 1000.0);
         }
 
         {
             // Flush LocalHistogramVec
-            local_vec.with_label_values(&["v1", "v2"]).observe(4.0);
+            local_vec.with_label_values(&["v1", "v2"]).observe(4000.0);
             local_vec.flush();
-            check(2, 5.0);
+            check(2, 5000.0);
         }
         {
             // Reset ["v1", "v2"]
             local_vec.remove_label_values(&["v1", "v2"]).unwrap();
 
             // Flush on drop
-            local_vec.with_label_values(&["v1", "v2"]).observe(2.0);
+            local_vec.with_label_values(&["v1", "v2"]).observe(2000.0);
             drop(local_vec);
-            check(1, 2.0);
+            check(1, 2000.0);
         }
     }
 }

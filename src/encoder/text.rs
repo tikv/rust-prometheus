@@ -290,7 +290,7 @@ test_gauge{a="1",b="2"} 42
     fn test_text_encoder_histogram() {
         let opts = HistogramOpts::new("test_histogram", "test help").const_label("a", "1");
         let histogram = Histogram::with_opts(opts).unwrap();
-        histogram.observe(0.25);
+        histogram.observe(250.0);
 
         let mf = histogram.collect();
         let mut writer = Vec::<u8>::new();
@@ -300,19 +300,19 @@ test_gauge{a="1",b="2"} 42
 
         let ans = r##"# HELP test_histogram test help
 # TYPE test_histogram histogram
-test_histogram_bucket{a="1",le="0.005"} 0
-test_histogram_bucket{a="1",le="0.01"} 0
-test_histogram_bucket{a="1",le="0.025"} 0
-test_histogram_bucket{a="1",le="0.05"} 0
-test_histogram_bucket{a="1",le="0.1"} 0
-test_histogram_bucket{a="1",le="0.25"} 1
-test_histogram_bucket{a="1",le="0.5"} 1
-test_histogram_bucket{a="1",le="1"} 1
-test_histogram_bucket{a="1",le="2.5"} 1
-test_histogram_bucket{a="1",le="5"} 1
-test_histogram_bucket{a="1",le="10"} 1
+test_histogram_bucket{a="1",le="5"} 0
+test_histogram_bucket{a="1",le="10"} 0
+test_histogram_bucket{a="1",le="25"} 0
+test_histogram_bucket{a="1",le="50"} 0
+test_histogram_bucket{a="1",le="100"} 0
+test_histogram_bucket{a="1",le="250"} 1
+test_histogram_bucket{a="1",le="500"} 1
+test_histogram_bucket{a="1",le="1000"} 1
+test_histogram_bucket{a="1",le="2500"} 1
+test_histogram_bucket{a="1",le="5000"} 1
+test_histogram_bucket{a="1",le="10000"} 1
 test_histogram_bucket{a="1",le="+Inf"} 1
-test_histogram_sum{a="1"} 0.25
+test_histogram_sum{a="1"} 250
 test_histogram_count{a="1"} 1
 "##;
         assert_eq!(ans.as_bytes(), writer.as_slice());
