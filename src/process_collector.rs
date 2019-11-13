@@ -15,6 +15,7 @@
 //!
 //! This module only supports **Linux** platform.
 
+use std::borrow::Cow;
 use std::sync::Mutex;
 
 use crate::counter::Counter;
@@ -46,7 +47,7 @@ pub struct ProcessCollector {
 
 impl ProcessCollector {
     /// Create a `ProcessCollector` with the given process id and namespace.
-    pub fn new<S: Into<String>>(pid: pid_t, namespace: S) -> ProcessCollector {
+    pub fn new<S: Into<Cow<'static, str>>>(pid: pid_t, namespace: S) -> ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
 

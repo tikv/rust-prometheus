@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use std::collections::btree_map::Entry as BEntry;
 use std::collections::hash_map::Entry as HEntry;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -25,7 +26,7 @@ use crate::proto;
 
 struct RegistryCore {
     pub collectors_by_id: HashMap<u64, Box<dyn Collector>>,
-    pub dim_hashes_by_name: HashMap<String, u64>,
+    pub dim_hashes_by_name: HashMap<Cow<'static, str>, u64>,
     pub desc_ids: HashSet<u64>,
     /// Optional common labels for all registered collectors.
     pub labels: Option<HashMap<String, String>>,

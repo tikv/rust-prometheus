@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -47,7 +48,7 @@ impl<P: Atomic> Clone for GenericGauge<P> {
 
 impl<P: Atomic> GenericGauge<P> {
     /// Create a [`GenericGauge`](::core::GenericGauge) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
+    pub fn new<S: Into<Cow<'static, str>>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
         Self::with_opts(opts)
     }
@@ -162,8 +163,8 @@ impl<P: Atomic> GenericGaugeVec<P> {
     /// Create a new [`GenericGaugeVec`](::core::GenericGaugeVec) based on the provided
     /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must
     /// be provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
-        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+    pub fn new(opts: Opts, label_names: &[&'static str]) -> Result<Self> {
+        let variable_names = label_names.iter().map(|s| Cow::Borrowed(*s)).collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder::new(), opts)?;
 

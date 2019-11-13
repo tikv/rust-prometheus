@@ -125,8 +125,8 @@ impl<P: Atomic> Value<P> {
 
     pub fn collect(&self) -> MetricFamily {
         let mut m = MetricFamily::default();
-        m.set_name(self.desc.fq_name.clone());
-        m.set_help(self.desc.help.clone());
+        m.set_name(self.desc.fq_name.to_string());
+        m.set_help(self.desc.help.to_string());
         m.set_field_type(self.val_type.metric_type());
         m.set_metric(from_vec!(vec![self.metric()]));
         m
@@ -146,7 +146,7 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
     let mut label_pairs = Vec::with_capacity(total_len);
     for (i, n) in desc.variable_labels.iter().enumerate() {
         let mut label_pair = LabelPair::default();
-        label_pair.set_name(n.clone());
+        label_pair.set_name(n.to_string());
         label_pair.set_value(label_values[i].to_owned());
         label_pairs.push(label_pair);
     }

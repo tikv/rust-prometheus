@@ -31,6 +31,7 @@
 /// assert!(labels.is_empty());
 /// # }
 /// ```
+///
 #[macro_export]
 macro_rules! labels {
     ( $( $ KEY : expr => $ VALUE : expr ),* $(,)? ) => {
@@ -80,12 +81,14 @@ macro_rules! opts {
     ( $ NAME : expr , $ HELP : expr $ ( , $ CONST_LABELS : expr ) * ) => {
         {
             use std::collections::HashMap;
+            use std::borrow::Cow;
 
             let opts = $crate::Opts::new($NAME, $HELP);
-            let lbs = HashMap::<String, String>::new();
+            let lbs = HashMap::<Cow<'static, str>, Cow<'static, str>>::new();
             $(
                 let mut lbs = lbs;
-                lbs.extend($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
+                lbs.extend($CONST_LABELS.iter().map(|(k, v)| (Cow::Borrowed(*k), Cow::Borrowed
+        (*v))));
             )*
 
             opts.const_labels(lbs)
@@ -100,6 +103,7 @@ macro_rules! opts {
 /// ```
 /// # #[macro_use] extern crate prometheus;
 /// # use prometheus::linear_buckets;
+/// # use std::borrow::Cow;
 /// # fn main() {
 /// let name = "test_histogram_opts";
 /// let help = "test opts help";
@@ -116,7 +120,7 @@ macro_rules! opts {
 /// let opts = histogram_opts!(name,
 ///                            help,
 ///                            vec![1.0, 2.0],
-///                            labels!{"key".to_string() => "value".to_string(),});
+///                            labels!{Cow::Borrowed("key")=> Cow::Borrowed("value"),});
 /// assert_eq!(opts.common_opts.name, name);
 /// assert_eq!(opts.common_opts.help, help);
 /// assert_eq!(opts.buckets.len(), 2);

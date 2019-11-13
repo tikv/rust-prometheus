@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::{Cow, ToOwned};
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
 use std::collections::HashMap;
 
@@ -44,25 +45,25 @@ pub struct Opts {
     /// "_"). Only Name is mandatory, the others merely help structuring the
     /// name. Note that the fully-qualified name of the metric must be a
     /// valid Prometheus metric name.
-    pub namespace: String,
+    pub namespace: Cow<'static, str>,
     /// namespace, subsystem, and name are components of the fully-qualified
     /// name of the [`Metric`](::core::Metric) (created by joining these components with
     /// "_"). Only Name is mandatory, the others merely help structuring the
     /// name. Note that the fully-qualified name of the metric must be a
     /// valid Prometheus metric name.
-    pub subsystem: String,
+    pub subsystem: Cow<'static, str>,
     /// namespace, subsystem, and name are components of the fully-qualified
     /// name of the [`Metric`](::core::Metric) (created by joining these components with
     /// "_"). Only Name is mandatory, the others merely help structuring the
     /// name. Note that the fully-qualified name of the metric must be a
     /// valid Prometheus metric name.
-    pub name: String,
+    pub name: Cow<'static, str>,
 
     /// help provides information about this metric. Mandatory!
     ///
     /// Metrics with the same fully-qualified name must have the same Help
     /// string.
-    pub help: String,
+    pub help: Cow<'static, str>,
 
     /// const_labels are used to attach fixed labels to this metric. Metrics
     /// with the same fully-qualified name must have the same label names in
@@ -82,7 +83,7 @@ pub struct Opts {
     /// If the value of a label never changes (not even between binaries),
     /// that label most likely should not be a label at all (but part of the
     /// metric name).
-    pub const_labels: HashMap<String, String>,
+    pub const_labels: HashMap<Cow<'static, str>, Cow<'static, str>>,
 
     /// variable_labels contains names of labels for which the metric maintains
     /// variable values. Metrics with the same fully-qualified name must have
@@ -90,15 +91,15 @@ pub struct Opts {
     ///
     /// Note that variable_labels is used in `MetricVec`. To create a single
     /// metric must leave it empty.
-    pub variable_labels: Vec<String>,
+    pub variable_labels: Vec<Cow<'static, str>>,
 }
 
 impl Opts {
     /// `new` creates the Opts with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
+    pub fn new<S: Into<Cow<'static, str>>>(name: S, help: S) -> Opts {
         Opts {
-            namespace: "".to_owned(),
-            subsystem: "".to_owned(),
+            namespace: "".into(),
+            subsystem: "".into(),
             name: name.into(),
             help: help.into(),
             const_labels: HashMap::new(),
@@ -107,44 +108,47 @@ impl Opts {
     }
 
     /// `namespace` sets the namespace.
-    pub fn namespace<S: Into<String>>(mut self, namespace: S) -> Self {
+    pub fn namespace<S: Into<Cow<'static, str>>>(mut self, namespace: S) -> Self {
         self.namespace = namespace.into();
         self
     }
 
     /// `subsystem` sets the sub system.
-    pub fn subsystem<S: Into<String>>(mut self, subsystem: S) -> Self {
+    pub fn subsystem<S: Into<Cow<'static, str>>>(mut self, subsystem: S) -> Self {
         self.subsystem = subsystem.into();
         self
     }
 
     /// `const_labels` sets the const labels.
-    pub fn const_labels(mut self, const_labels: HashMap<String, String>) -> Self {
+    pub fn const_labels(
+        mut self,
+        const_labels: HashMap<Cow<'static, str>, Cow<'static, str>>,
+    ) -> Self {
         self.const_labels = const_labels;
         self
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<S: Into<Cow<'static, str>>>(mut self, name: S, value: S) -> Self {
         self.const_labels.insert(name.into(), value.into());
         self
     }
 
     /// `variable_labels` sets the variable labels.
-    pub fn variable_labels(mut self, variable_labels: Vec<String>) -> Self {
+    pub fn variable_labels(mut self, variable_labels: Vec<Cow<'static, str>>) -> Self {
         self.variable_labels = variable_labels;
         self
     }
 
     /// `variable_label` adds a variable label.
-    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
+    pub fn variable_label<S: Into<Cow<'static, str>>>(mut self, name: S) -> Self {
         self.variable_labels.push(name.into());
         self
     }
 
     /// `fq_name` returns the fq_name.
-    pub fn fq_name(&self) -> String {
-        build_fq_name(&self.namespace, &self.subsystem, &self.name)
+    pub fn fq_name(&self) -> Cow<'static, str> {
+        Cow::from(build_fq_name(&self.namespace, &self.subsystem, &self.name))
     }
 }
 

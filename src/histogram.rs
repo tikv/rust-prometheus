@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::{Cow, ToOwned};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
@@ -92,7 +93,7 @@ pub struct HistogramOpts {
 
 impl HistogramOpts {
     /// Create a [`HistogramOpts`](::HistogramOpts) with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
+    pub fn new<S: Into<Cow<'static, str>>>(name: S, help: S) -> HistogramOpts {
         HistogramOpts {
             common_opts: Opts::new(name, help),
             buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
@@ -100,43 +101,46 @@ impl HistogramOpts {
     }
 
     /// `namespace` sets the namespace.
-    pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
+    pub fn namespace<S: Into<Cow<'static, str>>>(mut self, namesapce: S) -> Self {
         self.common_opts.namespace = namesapce.into();
         self
     }
 
     /// `subsystem` sets the sub system.
-    pub fn subsystem<S: Into<String>>(mut self, subsystem: S) -> Self {
+    pub fn subsystem<S: Into<Cow<'static, str>>>(mut self, subsystem: S) -> Self {
         self.common_opts.subsystem = subsystem.into();
         self
     }
 
     /// `const_labels` sets the const labels.
-    pub fn const_labels(mut self, const_labels: HashMap<String, String>) -> Self {
+    pub fn const_labels(
+        mut self,
+        const_labels: HashMap<Cow<'static, str>, Cow<'static, str>>,
+    ) -> Self {
         self.common_opts = self.common_opts.const_labels(const_labels);
         self
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<S: Into<Cow<'static, str>>>(mut self, name: S, value: S) -> Self {
         self.common_opts = self.common_opts.const_label(name, value);
         self
     }
 
     /// `variable_labels` sets the variable labels.
-    pub fn variable_labels(mut self, variable_labels: Vec<String>) -> Self {
+    pub fn variable_labels(mut self, variable_labels: Vec<Cow<'static, str>>) -> Self {
         self.common_opts = self.common_opts.variable_labels(variable_labels);
         self
     }
 
     /// `variable_label` adds a variable label.
-    pub fn variable_label<S: Into<String>>(mut self, name: S) -> Self {
-        self.common_opts = self.common_opts.variable_label(name);
+    pub fn variable_label<S: Into<Cow<'static, str>>>(mut self, name: S) -> Self {
+        self.common_opts = self.common_opts.variable_label(name.into());
         self
     }
 
     /// `fq_name` returns the fq_name.
-    pub fn fq_name(&self) -> String {
+    pub fn fq_name(&self) -> Cow<'static, str> {
         self.common_opts.fq_name()
     }
 
@@ -500,8 +504,8 @@ impl Collector for Histogram {
 
     fn collect(&self) -> Vec<proto::MetricFamily> {
         let mut m = proto::MetricFamily::default();
-        m.set_name(self.core.desc.fq_name.clone());
-        m.set_help(self.core.desc.help.clone());
+        m.set_name(self.core.desc.fq_name.to_string());
+        m.set_help(self.core.desc.help.to_string());
         m.set_field_type(proto::MetricType::HISTOGRAM);
         m.set_metric(from_vec!(vec![self.metric()]));
 
@@ -531,8 +535,8 @@ impl HistogramVec {
     /// Create a new [`HistogramVec`](::HistogramVec) based on the provided
     /// [`HistogramOpts`](::HistogramOpts) and partitioned by the given label names. At least
     /// one label name must be provided.
-    pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
-        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+    pub fn new(opts: HistogramOpts, label_names: &[&'static str]) -> Result<HistogramVec> {
+        let variable_names = label_names.iter().map(|s| Cow::Borrowed(*s)).collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec =
             MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
@@ -855,7 +859,7 @@ impl LocalHistogramVec {
 
     /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
+    pub fn with_label_values(&mut self, vals: &[&str]) -> &LocalHistogram {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
         self.local

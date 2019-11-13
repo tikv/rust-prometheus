@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
 use std::hash::Hasher;
 
@@ -80,15 +81,15 @@ fn is_valid_label_name(name: &str) -> bool {
 #[derive(Clone, Debug)]
 pub struct Desc {
     /// fq_name has been built from Namespace, Subsystem, and Name.
-    pub fq_name: String,
+    pub fq_name: Cow<'static, str>,
     /// help provides some helpful information about this metric.
-    pub help: String,
+    pub help: Cow<'static, str>,
     /// const_label_pairs contains precalculated DTO label pairs based on
     /// the constant labels.
     pub const_label_pairs: Vec<LabelPair>,
     /// variable_labels contains names of labels for which the metric
     /// maintains variable values.
-    pub variable_labels: Vec<String>,
+    pub variable_labels: Vec<Cow<'static, str>>,
     /// id is a hash of the values of the ConstLabels and fqName. This
     /// must be unique among all registered descriptors and can therefore be
     /// used as an identifier of the descriptor.
@@ -104,10 +105,10 @@ impl Desc {
     /// and will be reported on registration time. variableLabels and constLabels can
     /// be nil if no such labels should be set. fqName and help must not be empty.
     pub fn new(
-        fq_name: String,
-        help: String,
-        variable_labels: Vec<String>,
-        const_labels: HashMap<String, String>,
+        fq_name: Cow<'static, str>,
+        help: Cow<'static, str>,
+        variable_labels: Vec<Cow<'static, str>>,
+        const_labels: HashMap<Cow<'static, str>, Cow<'static, str>>,
     ) -> Result<Desc> {
         let mut desc = Desc {
             fq_name: fq_name.clone(),
@@ -142,7 +143,7 @@ impl Desc {
                 )));
             }
 
-            if !label_names.insert(label_name.clone()) {
+            if !label_names.insert(label_name) {
                 return Err(Error::Msg(format!(
                     "duplicate const label name {}",
                     label_name
@@ -152,7 +153,7 @@ impl Desc {
 
         // ... so that we can now add const label values in the order of their names.
         for label_name in &label_names {
-            label_values.push(const_labels.get(label_name).cloned().unwrap());
+            label_values.push(const_labels.get(*label_name).cloned().unwrap());
         }
 
         // Now add the variable label names, but prefix them with something that
@@ -166,7 +167,7 @@ impl Desc {
                 )));
             }
 
-            if !label_names.insert(format!("${}", label_name)) {
+            if !label_names.insert(label_name) {
                 return Err(Error::Msg(format!(
                     "duplicate variable label name {}",
                     label_name
@@ -195,8 +196,8 @@ impl Desc {
 
         for (key, value) in const_labels {
             let mut label_pair = LabelPair::default();
-            label_pair.set_name(key);
-            label_pair.set_value(value);
+            label_pair.set_name(key.to_string());
+            label_pair.set_value(value.to_string());
             desc.const_label_pairs.push(label_pair);
         }
 
