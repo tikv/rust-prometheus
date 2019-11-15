@@ -1,3 +1,5 @@
+// Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
+
 use prometheus::register_counter;
 
 /// small example that uses rust 2018 style macro imports

@@ -1,3 +1,5 @@
+// Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
+
 //! Non-generated version of required structures provided by the protobuf.
 //! This version is used when the `protobuf` feature is turned off.
 
