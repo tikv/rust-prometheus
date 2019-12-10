@@ -807,6 +807,11 @@ impl LocalHistogram {
         self.core.borrow_mut().clear();
     }
 
+    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
+    pub fn flush(&self) {
+        self.core.borrow_mut().flush();
+    }
+
     /// Return accumulated sum of local samples.
     pub fn get_sample_sum(&self) -> f64 {
         self.core.borrow().sample_sum()
@@ -821,7 +826,7 @@ impl LocalHistogram {
 impl LocalMetric for LocalHistogram {
     /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
     fn flush(&self) {
-        self.core.borrow_mut().flush();
+        self.flush();
     }
 }
 
@@ -861,14 +866,19 @@ impl LocalHistogramVec {
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
+
+    /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
+    pub fn flush(&self) {
+        for h in self.local.values() {
+            h.flush();
+        }
+    }
 }
 
 impl LocalMetric for LocalHistogramVec {
     /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
     fn flush(&self) {
-        for h in self.local.values() {
-            h.flush();
-        }
+        self.flush()
     }
 }
 

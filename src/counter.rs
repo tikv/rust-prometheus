@@ -214,17 +214,23 @@ impl<P: Atomic> GenericLocalCounter<P> {
     pub fn reset(&self) {
         *self.val.borrow_mut() = P::T::from_i64(0);
     }
+
+    /// Flush the local metrics to the [`Counter`](::Counter).
+    #[inline]
+    pub fn flush(&self) {
+        if *self.val.borrow() == P::T::from_i64(0) {
+            return;
+        }
+        self.counter.inc_by(*self.val.borrow());
+        *self.val.borrow_mut() = P::T::from_i64(0);
+    }
 }
 
 impl<P: Atomic> LocalMetric for GenericLocalCounter<P> {
     /// Flush the local metrics to the [`Counter`](::Counter).
     #[inline]
     fn flush(&self) {
-        if *self.val.borrow() == P::T::from_i64(0) {
-            return;
-        }
-        self.counter.inc_by(*self.val.borrow());
-        *self.val.borrow_mut() = P::T::from_i64(0);
+        self.flush();
     }
 }
 
@@ -281,14 +287,19 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
+
+    /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
+    pub fn flush(&self) {
+        for h in self.local.values() {
+            h.flush();
+        }
+    }
 }
 
 impl<P: Atomic> LocalMetric for GenericLocalCounterVec<P> {
     /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
     fn flush(&self) {
-        for h in self.local.values() {
-            h.flush();
-        }
+        self.flush();
     }
 }
 
