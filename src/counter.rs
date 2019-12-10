@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use crate::desc::Desc;
 use crate::errors::Result;
-use crate::metrics::{Collector, Metric, Opts};
+use crate::metrics::{Collector, LocalMetric, Metric, Opts};
 use crate::proto;
 use crate::value::{Value, ValueType};
 use crate::vec::{MetricVec, MetricVecBuilder};
@@ -214,10 +214,12 @@ impl<P: Atomic> GenericLocalCounter<P> {
     pub fn reset(&self) {
         *self.val.borrow_mut() = P::T::from_i64(0);
     }
+}
 
+impl<P: Atomic> LocalMetric for GenericLocalCounter<P> {
     /// Flush the local metrics to the [`Counter`](::Counter).
     #[inline]
-    pub fn flush(&self) {
+    fn flush(&self) {
         if *self.val.borrow() == P::T::from_i64(0) {
             return;
         }
@@ -279,9 +281,11 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
+}
 
+impl<P: Atomic> LocalMetric for GenericLocalCounterVec<P> {
     /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
-    pub fn flush(&self) {
+    fn flush(&self) {
         for h in self.local.values() {
             h.flush();
         }

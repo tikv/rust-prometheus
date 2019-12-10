@@ -10,7 +10,7 @@ use std::time::{Duration, Instant as StdInstant};
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
-use crate::metrics::{Collector, Metric, Opts};
+use crate::metrics::{Collector, LocalMetric, Metric, Opts};
 use crate::proto;
 use crate::value::make_label_pairs;
 use crate::vec::{MetricVec, MetricVecBuilder};
@@ -807,11 +807,6 @@ impl LocalHistogram {
         self.core.borrow_mut().clear();
     }
 
-    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
-    pub fn flush(&self) {
-        self.core.borrow_mut().flush();
-    }
-
     /// Return accumulated sum of local samples.
     pub fn get_sample_sum(&self) -> f64 {
         self.core.borrow().sample_sum()
@@ -820,6 +815,13 @@ impl LocalHistogram {
     /// Return count of local samples.
     pub fn get_sample_count(&self) -> u64 {
         self.core.borrow().sample_count()
+    }
+}
+
+impl LocalMetric for LocalHistogram {
+    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
+    fn flush(&self) {
+        self.core.borrow_mut().flush();
     }
 }
 
@@ -859,9 +861,11 @@ impl LocalHistogramVec {
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
+}
 
+impl LocalMetric for LocalHistogramVec {
     /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
-    pub fn flush(&self) {
+    fn flush(&self) {
         for h in self.local.values() {
             h.flush();
         }

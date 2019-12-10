@@ -25,6 +25,10 @@ pub trait Metric: Sync + Send + Clone {
     fn metric(&self) -> proto::Metric;
 }
 
+pub trait LocalMetric {
+    fn flush(&self);
+}
+
 /// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.
 #[derive(Debug, Clone)]
 pub struct Opts {
