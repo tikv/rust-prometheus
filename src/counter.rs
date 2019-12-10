@@ -281,8 +281,8 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
     }
 
     /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
-    pub fn flush(&mut self) {
-        for h in self.local.values_mut() {
+    pub fn flush(&self) {
+        for h in self.local.values() {
             h.flush();
         }
     }

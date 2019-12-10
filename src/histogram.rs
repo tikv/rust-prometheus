@@ -861,7 +861,7 @@ impl LocalHistogramVec {
     }
 
     /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
-    pub fn flush(&mut self) {
+    pub fn flush(&self) {
         for h in self.local.values() {
             h.flush();
         }
