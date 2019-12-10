@@ -455,6 +455,7 @@ impl Histogram {
     }
 
     /// Observe execution time of a closure , in second.
+    #[cfg(feature = "nightly")]
     pub fn observe_closure_duration<F, T>(&self, f: F) -> T
     where
         F: FnOnce() -> T,
@@ -815,6 +816,7 @@ impl LocalHistogram {
     }
 
     /// Observe execution time of a closure , in second.
+    #[cfg(feature = "nightly")]
     pub fn observe_closure_duration<F, T>(&self, f: F) -> T
     where
         F: FnOnce() -> T,
