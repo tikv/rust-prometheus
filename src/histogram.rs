@@ -455,8 +455,20 @@ impl Histogram {
     }
 
     /// Observe execution time of a closure , in second.
-    #[cfg(feature = "nightly")]
     pub fn observe_closure_duration<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
+    /// Observe execution time of a closure , in second.
+    #[cfg(feature = "nightly")]
+    pub fn observe_closure_duration_coarse<F, T>(&self, f: F) -> T
     where
         F: FnOnce() -> T,
     {
@@ -814,10 +826,21 @@ impl LocalHistogram {
     pub fn start_coarse_timer(&self) -> LocalHistogramTimer {
         LocalHistogramTimer::new_coarse(self.clone())
     }
+    /// Observe execution time of a closure , in second.
+    pub fn observe_closure_duration<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
 
     /// Observe execution time of a closure , in second.
     #[cfg(feature = "nightly")]
-    pub fn observe_closure_duration<F, T>(&self, f: F) -> T
+    pub fn observe_closure_duration_coarse<F, T>(&self, f: F) -> T
     where
         F: FnOnce() -> T,
     {
