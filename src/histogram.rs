@@ -826,7 +826,7 @@ impl LocalHistogram {
 impl LocalMetric for LocalHistogram {
     /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
     fn flush(&self) {
-        self.flush();
+        LocalHistogram::flush(self);
     }
 }
 
@@ -878,7 +878,7 @@ impl LocalHistogramVec {
 impl LocalMetric for LocalHistogramVec {
     /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
     fn flush(&self) {
-        self.flush()
+        LocalHistogramVec::flush(self)
     }
 }
 
