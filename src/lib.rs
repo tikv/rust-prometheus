@@ -158,11 +158,10 @@ pub mod local {
     Unsync local metrics, provides better performance.
 
     */
-
-    // TODO: define a trait and implement the trait for metrics.
-
+    
     pub use super::counter::{LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec};
     pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};
+    pub use super::metrics::LocalMetric;
 }
 
 pub mod core {
