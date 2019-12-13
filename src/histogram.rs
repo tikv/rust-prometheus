@@ -454,6 +454,31 @@ impl Histogram {
         HistogramTimer::new_coarse(self.clone())
     }
 
+    /// Observe execution time of a closure, in second.
+    pub fn observe_closure_duration<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
+    /// Observe execution time of a closure, in second.
+    #[cfg(feature = "nightly")]
+    pub fn observe_closure_duration_coarse<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now_coarse();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
     /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
     pub fn local(&self) -> LocalHistogram {
         LocalHistogram::new(self.clone())
@@ -802,6 +827,31 @@ impl LocalHistogram {
         LocalHistogramTimer::new_coarse(self.clone())
     }
 
+    /// Observe execution time of a closure, in second.
+    pub fn observe_closure_duration<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
+    /// Observe execution time of a closure, in second.
+    #[cfg(feature = "nightly")]
+    pub fn observe_closure_duration_coarse<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now_coarse();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
     /// Clear the local metric.
     pub fn clear(&self) {
         self.core.borrow_mut().clear();
@@ -959,13 +1009,17 @@ mod tests {
         });
         assert!(handler.join().is_ok());
 
+        histogram.observe_closure_duration(|| {
+            thread::sleep(Duration::from_millis(400));
+        });
+
         let mut mfs = histogram.collect();
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
         let m = mf.get_metric().get(0).unwrap();
         let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 2);
+        assert_eq!(proto_histogram.get_sample_count(), 3);
         assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
     }
 
