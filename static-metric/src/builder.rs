@@ -231,8 +231,8 @@ impl<'a> MetricBuilderContext<'a> {
         if util::is_local_metric(self.metric.metric_type.clone()) {
             quote! {
                 impl ::prometheus::local::LocalMetric for #struct_name {
-                        fn flush(&self) {
-                           #struct_name::flush(self);
+                    fn flush(&self) {
+                        #struct_name::flush(self);
                     }
                 }
             }
