@@ -78,9 +78,11 @@ impl TokensBuilder {
                 let builder_context = MetricBuilderContext::new(metric, enum_definitions, i);
                 let code_struct = builder_context.build_struct();
                 let code_impl = builder_context.build_impl();
+                let code_trait_impl = builder_context.build_local_metric_impl();
                 quote! {
                     #code_struct
                     #code_impl
+                    #code_trait_impl
                 }
             })
             .collect();
@@ -220,6 +222,22 @@ impl<'a> MetricBuilderContext<'a> {
                 #impl_try_get
                 #impl_flush
             }
+        }
+    }
+
+    fn build_local_metric_impl(&self) -> Tokens {
+        let struct_name = &self.struct_name;
+
+        if util::is_local_metric(self.metric.metric_type.clone()) {
+            quote! {
+                impl ::prometheus::local::LocalMetric for #struct_name {
+                    fn flush(&self) {
+                        #struct_name::flush(self);
+                    }
+                }
+            }
+        } else {
+            Tokens::new()
         }
     }
 

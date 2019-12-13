@@ -25,6 +25,12 @@ pub trait Metric: Sync + Send + Clone {
     fn metric(&self) -> proto::Metric;
 }
 
+/// An interface models a Metric only usable in single thread environment.
+pub trait LocalMetric {
+    /// Flush the local metrics to the global one.
+    fn flush(&self);
+}
+
 /// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.
 #[derive(Debug, Clone)]
 pub struct Opts {

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use crate::desc::Desc;
 use crate::errors::Result;
-use crate::metrics::{Collector, Metric, Opts};
+use crate::metrics::{Collector, LocalMetric, Metric, Opts};
 use crate::proto;
 use crate::value::{Value, ValueType};
 use crate::vec::{MetricVec, MetricVecBuilder};
@@ -226,6 +226,14 @@ impl<P: Atomic> GenericLocalCounter<P> {
     }
 }
 
+impl<P: Atomic> LocalMetric for GenericLocalCounter<P> {
+    /// Flush the local metrics to the [`Counter`](::Counter).
+    #[inline]
+    fn flush(&self) {
+        GenericLocalCounter::flush(self);
+    }
+}
+
 impl<P: Atomic> Clone for GenericLocalCounter<P> {
     fn clone(&self) -> Self {
         Self::new(self.counter.clone())
@@ -281,10 +289,17 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
     }
 
     /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
-    pub fn flush(&mut self) {
-        for h in self.local.values_mut() {
+    pub fn flush(&self) {
+        for h in self.local.values() {
             h.flush();
         }
+    }
+}
+
+impl<P: Atomic> LocalMetric for GenericLocalCounterVec<P> {
+    /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
+    fn flush(&self) {
+        GenericLocalCounterVec::flush(self);
     }
 }
 

@@ -10,7 +10,7 @@ use std::time::{Duration, Instant as StdInstant};
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
-use crate::metrics::{Collector, Metric, Opts};
+use crate::metrics::{Collector, LocalMetric, Metric, Opts};
 use crate::proto;
 use crate::value::make_label_pairs;
 use crate::vec::{MetricVec, MetricVecBuilder};
@@ -873,6 +873,13 @@ impl LocalHistogram {
     }
 }
 
+impl LocalMetric for LocalHistogram {
+    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
+    fn flush(&self) {
+        LocalHistogram::flush(self);
+    }
+}
+
 impl Drop for LocalHistogram {
     fn drop(&mut self) {
         self.flush()
@@ -911,10 +918,17 @@ impl LocalHistogramVec {
     }
 
     /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
-    pub fn flush(&mut self) {
+    pub fn flush(&self) {
         for h in self.local.values() {
             h.flush();
         }
+    }
+}
+
+impl LocalMetric for LocalHistogramVec {
+    /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
+    fn flush(&self) {
+        LocalHistogramVec::flush(self)
     }
 }
 
