@@ -405,14 +405,18 @@ impl Drop for HistogramTimer {
 /// it also provides a sum of observations and an observation count.
 ///
 /// On the Prometheus server, quantiles can be calculated from a [`Histogram`] using
-/// the `histogram_quantile` function in the query language.
+/// the [`histogram_quantile`][1] function in the query language.
 ///
 /// Note that Histograms, in contrast to Summaries, can be aggregated with the
-/// Prometheus query language (see the documentation for detailed
-/// procedures). However, Histograms require the user to pre-define suitable
-/// buckets, and they are in general less accurate. The Observe method of a
-/// [`Histogram`] has a very low performance overhead in comparison with the Observe
-/// method of a Summary.
+/// Prometheus query language (see [the prometheus documentation][2] for
+/// detailed procedures). However, Histograms require the user to pre-define
+/// suitable buckets, (see [`linear_buckets`] and [`exponential_buckets`] for
+/// some helper provided here) and they are in general less accurate. The
+/// Observe method of a [`Histogram`] has a very low performance overhead in
+/// comparison with the Observe method of a Summary.
+///
+/// [1]: https://prometheus.io/docs/prometheus/latest/querying/functions/#histogram_quantile
+/// [2]: https://prometheus.io/docs/practices/histograms/
 #[derive(Clone, Debug)]
 pub struct Histogram {
     core: Arc<HistogramCore>,
