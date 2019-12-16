@@ -15,7 +15,7 @@ use crate::proto;
 use crate::value::make_label_pairs;
 use crate::vec::{MetricVec, MetricVecBuilder};
 
-/// The default [`Histogram`](::Histogram) buckets. The default buckets are
+/// The default [`Histogram`] buckets. The default buckets are
 /// tailored to broadly measure the response time (in seconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
@@ -63,7 +63,7 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
     Ok(buckets)
 }
 
-/// A struct that bundles the options for creating a [`Histogram`](::Histogram) metric. It is
+/// A struct that bundles the options for creating a [`Histogram`] metric. It is
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
 #[derive(Clone, Debug)]
@@ -80,7 +80,7 @@ pub struct HistogramOpts {
 }
 
 impl HistogramOpts {
-    /// Create a [`HistogramOpts`](::HistogramOpts) with the `name` and `help` arguments.
+    /// Create a [`HistogramOpts`] with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
         HistogramOpts {
             common_opts: Opts::new(name, help),
@@ -400,18 +400,18 @@ impl Drop for HistogramTimer {
     }
 }
 
-/// A [`Metric`](::core::Metric) counts individual observations from an event or sample stream in
-/// configurable buckets. Similar to a summary, it also provides a sum of
-/// observations and an observation count.
+/// A [`Metric`] counts individual observations from an event or sample stream
+/// in configurable buckets. Similar to a [`Summary`](crate::proto::Summary),
+/// it also provides a sum of observations and an observation count.
 ///
-/// On the Prometheus server, quantiles can be calculated from a [`Histogram`](::Histogram) using
+/// On the Prometheus server, quantiles can be calculated from a [`Histogram`] using
 /// the `histogram_quantile` function in the query language.
 ///
 /// Note that Histograms, in contrast to Summaries, can be aggregated with the
 /// Prometheus query language (see the documentation for detailed
 /// procedures). However, Histograms require the user to pre-define suitable
 /// buckets, and they are in general less accurate. The Observe method of a
-/// [`Histogram`](::Histogram) has a very low performance overhead in comparison with the Observe
+/// [`Histogram`] has a very low performance overhead in comparison with the Observe
 /// method of a Summary.
 #[derive(Clone, Debug)]
 pub struct Histogram {
@@ -419,7 +419,7 @@ pub struct Histogram {
 }
 
 impl Histogram {
-    /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
+    /// `with_opts` creates a [`Histogram`] with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
         Histogram::with_opts_and_label_values(&opts, &[])
     }
@@ -437,17 +437,17 @@ impl Histogram {
 }
 
 impl Histogram {
-    /// Add a single observation to the [`Histogram`](::Histogram).
+    /// Add a single observation to the [`Histogram`].
     pub fn observe(&self, v: f64) {
         self.core.observe(v)
     }
 
-    /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
+    /// Return a [`HistogramTimer`] to track a duration.
     pub fn start_timer(&self) -> HistogramTimer {
         HistogramTimer::new(self.clone())
     }
 
-    /// Return a [`HistogramTimer`](::HistogramTimer) to track a duration.
+    /// Return a [`HistogramTimer`] to track a duration.
     /// It is faster but less precise.
     #[cfg(feature = "nightly")]
     pub fn start_coarse_timer(&self) -> HistogramTimer {
@@ -479,7 +479,7 @@ impl Histogram {
         res
     }
 
-    /// Return a [`LocalHistogram`](::local::LocalHistogram) for single thread usage.
+    /// Return a [`LocalHistogram`] for single thread usage.
     pub fn local(&self) -> LocalHistogram {
         LocalHistogram::new(self.clone())
     }
@@ -535,15 +535,15 @@ impl MetricVecBuilder for HistogramVecBuilder {
     }
 }
 
-/// A [`Collector`](::core::Collector) that bundles a set of Histograms that all share the
-/// same [`Desc`](::core::Desc), but have different values for their variable labels. This is used
+/// A [`Collector`] that bundles a set of Histograms that all share the
+/// same [`Desc`], but have different values for their variable labels. This is used
 /// if you want to count the same thing partitioned by various dimensions
 /// (e.g. HTTP request latencies, partitioned by status code and method).
 pub type HistogramVec = MetricVec<HistogramVecBuilder>;
 
 impl HistogramVec {
-    /// Create a new [`HistogramVec`](::HistogramVec) based on the provided
-    /// [`HistogramOpts`](::HistogramOpts) and partitioned by the given label names. At least
+    /// Create a new [`HistogramVec`] based on the provided
+    /// [`HistogramOpts`] and partitioned by the given label names. At least
     /// one label name must be provided.
     pub fn new(opts: HistogramOpts, label_names: &[&str]) -> Result<HistogramVec> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
@@ -564,7 +564,7 @@ impl HistogramVec {
 /// Create `count` buckets, each `width` wide, where the lowest
 /// bucket has an upper bound of `start`. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
-/// used for the Buckets field of [`HistogramOpts`](::HistogramOpts).
+/// used for the Buckets field of [`HistogramOpts`].
 ///
 /// The function returns an error if `count` is zero or `width` is zero or
 /// negative.
@@ -593,7 +593,7 @@ pub fn linear_buckets(start: f64, width: f64, count: usize) -> Result<Vec<f64>> 
 /// upper bound of `start` and each following bucket's upper bound is `factor`
 /// times the previous bucket's upper bound. The final +Inf bucket is not counted
 /// and not included in the returned slice. The returned slice is meant to be
-/// used for the Buckets field of [`HistogramOpts`](::HistogramOpts).
+/// used for the Buckets field of [`HistogramOpts`].
 ///
 /// The function returns an error if `count` is zero, if `start` is zero or
 /// negative, or if `factor` is less than or equal 1.
@@ -644,7 +644,7 @@ pub struct LocalHistogramCore {
     sum: f64,
 }
 
-/// An unsync [`Histogram`](::Histogram).
+/// An unsync [`Histogram`].
 #[derive(Debug)]
 pub struct LocalHistogram {
     core: RefCell<LocalHistogramCore>,
@@ -659,7 +659,7 @@ impl Clone for LocalHistogram {
     }
 }
 
-/// An unsync [`HistogramTimer`](::HistogramTimer).
+/// An unsync [`HistogramTimer`].
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
 #[derive(Debug)]
 pub struct LocalHistogramTimer {
@@ -810,7 +810,7 @@ impl LocalHistogram {
         }
     }
 
-    /// Add a single observation to the [`Histogram`](::Histogram).
+    /// Add a single observation to the [`Histogram`].
     pub fn observe(&self, v: f64) {
         self.core.borrow_mut().observe(v);
     }
@@ -857,7 +857,7 @@ impl LocalHistogram {
         self.core.borrow_mut().clear();
     }
 
-    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
+    /// Flush the local metrics to the [`Histogram`] metric.
     pub fn flush(&self) {
         self.core.borrow_mut().flush();
     }
@@ -886,7 +886,7 @@ impl Drop for LocalHistogram {
     }
 }
 
-/// An unsync [`HistogramVec`](::HistogramVec).
+/// An unsync [`HistogramVec`].
 #[derive(Debug)]
 pub struct LocalHistogramVec {
     vec: HistogramVec,
@@ -899,8 +899,8 @@ impl LocalHistogramVec {
         LocalHistogramVec { vec, local }
     }
 
-    /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
-    /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
+    /// Get a [`LocalHistogram`] by label values.
+    /// See more [`MetricVec::with_label_values`].
     pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
@@ -909,15 +909,15 @@ impl LocalHistogramVec {
             .or_insert_with(|| vec.with_label_values(vals).local())
     }
 
-    /// Remove a [`LocalHistogram`](::local::LocalHistogram) by label values.
-    /// See more [MetricVec::remove_label_values](::core::MetricVec::remove_label_values).
+    /// Remove a [`LocalHistogram`] by label values.
+    /// See more [`MetricVec::remove_label_values`].
     pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
         let hash = self.vec.v.hash_label_values(vals)?;
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
     }
 
-    /// Flush the local metrics to the [`HistogramVec`](::HistogramVec) metric.
+    /// Flush the local metrics to the [`HistogramVec`] metric.
     pub fn flush(&self) {
         for h in self.local.values() {
             h.flush();

@@ -20,7 +20,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     /// The associated describer.
     type P: Describer + Sync + Send + Clone;
 
-    /// `build` builds a [`Metric`](::core::Metric) with option and corresponding label names.
+    /// `build` builds a [`Metric`] with option and corresponding label names.
     fn build(&self, _: &Self::P, _: &[&str]) -> Result<Self::M>;
 }
 
@@ -166,11 +166,11 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
     }
 }
 
-/// A [`Collector`](::core::Collector) to bundle metrics of the same name that
+/// A [`Collector`] to bundle metrics of the same name that
 /// differ in their label values. It is usually not used directly but as a
 /// building block for implementations of vectors of a given metric
-/// type. [`GaugeVec`](::GaugeVec) and [`CounterVec`](::CounterVec) are examples already
-/// provided in this package.
+/// type. [`GaugeVec`](crate::GaugeVec) and [`CounterVec`](crate::CounterVec)
+/// are examples already provided in this package.
 #[derive(Clone)]
 pub struct MetricVec<T: MetricVecBuilder> {
     pub(crate) v: Arc<MetricVecCore<T>>,
@@ -198,19 +198,19 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         Ok(MetricVec { v: Arc::new(v) })
     }
 
-    /// `get_metric_with_label_values` returns the [`Metric`](::core::Metric) for the given slice
+    /// `get_metric_with_label_values` returns the [`Metric`] for the given slice
     /// of label values (same order as the VariableLabels in Desc). If that combination of
-    /// label values is accessed for the first time, a new [`Metric`](::core::Metric) is created.
+    /// label values is accessed for the first time, a new [`Metric`] is created.
     ///
-    /// It is possible to call this method without using the returned [`Metric`](::core::Metric)
-    /// to only create the new [`Metric`](::core::Metric) but leave it at its start value (e.g. a
-    /// [`Histogram`](::Histogram) without any observations).
+    /// It is possible to call this method without using the returned [`Metric`]
+    /// to only create the new [`Metric`] but leave it at its start value (e.g. a
+    /// [`Histogram`](crate::Histogram) without any observations).
     ///
-    /// Keeping the [`Metric`](::core::Metric) for later use is possible (and should be considered
+    /// Keeping the [`Metric`] for later use is possible (and should be considered
     /// if performance is critical), but keep in mind that Reset, DeleteLabelValues and Delete can
-    /// be used to delete the [`Metric`](::core::Metric) from the MetricVec. In that case, the
-    /// [`Metric`](::core::Metric) will still exist, but it will not be exported anymore, even if a
-    /// [`Metric`](::core::Metric) with the same label values is created later. See also the
+    /// be used to delete the [`Metric`] from the MetricVec. In that case, the
+    /// [`Metric`] will still exist, but it will not be exported anymore, even if a
+    /// [`Metric`] with the same label values is created later. See also the
     /// CounterVec example.
     ///
     /// An error is returned if the number of label values is not the same as the
@@ -225,11 +225,11 @@ impl<T: MetricVecBuilder> MetricVec<T> {
         self.v.get_metric_with_label_values(vals)
     }
 
-    /// `get_metric_with` returns the [`Metric`](::core::Metric) for the given Labels map (the
+    /// `get_metric_with` returns the [`Metric`] for the given Labels map (the
     /// label names must match those of the VariableLabels in Desc). If that label map is
-    /// accessed for the first time, a new [`Metric`](::core::Metric) is created. Implications of
-    /// creating a [`Metric`](::core::Metric) without using it and keeping the
-    /// [`Metric`](::core::Metric) for later use are the same as for GetMetricWithLabelValues.
+    /// accessed for the first time, a new [`Metric`] is created. Implications of
+    /// creating a [`Metric`] without using it and keeping the
+    /// [`Metric`] for later use are the same as for GetMetricWithLabelValues.
     ///
     /// An error is returned if the number and names of the Labels are inconsistent
     /// with those of the VariableLabels in Desc.
