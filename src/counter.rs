@@ -69,6 +69,16 @@ impl<P: Atomic> GenericCounter<P> {
         self.v.inc();
     }
 
+    /// Set the counter to an arbitrary value.
+    #[inline]
+    pub fn set(&self, v: P::T) {
+        #[cfg(debug_assertions)]
+        let old = self.get();
+
+        self.v.set(v);
+        debug_assert!(self.get() >= old);
+    }
+
     /// Return the counter value.
     #[inline]
     pub fn get(&self) -> P::T {
@@ -594,5 +604,21 @@ mod tests {
         let counter = IntCounter::new("foo", "bar").unwrap();
         let local = counter.local();
         local.inc_by(-42);
+    }
+
+    #[test]
+    fn test_int_counter_set() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        counter.set(42);
+        assert_eq!(counter.get(), 42);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "assertion failed")]
+    fn test_int_counter_set_decrease() {
+        let counter = IntCounter::new("foo", "bar").unwrap();
+        counter.inc_by(69);
+        counter.set(42);
     }
 }
