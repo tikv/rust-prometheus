@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use crate::desc::{Desc, Describer};
 use crate::errors::Result;
 use crate::proto::{self, LabelPair};
+use std::cell::Cell;
+use coarsetime::Instant;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -29,6 +31,18 @@ pub trait Metric: Sync + Send + Clone {
 pub trait LocalMetric {
     /// Flush the local metrics to the global one.
     fn flush(&self);
+}
+
+pub trait MayFlush: LocalMetric {
+    fn may_flush(&self, last_flash: &Cell<Instant>, flush_interval_sec: f64) {
+        let now = Instant::now();
+        let last_tick = last_flash.get();
+        if now.duration_since(last_tick).as_f64() < 1.0 {
+            return;
+        }
+        self.flush();
+        last_flash.set(now);
+    }
 }
 
 /// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.

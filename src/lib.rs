@@ -132,7 +132,7 @@ macro_rules! from_vec {
 extern crate cfg_if;
 #[macro_use]
 extern crate lazy_static;
-
+extern crate coarsetime;
 #[macro_use]
 mod macros;
 mod atomic64;
