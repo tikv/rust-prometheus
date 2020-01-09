@@ -133,6 +133,7 @@ extern crate cfg_if;
 #[macro_use]
 extern crate lazy_static;
 extern crate coarsetime;
+
 #[macro_use]
 mod macros;
 mod atomic64;
@@ -158,9 +159,11 @@ pub mod local {
     Unsync local metrics, provides better performance.
 
     */
-    pub use super::counter::{LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec};
+    pub use super::counter::{
+        AFLocalCounterDelegator, LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec,
+    };
     pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};
-    pub use super::metrics::LocalMetric;
+    pub use super::metrics::{LocalMetric, MayFlush};
 }
 
 pub mod core {

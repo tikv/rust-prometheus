@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use crate::desc::{Desc, Describer};
 use crate::errors::Result;
 use crate::proto::{self, LabelPair};
-use std::cell::Cell;
 use coarsetime::Instant;
+use std::cell::Cell;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -33,16 +33,21 @@ pub trait LocalMetric {
     fn flush(&self);
 }
 
+/// An interface models a LocalMatric with try to flush functions.
 pub trait MayFlush: LocalMetric {
-    fn may_flush(&self, last_flash: &Cell<Instant>, flush_interval_sec: f64) {
+    ///try to flush
+    fn try_flush(&self, last_flash: &Cell<Instant>, flush_interval_sec: f64) {
         let now = Instant::now();
         let last_tick = last_flash.get();
-        if now.duration_since(last_tick).as_f64() < 1.0 {
+        if now.duration_since(last_tick).as_f64() < flush_interval_sec {
             return;
         }
         self.flush();
         last_flash.set(now);
     }
+
+    ///open to implementation to fill try flush parameters
+    fn may_flush(&self);
 }
 
 /// A struct that bundles the options for creating most [`Metric`](::core::Metric) types.
