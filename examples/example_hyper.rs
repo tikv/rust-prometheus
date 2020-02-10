@@ -5,7 +5,11 @@ extern crate lazy_static;
 #[macro_use]
 extern crate prometheus;
 
-use hyper::{header::CONTENT_TYPE, rt::Future, service::service_fn_ok, Body, Response, Server};
+use hyper::{
+    header::CONTENT_TYPE,
+    service::{make_service_fn, service_fn},
+    Body, Request, Response, Server,
+};
 use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
 
 lazy_static! {
@@ -29,36 +33,38 @@ lazy_static! {
     .unwrap();
 }
 
-fn main() {
+async fn serve_req(_req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+    let encoder = TextEncoder::new();
+
+    HTTP_COUNTER.inc();
+    let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
+
+    let metric_families = prometheus::gather();
+    let mut buffer = vec![];
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+    HTTP_BODY_GAUGE.set(buffer.len() as f64);
+
+    let response = Response::builder()
+        .status(200)
+        .header(CONTENT_TYPE, encoder.format_type())
+        .body(Body::from(buffer))
+        .unwrap();
+
+    timer.observe_duration();
+
+    Ok(response)
+}
+
+#[tokio::main]
+async fn main() {
     let addr = ([127, 0, 0, 1], 9898).into();
-    println!("Listening address: {:?}", addr);
+    println!("Listening on http://{}", addr);
 
-    let new_service = || {
-        let encoder = TextEncoder::new();
-        service_fn_ok(move |_request| {
-            HTTP_COUNTER.inc();
-            let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
+    let serve_future = Server::bind(&addr).serve(make_service_fn(|_| async {
+        Ok::<_, hyper::Error>(service_fn(serve_req))
+    }));
 
-            let metric_families = prometheus::gather();
-            let mut buffer = vec![];
-            encoder.encode(&metric_families, &mut buffer).unwrap();
-            HTTP_BODY_GAUGE.set(buffer.len() as f64);
-
-            let response = Response::builder()
-                .status(200)
-                .header(CONTENT_TYPE, encoder.format_type())
-                .body(Body::from(buffer))
-                .unwrap();
-
-            timer.observe_duration();
-
-            response
-        })
-    };
-
-    let server = Server::bind(&addr)
-        .serve(new_service)
-        .map_err(|e| eprintln!("Server error: {}", e));
-
-    hyper::rt::run(server);
+    if let Err(err) = serve_future.await {
+        eprintln!("server error: {}", err);
+    }
 }
