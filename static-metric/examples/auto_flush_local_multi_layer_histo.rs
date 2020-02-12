@@ -1,6 +1,5 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
-
-/// Pseudo macro expanded code of make_auto_flush_static_metric.rs
+/// Pseudo macro expanded code of make_auto_flush_static_metric_histo.rs
 #[macro_use]
 extern crate lazy_static;
 extern crate coarsetime;
@@ -53,8 +52,8 @@ pub struct LhrsInner2 {
 
 #[allow(missing_copy_implementations)]
 pub struct LhrsInner3 {
-    pub http1: LocalIntCounter,
-    pub http2: LocalIntCounter,
+    pub http1: LocalHistogram,
+    pub http2: LocalHistogram,
 }
 
 pub struct LhrsDelegator {
@@ -65,8 +64,8 @@ pub struct LhrsDelegator {
 }
 
 pub struct LhrsDelegator2 {
-    pub http1: AFLocalCounter<LhrsInner, LocalIntCounter, LhrsDelegator3>,
-    pub http2: AFLocalCounter<LhrsInner, LocalIntCounter, LhrsDelegator3>,
+    pub http1: AFLocalHistogram<LhrsInner, LhrsDelegator3>,
+    pub http2: AFLocalHistogram<LhrsInner, LhrsDelegator3>,
 }
 
 pub struct LhrsDelegator3 {
@@ -77,7 +76,7 @@ pub struct LhrsDelegator3 {
 }
 
 impl LhrsInner {
-    pub fn from(m: &IntCounterVec) -> LhrsInner {
+    pub fn from(m: &HistogramVec) -> LhrsInner {
         LhrsInner {
             foo: LhrsInner2::from("foo", m),
             bar: LhrsInner2::from("bar", m),
@@ -92,7 +91,7 @@ impl LhrsInner {
 }
 
 impl LhrsInner2 {
-    pub fn from(label_0: &str, m: &IntCounterVec) -> LhrsInner2 {
+    pub fn from(label_0: &str, m: &HistogramVec) -> LhrsInner2 {
         LhrsInner2 {
             post: LhrsInner3::from(label_0, "post", m),
             get: LhrsInner3::from(label_0, "get", m),
@@ -110,7 +109,7 @@ impl LhrsInner2 {
 }
 
 impl LhrsInner3 {
-    pub fn from(label_0: &str, label_1: &str, m: &IntCounterVec) -> LhrsInner3 {
+    pub fn from(label_0: &str, label_1: &str, m: &HistogramVec) -> LhrsInner3 {
         LhrsInner3 {
             http1: m
                 .with(&{
@@ -202,13 +201,13 @@ impl LhrsDelegator2 {
             root,
             offset1,
             offset2,
-            &(x.http1) as *const LocalIntCounter as usize - branch_offset,
+            &(x.http1) as *const LocalHistogram as usize - branch_offset,
         );
         let http2 = LhrsDelegator3::new(
             root,
             offset1,
             offset2,
-            &(x.http2) as *const LocalIntCounter as usize - branch_offset,
+            &(x.http2) as *const LocalHistogram as usize - branch_offset,
         );
         mem::forget(x);
         LhrsDelegator2 { http1, http2 }
@@ -221,7 +220,7 @@ impl LhrsDelegator3 {
         offset1: usize,
         offset2: usize,
         offset3: usize,
-    ) -> AFLocalCounter<LhrsInner, LocalIntCounter, LhrsDelegator3> {
+    ) -> AFLocalHistogram<LhrsInner, LhrsDelegator3> {
         let delegator = LhrsDelegator3 {
             root,
             offset1,
@@ -229,24 +228,24 @@ impl LhrsDelegator3 {
             offset3,
         };
 
-        AFLocalCounter {
+        AFLocalHistogram {
             delegator,
             _p: std::marker::PhantomData,
         }
     }
 }
 
-impl AFLDelegator<LhrsInner, LocalIntCounter> for LhrsDelegator3 {
+impl AFLHistogramDelegator<LhrsInner> for LhrsDelegator3 {
     fn get_root_metric(&self) -> &'static LocalKey<LhrsInner> {
         self.root
     }
 
-    fn get_local<'a>(&self, root_metric: &'a LhrsInner) -> &'a LocalIntCounter {
+    fn get_local<'a>(&self, root_metric: &'a LhrsInner) -> &'a LocalHistogram {
         unsafe {
             let inner1 = root_metric as *const LhrsInner;
             let inner2 = (inner1 as usize + self.offset1) as *const LhrsInner2;
             let inner3 = (inner2 as usize + self.offset2) as *const LhrsInner3;
-            let counter = (inner3 as usize + self.offset3) as *const LocalIntCounter;
+            let counter = (inner3 as usize + self.offset3) as *const LocalHistogram;
             &*counter
         }
     }
@@ -288,8 +287,8 @@ impl Lhrs {
 }
 
 lazy_static! {
-pub static ref HTTP_COUNTER_VEC: IntCounterVec =
-register_int_counter_vec ! (
+pub static ref HTTP_HISTO_VEC: HistogramVec =
+register_histogram_vec ! (
 "http_requests",
 "Total number of HTTP requests.",
 & ["product", "method", "version"]    // it doesn't matter for the label order
@@ -297,7 +296,7 @@ register_int_counter_vec ! (
 }
 
 thread_local! {
-pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_COUNTER_VEC);
+pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_HISTO_VEC);
 }
 
 lazy_static! {
@@ -305,23 +304,37 @@ lazy_static! {
 }
 
 fn main() {
-    TLS_HTTP_COUNTER.foo.post.http1.inc();
-    TLS_HTTP_COUNTER.foo.post.http1.inc();
+    TLS_HTTP_COUNTER.foo.post.http1.observe(1.0);
+    TLS_HTTP_COUNTER.foo.post.http1.observe(1.0);
 
     assert_eq!(
-        HTTP_COUNTER_VEC
+        HTTP_HISTO_VEC
             .with_label_values(&["foo", "post", "HTTP/1"])
-            .get(),
+            .get_sample_count(),
         0
     );
 
     ::std::thread::sleep(::std::time::Duration::from_secs(2));
 
-    TLS_HTTP_COUNTER.foo.post.http1.inc();
+    TLS_HTTP_COUNTER.foo.post.http1.observe(1.0);
     assert_eq!(
-        HTTP_COUNTER_VEC
+        HTTP_HISTO_VEC
             .with_label_values(&["foo", "post", "HTTP/1"])
-            .get(),
+            .get_sample_count(),
         3
+    );
+
+    assert!(
+        HTTP_HISTO_VEC
+            .with_label_values(&["foo", "post", "HTTP/1"])
+            .get_sample_sum()
+            > 2.9
+    );
+
+    assert!(
+        HTTP_HISTO_VEC
+            .with_label_values(&["foo", "post", "HTTP/1"])
+            .get_sample_sum()
+            < 3.1
     );
 }

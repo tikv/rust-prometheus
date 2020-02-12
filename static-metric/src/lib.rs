@@ -30,6 +30,7 @@ extern crate proc_macro2;
 extern crate quote;
 extern crate syn;
 
+mod auto_flush_builder;
 mod builder;
 mod parser;
 mod register_macro;
@@ -40,12 +41,20 @@ use proc_macro::TokenStream;
 use self::builder::TokensBuilder;
 use self::parser::StaticMetricMacroBody;
 use self::register_macro::RegisterMethodInvoking;
+use auto_flush_builder::AutoFlushTokensBuilder;
 
 /// Build static metrics.
 #[proc_macro]
 pub fn make_static_metric(input: TokenStream) -> TokenStream {
     let body: StaticMetricMacroBody = syn::parse(input).unwrap();
     TokensBuilder::build(body).into()
+}
+
+/// Build auto flush able static metrics.
+#[proc_macro]
+pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
+    let body: StaticMetricMacroBody = syn::parse(input).unwrap();
+    AutoFlushTokensBuilder::build(body).into()
 }
 
 /// Register a `CounterVec` and create static metrics from it.

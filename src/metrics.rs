@@ -35,7 +35,7 @@ pub trait LocalMetric {
 
 /// An interface models a LocalMatric with try to flush functions.
 pub trait MayFlush: LocalMetric {
-    ///try to flush
+    /// Try to flush
     fn try_flush(&self, last_flash: &Cell<Instant>, flush_interval_sec: f64) {
         let now = Instant::now();
         let last_tick = last_flash.get();
@@ -46,7 +46,7 @@ pub trait MayFlush: LocalMetric {
         last_flash.set(now);
     }
 
-    ///open to implementation to fill try flush parameters
+    /// Ppen to implementation to fill try flush parameters
     fn may_flush(&self);
 }
 

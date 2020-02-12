@@ -115,7 +115,7 @@ impl TokensBuilder {
         }
     }
 
-    fn build_label_enum(label_enum: &MetricEnumDef) -> Tokens {
+    pub fn build_label_enum(label_enum: &MetricEnumDef) -> Tokens {
         let visibility = &label_enum.visibility;
         let enum_name = &label_enum.enum_name;
         let enum_item_names = label_enum.definitions.get_names();

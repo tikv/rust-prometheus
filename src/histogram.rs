@@ -299,6 +299,9 @@ impl Instant {
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 use self::coarse::*;
+use crate::local::MayFlush;
+use spin::Mutex;
+use std::thread::LocalKey;
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 mod coarse {
@@ -870,6 +873,89 @@ impl LocalHistogram {
     /// Return count of local samples.
     pub fn get_sample_count(&self) -> u64 {
         self.core.borrow().sample_count()
+    }
+}
+
+/// Delegator for auto flush-able local counter
+pub trait AFLHistogramDelegator<T: 'static + MayFlush> {
+    /// Get the root local metric for delegate
+    fn get_root_metric(&self) -> &'static LocalKey<T>;
+
+    /// Get the final counter for delegate
+    fn get_local<'a>(&self, root_metric: &'a T) -> &'a LocalHistogram;
+}
+
+/// Auto flush-able local counter
+#[derive(Debug)]
+pub struct AFLocalHistogram<T: 'static + MayFlush, D: AFLHistogramDelegator<T>> {
+    /// Delegator to get thread local metric
+    pub delegator: D,
+    /// Phantomdata marker
+    pub _p: std::marker::PhantomData<Mutex<T>>,
+}
+
+#[allow(dead_code)]
+impl<M: 'static + MayFlush, D: AFLHistogramDelegator<M>> AFLocalHistogram<M, D> {
+    /// Add a single observation to the [`Histogram`](::Histogram).
+    pub fn observe(&self, v: f64) {
+        self.delegator.get_root_metric().with(|m| {
+            let local = self.delegator.get_local(m);
+            local.observe(v);
+            m.may_flush();
+        })
+    }
+
+    /// Observe execution time of a closure, in second.
+    pub fn observe_closure_duration<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
+    /// Observe execution time of a closure, in second.
+    #[cfg(feature = "nightly")]
+    pub fn observe_closure_duration_coarse<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        let instant = Instant::now_coarse();
+        let res = f();
+        let elapsed = duration_to_seconds(instant.elapsed());
+        self.observe(elapsed);
+        res
+    }
+
+    /// Clear the local metric.
+    pub fn clear(&self) {
+        self.delegator
+            .get_root_metric()
+            .with(|m| self.delegator.get_local(m).clear())
+    }
+
+    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
+    pub fn flush(&self) {
+        self.delegator
+            .get_root_metric()
+            .with(|m| self.delegator.get_local(m).flush());
+    }
+
+    /// Return accumulated sum of local samples.
+    pub fn get_sample_sum(&self) -> f64 {
+        self.delegator
+            .get_root_metric()
+            .with(|m| self.delegator.get_local(m).get_sample_sum())
+    }
+
+    /// Return count of local samples.
+    pub fn get_sample_count(&self) -> u64 {
+        self.delegator
+            .get_root_metric()
+            .with(|m| self.delegator.get_local(m).get_sample_count())
     }
 }
 
