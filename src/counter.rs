@@ -248,9 +248,21 @@ pub trait AFLDelegator<T: 'static + MayFlush, V: CounterWithValueType> {
 #[derive(Debug)]
 pub struct AFLocalCounter<T: 'static + MayFlush, V: CounterWithValueType, D: AFLDelegator<T, V>> {
     /// Delegator to get thread local metric
-    pub delegator: D,
+    delegator: D,
     /// Phantomdata marker
-    pub _p: std::marker::PhantomData<(Mutex<T>, Mutex<V>)>,
+    _p: std::marker::PhantomData<(Mutex<T>, Mutex<V>)>,
+}
+
+impl<T: 'static + MayFlush, V: CounterWithValueType, D: AFLDelegator<T, V>>
+    AFLocalCounter<T, V, D>
+{
+    /// Construct a new AFLocalCounter from delegator.
+    pub fn new(delegator: D) -> AFLocalCounter<T, V, D> {
+        AFLocalCounter {
+            delegator,
+            _p: std::marker::PhantomData,
+        }
+    }
 }
 
 /// Auto flush-able local counter

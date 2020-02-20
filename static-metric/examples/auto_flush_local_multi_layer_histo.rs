@@ -228,10 +228,7 @@ impl LhrsDelegator3 {
             offset3,
         };
 
-        AFLocalHistogram {
-            delegator,
-            _p: std::marker::PhantomData,
-        }
+        AFLocalHistogram::new(delegator)
     }
 }
 

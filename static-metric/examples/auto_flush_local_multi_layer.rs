@@ -229,10 +229,7 @@ impl LhrsDelegator3 {
             offset3,
         };
 
-        AFLocalCounter {
-            delegator,
-            _p: std::marker::PhantomData,
-        }
+        AFLocalCounter::new(delegator)
     }
 }
 

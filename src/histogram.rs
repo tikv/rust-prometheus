@@ -889,9 +889,19 @@ pub trait AFLHistogramDelegator<T: 'static + MayFlush> {
 #[derive(Debug)]
 pub struct AFLocalHistogram<T: 'static + MayFlush, D: AFLHistogramDelegator<T>> {
     /// Delegator to get thread local metric
-    pub delegator: D,
+    delegator: D,
     /// Phantomdata marker
-    pub _p: std::marker::PhantomData<Mutex<T>>,
+    _p: std::marker::PhantomData<Mutex<T>>,
+}
+
+impl<T: 'static + MayFlush, D: AFLHistogramDelegator<T>> AFLocalHistogram<T, D> {
+    /// Construct a new AFLocalHistogram from delegator
+    pub fn new(delegator: D) -> AFLocalHistogram<T, D> {
+        AFLocalHistogram {
+            delegator,
+            _p: std::marker::PhantomData,
+        }
+    }
 }
 
 #[allow(dead_code)]

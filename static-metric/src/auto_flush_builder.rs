@@ -498,10 +498,7 @@ impl<'a> MetricBuilderContext<'a> {
                                 root,
                                 #known_offsets_tokens
                             };
-                           #local_id {
-                            delegator,
-                            _p:std::marker::PhantomData,
-                          }
+                           #local_id::new(delegator)
                         }
             }
         } else {
