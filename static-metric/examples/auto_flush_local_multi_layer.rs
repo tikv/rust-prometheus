@@ -233,7 +233,7 @@ impl LhrsDelegator3 {
     }
 }
 
-impl AFLDelegator<LhrsInner, LocalIntCounter> for LhrsDelegator3 {
+impl CounterDelegator<LhrsInner, LocalIntCounter> for LhrsDelegator3 {
     fn get_root_metric(&self) -> &'static LocalKey<LhrsInner> {
         self.root
     }

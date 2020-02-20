@@ -4,16 +4,15 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::atomic64::{Atomic, AtomicF64, AtomicI64, Number};
 use crate::desc::Desc;
 use crate::errors::Result;
-use crate::metrics::{Collector, LocalMetric, MayFlush, Metric, Opts};
+use crate::metrics::{Collector, LocalMetric, Metric, Opts};
 use crate::proto;
 use crate::value::{Value, ValueType};
 use crate::vec::{MetricVec, MetricVecBuilder};
-use std::thread::LocalKey;
 
 /// The underlying implementation for [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
 #[derive(Debug)]
@@ -232,101 +231,6 @@ impl<P: Atomic> GenericLocalCounter<P> {
         }
         self.counter.inc_by(*self.val.borrow());
         *self.val.borrow_mut() = P::T::from_i64(0);
-    }
-}
-
-/// Delegator for auto flush-able local counter
-pub trait AFLDelegator<T: 'static + MayFlush, V: CounterWithValueType> {
-    /// Get the root local metric for delegate
-    fn get_root_metric(&self) -> &'static LocalKey<T>;
-
-    /// Get the final counter for delegate
-    fn get_local<'a>(&self, root_metric: &'a T) -> &'a GenericLocalCounter<V::ValueType>;
-}
-
-/// Auto flush-able local counter
-#[derive(Debug)]
-pub struct AFLocalCounter<T: 'static + MayFlush, V: CounterWithValueType, D: AFLDelegator<T, V>> {
-    /// Delegator to get thread local metric
-    delegator: D,
-    /// Phantomdata marker
-    _p: std::marker::PhantomData<(Mutex<T>, Mutex<V>)>,
-}
-
-impl<T: 'static + MayFlush, V: CounterWithValueType, D: AFLDelegator<T, V>>
-    AFLocalCounter<T, V, D>
-{
-    /// Construct a new AFLocalCounter from delegator.
-    pub fn new(delegator: D) -> AFLocalCounter<T, V, D> {
-        AFLocalCounter {
-            delegator,
-            _p: std::marker::PhantomData,
-        }
-    }
-}
-
-/// Auto flush-able local counter
-impl<T: 'static + MayFlush, V: CounterWithValueType, D: AFLDelegator<T, V>>
-    AFLocalCounter<T, V, D>
-{
-    #[inline]
-    /// Get the root local metric for delegate
-    fn get_root_metric(&self) -> &'static LocalKey<T> {
-        self.delegator.get_root_metric()
-    }
-    #[inline]
-    /// Get the final counter for delegate
-    fn get_counter<'a>(&self, root_metric: &'a T) -> &'a GenericLocalCounter<V::ValueType> {
-        self.delegator.get_local(root_metric)
-    }
-
-    /// Increase the given value to the local counter,
-    /// and try to flush to global
-    /// # Panics
-    ///
-    /// Panics in debug build if the value is < 0.
-    #[inline]
-    pub fn inc_by(&self, v: <V::ValueType as Atomic>::T) {
-        self.get_root_metric().with(|m| {
-            let counter = self.get_counter(m);
-            counter.inc_by(v);
-            m.may_flush();
-        })
-    }
-
-    /// Increase the local counter by 1,
-    /// and try to flush to global.
-    #[inline]
-    pub fn inc(&self) {
-        self.get_root_metric().with(|m| {
-            let counter = self.get_counter(m);
-            counter.inc();
-            m.may_flush();
-        })
-    }
-
-    /// Return the local counter value.
-    #[inline]
-    pub fn get(&self) {
-        self.get_root_metric().with(|m| {
-            let counter = self.get_counter(m);
-            counter.get();
-        })
-    }
-
-    /// Restart the counter, resetting its value back to 0.
-    #[inline]
-    pub fn reset(&self) {
-        self.get_root_metric().with(|m| {
-            let counter = self.get_counter(m);
-            counter.reset();
-        })
-    }
-
-    /// trigger flush of LocalKey<T>
-    #[inline]
-    pub fn flush(&self) {
-        self.get_root_metric().with(|m| m.flush())
     }
 }
 

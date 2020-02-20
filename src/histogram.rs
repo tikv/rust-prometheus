@@ -251,14 +251,14 @@ impl std::fmt::Debug for Timespec {
 }
 
 #[derive(Debug)]
-enum Instant {
+pub enum Instant {
     Monotonic(StdInstant),
     #[cfg(all(feature = "nightly", target_os = "linux"))]
     MonotonicCoarse(Timespec),
 }
 
 impl Instant {
-    fn now() -> Instant {
+    pub fn now() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
@@ -272,7 +272,7 @@ impl Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
-    fn elapsed(&self) -> Duration {
+    pub fn elapsed(&self) -> Duration {
         match &*self {
             Instant::Monotonic(i) => i.elapsed(),
 
@@ -299,9 +299,6 @@ impl Instant {
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 use self::coarse::*;
-use crate::local::MayFlush;
-use spin::Mutex;
-use std::thread::LocalKey;
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
 mod coarse {
@@ -634,7 +631,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 
 /// `duration_to_seconds` converts Duration to seconds.
 #[inline]
-fn duration_to_seconds(d: Duration) -> f64 {
+pub fn duration_to_seconds(d: Duration) -> f64 {
     let nanos = f64::from(d.subsec_nanos()) / 1e9;
     d.as_secs() as f64 + nanos
 }
@@ -873,99 +870,6 @@ impl LocalHistogram {
     /// Return count of local samples.
     pub fn get_sample_count(&self) -> u64 {
         self.core.borrow().sample_count()
-    }
-}
-
-/// Delegator for auto flush-able local counter
-pub trait AFLHistogramDelegator<T: 'static + MayFlush> {
-    /// Get the root local metric for delegate
-    fn get_root_metric(&self) -> &'static LocalKey<T>;
-
-    /// Get the final counter for delegate
-    fn get_local<'a>(&self, root_metric: &'a T) -> &'a LocalHistogram;
-}
-
-/// Auto flush-able local counter
-#[derive(Debug)]
-pub struct AFLocalHistogram<T: 'static + MayFlush, D: AFLHistogramDelegator<T>> {
-    /// Delegator to get thread local metric
-    delegator: D,
-    /// Phantomdata marker
-    _p: std::marker::PhantomData<Mutex<T>>,
-}
-
-impl<T: 'static + MayFlush, D: AFLHistogramDelegator<T>> AFLocalHistogram<T, D> {
-    /// Construct a new AFLocalHistogram from delegator
-    pub fn new(delegator: D) -> AFLocalHistogram<T, D> {
-        AFLocalHistogram {
-            delegator,
-            _p: std::marker::PhantomData,
-        }
-    }
-}
-
-#[allow(dead_code)]
-impl<M: 'static + MayFlush, D: AFLHistogramDelegator<M>> AFLocalHistogram<M, D> {
-    /// Add a single observation to the [`Histogram`](::Histogram).
-    pub fn observe(&self, v: f64) {
-        self.delegator.get_root_metric().with(|m| {
-            let local = self.delegator.get_local(m);
-            local.observe(v);
-            m.may_flush();
-        })
-    }
-
-    /// Observe execution time of a closure, in second.
-    pub fn observe_closure_duration<F, T>(&self, f: F) -> T
-    where
-        F: FnOnce() -> T,
-    {
-        let instant = Instant::now();
-        let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
-        self.observe(elapsed);
-        res
-    }
-
-    /// Observe execution time of a closure, in second.
-    #[cfg(feature = "nightly")]
-    pub fn observe_closure_duration_coarse<F, T>(&self, f: F) -> T
-    where
-        F: FnOnce() -> T,
-    {
-        let instant = Instant::now_coarse();
-        let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
-        self.observe(elapsed);
-        res
-    }
-
-    /// Clear the local metric.
-    pub fn clear(&self) {
-        self.delegator
-            .get_root_metric()
-            .with(|m| self.delegator.get_local(m).clear())
-    }
-
-    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
-    pub fn flush(&self) {
-        self.delegator
-            .get_root_metric()
-            .with(|m| self.delegator.get_local(m).flush());
-    }
-
-    /// Return accumulated sum of local samples.
-    pub fn get_sample_sum(&self) -> f64 {
-        self.delegator
-            .get_root_metric()
-            .with(|m| self.delegator.get_local(m).get_sample_sum())
-    }
-
-    /// Return count of local samples.
-    pub fn get_sample_count(&self) -> u64 {
-        self.delegator
-            .get_root_metric()
-            .with(|m| self.delegator.get_local(m).get_sample_count())
     }
 }
 

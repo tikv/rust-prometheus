@@ -232,7 +232,7 @@ impl LhrsDelegator3 {
     }
 }
 
-impl AFLHistogramDelegator<LhrsInner> for LhrsDelegator3 {
+impl HistogramDelegator<LhrsInner> for LhrsDelegator3 {
     fn get_root_metric(&self) -> &'static LocalKey<LhrsInner> {
         self.root
     }

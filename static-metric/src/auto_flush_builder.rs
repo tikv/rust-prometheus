@@ -204,14 +204,14 @@ impl AutoFlushTokensBuilder {
             .collect::<Vec<Tokens>>();
 
         //todo: for both counter and histogram
-        //AFLHistogramDelegator<LhrsInner>
+        //HistogramDelegator<LhrsInner>
         let delegator_tokens = if metric_type.to_string().contains("Counter") {
             quote! {
-                AFLDelegator<#inner_struct, #metric_type>
+                CounterDelegator<#inner_struct, #metric_type>
             }
         } else {
             quote! {
-                AFLHistogramDelegator<#inner_struct>
+                HistogramDelegator<#inner_struct>
             }
         };
 
