@@ -11,11 +11,9 @@ use super::parser::*;
 use super::util;
 use builder::TokensBuilder;
 
-lazy_static! {
-    /// Used for isolating different static metrics, so that structs for labels in each metric will not conflict even
-    /// when they have a common prefix.
-    static ref SCOPE_ID: AtomicUsize = AtomicUsize::new(0);
-}
+/// Used for isolating different static metrics, so that structs for labels in each metric will not conflict even
+/// when they have a common prefix.
+static SCOPE_ID: AtomicUsize = AtomicUsize::new(0);
 
 pub struct AutoFlushTokensBuilder;
 
