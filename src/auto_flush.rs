@@ -54,6 +54,7 @@ impl<T: 'static + MayFlush, V: CounterWithValueType, D: CounterDelegator<T, V>>
     fn get_root_metric(&self) -> &'static LocalKey<T> {
         self.delegator.get_root_metric()
     }
+
     #[inline]
     /// Get the final counter for delegate
     fn get_counter<'a>(&self, root_metric: &'a T) -> &'a GenericLocalCounter<V::ValueType> {
