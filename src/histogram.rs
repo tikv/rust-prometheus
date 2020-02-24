@@ -268,7 +268,7 @@ impl Instant {
     }
 
     #[cfg(all(feature = "nightly", not(target_os = "linux")))]
-    fn now_coarse() -> Instant {
+    pub fn now_coarse() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
