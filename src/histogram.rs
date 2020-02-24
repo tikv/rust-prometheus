@@ -164,7 +164,7 @@ pub struct HistogramCore {
 }
 
 impl HistogramCore {
-    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore> {
+    pub fn new(opts: &HistogramOpts, label_values: &[impl AsRef<str>]) -> Result<HistogramCore> {
         let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
@@ -421,12 +421,13 @@ pub struct Histogram {
 impl Histogram {
     /// `with_opts` creates a [`Histogram`](::Histogram) with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(&opts, &[])
+        let empty_labels: [String; 0] = [];
+        Histogram::with_opts_and_label_values(&opts, &empty_labels)
     }
 
     fn with_opts_and_label_values(
         opts: &HistogramOpts,
-        label_values: &[&str],
+        label_values: &[impl AsRef<str>],
     ) -> Result<Histogram> {
         let core = HistogramCore::new(opts, label_values)?;
 
@@ -530,7 +531,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
     type M = Histogram;
     type P = HistogramOpts;
 
-    fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
+    fn build(&self, opts: &HistogramOpts, vals: &[impl AsRef<str>]) -> Result<Histogram> {
         Histogram::with_opts_and_label_values(opts, vals)
     }
 }
@@ -901,7 +902,7 @@ impl LocalHistogramVec {
 
     /// Get a [`LocalHistogram`](::local::LocalHistogram) by label values.
     /// See more [MetricVec::with_label_values](::core::MetricVec::with_label_values).
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a LocalHistogram {
+    pub fn with_label_values<'a>(&'a mut self, vals: &[impl AsRef<str>]) -> &'a LocalHistogram {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
         self.local
