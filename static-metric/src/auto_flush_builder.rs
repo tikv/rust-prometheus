@@ -201,8 +201,6 @@ impl AutoFlushTokensBuilder {
             .map(|m| offset_fetcher(m))
             .collect::<Vec<Tokens>>();
 
-        //todo: for both counter and histogram
-        //HistogramDelegator<LhrsInner>
         let delegator_tokens = if metric_type.to_string().contains("Counter") {
             quote! {
                 CounterDelegator<#inner_struct, #metric_type>
@@ -462,8 +460,6 @@ impl<'a> MetricBuilderContext<'a> {
           )*
         };
         if self.is_last_label {
-            //TODO for histogram
-            //AFLocalHistogram<LhrsInner, LhrsDelegator3>
 
             let local_id = if metric_type.to_string().contains("Counter") {
                 quote! {
@@ -540,7 +536,7 @@ impl<'a> MetricBuilderContext<'a> {
             .get_names();
 
         quote! {
-            pub fn from(inner: &'static LocalKey<#inner_struct_name>) -> Lhrs {
+            pub fn from(inner: &'static LocalKey<#inner_struct_name>) -> #outer_struct_name {
                 let x = unsafe { MaybeUninit::<#inner_struct_name>::uninit().assume_init() };
                 let branch_offset = &x as *const #inner_struct_name as usize;
 
@@ -725,11 +721,7 @@ impl<'a> MetricBuilderContext<'a> {
             (1..=self.metric.labels.len())
                 .map(|_| {
                     let delegator_member_type = self.delegator_member_type.clone();
-                    //todo for histogram
-                    //AFLocalHistogram<LhrsInner, LhrsDelegator3>
-                    //                    quote! {
-                    //                        AFLocalCounter<#inner_root_name,#metric_type,#delegator_member_type>
-                    //                    };
+
                     if metric_type.to_string().contains("Counter") {
                         quote! {
                             AFLocalCounter<#inner_root_name,#metric_type,#delegator_member_type>
