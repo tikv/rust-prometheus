@@ -22,7 +22,6 @@ assert_eq!(HIGH_FIVE_COUNTER.get(), 1);
 Is it reccomended that you consult the [`prometheus` documentation for more information.](https://docs.rs/prometheus/)
 */
 
-#[macro_use]
 extern crate lazy_static;
 extern crate proc_macro;
 extern crate proc_macro2;
@@ -31,6 +30,7 @@ extern crate quote;
 extern crate syn;
 
 mod auto_flush_builder;
+mod auto_flush_from;
 mod builder;
 mod parser;
 mod register_macro;
@@ -42,6 +42,7 @@ use self::builder::TokensBuilder;
 use self::parser::StaticMetricMacroBody;
 use self::register_macro::RegisterMethodInvoking;
 use auto_flush_builder::AutoFlushTokensBuilder;
+use auto_flush_from::AutoFlushFromDef;
 
 /// Build static metrics.
 #[proc_macro]
@@ -55,6 +56,12 @@ pub fn make_static_metric(input: TokenStream) -> TokenStream {
 pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
     let body: StaticMetricMacroBody = syn::parse(input).unwrap();
     AutoFlushTokensBuilder::build(body).into()
+}
+
+#[proc_macro]
+pub fn auto_flush_from(input: TokenStream) -> TokenStream {
+    let def: AutoFlushFromDef = syn::parse(input).unwrap();
+    def.auto_flush_from().into()
 }
 
 /// Register a `CounterVec` and create static metrics from it.
