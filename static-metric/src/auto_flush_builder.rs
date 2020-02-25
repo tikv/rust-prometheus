@@ -258,7 +258,8 @@ impl<'a> MetricBuilderContext<'a> {
         label_index: usize,
     ) -> MetricBuilderContext<'a> {
         let is_last_label = label_index == metric.labels.len() - 1;
-        let is_secondary_last_label = metric.labels.len() >= 2 && label_index == metric.labels.len() - 2;
+        let is_secondary_last_label =
+            metric.labels.len() >= 2 && label_index == metric.labels.len() - 2;
 
         MetricBuilderContext {
             metric,
@@ -332,9 +333,25 @@ impl<'a> MetricBuilderContext<'a> {
     }
 
     fn build_outer_struct(&self) -> Tokens {
+        let metric_type = self.metric.metric_type.clone();
         let outer_struct_name = self.struct_name.clone();
         let inner_struct_name = self.inner_struct_name();
         let delegator_name = self.delegator_struct_name();
+        let auto_flush_local = if metric_type.to_string().contains("Counter") {
+            quote! {
+                AFLocalCounter<#inner_struct_name,#metric_type,#delegator_name>
+            }
+        } else {
+            quote! {
+                AFLocalHistogram<#inner_struct_name,#delegator_name>
+            }
+        };
+
+        let member_type = if self.metric.labels.len() == 1 {
+            auto_flush_local
+        } else {
+            delegator_name.into_token_stream()
+        };
         let field_names = self
             .label
             .get_value_def_list(self.enum_definitions)
@@ -344,7 +361,7 @@ impl<'a> MetricBuilderContext<'a> {
             pub struct #outer_struct_name {
                 inner: &'static LocalKey<#inner_struct_name>,
                 #(
-                  pub #field_names: #delegator_name,
+                  pub #field_names: #member_type,
                 )*
             }
         }
@@ -460,7 +477,6 @@ impl<'a> MetricBuilderContext<'a> {
           )*
         };
         if self.is_last_label {
-
             let local_id = if metric_type.to_string().contains("Counter") {
                 quote! {
                     AFLocalCounter
@@ -591,7 +607,26 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_outer_impl_get(&self) -> Tokens {
         let enum_ident = self.label.get_enum_ident();
         if let Some(e) = enum_ident {
-            let member_type = &self.delegator_struct_name();
+            let metric_type = self.metric.metric_type.clone();
+            let inner_struct_name = self.inner_struct_name();
+            let delegator_name = self.delegator_struct_name();
+
+            let auto_flush_local = if metric_type.to_string().contains("Counter") {
+                quote! {
+                    AFLocalCounter<#inner_struct_name,#metric_type,#delegator_name>
+                }
+            } else {
+                quote! {
+                    AFLocalHistogram<#inner_struct_name,#delegator_name>
+                }
+            };
+
+            let member_type = if self.metric.labels.len() == 1 {
+                auto_flush_local
+            } else {
+                delegator_name.into_token_stream()
+            };
+
             let match_patterns = self
                 .enum_definitions
                 .get(e)
