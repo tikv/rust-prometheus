@@ -12,7 +12,6 @@ use super::util;
 use builder::TokensBuilder;
 use builder::SCOPE_ID;
 
-
 pub struct AutoFlushTokensBuilder;
 
 impl AutoFlushTokensBuilder {

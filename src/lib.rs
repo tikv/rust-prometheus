@@ -160,7 +160,9 @@ pub mod local {
     Unsync local metrics, provides better performance.
 
     */
-    pub use super::counter::{LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec};
+    pub use super::counter::{
+        CounterWithValueType, LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec,
+    };
     pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};
     pub use super::metrics::{LocalMetric, MayFlush};
 
