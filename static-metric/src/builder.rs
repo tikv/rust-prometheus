@@ -12,7 +12,7 @@ use super::util;
 
 /// Used for isolating different static metrics, so that structs for labels in each metric will not conflict even
 /// when they have a common prefix.
-static SCOPE_ID: AtomicUsize = AtomicUsize::new(0);
+pub static SCOPE_ID: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TokensBuilder;
 
