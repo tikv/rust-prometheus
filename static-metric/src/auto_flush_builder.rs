@@ -260,7 +260,7 @@ impl<'a> MetricBuilderContext<'a> {
         label_index: usize,
     ) -> MetricBuilderContext<'a> {
         let is_last_label = label_index == metric.labels.len() - 1;
-        let is_secondary_last_label = label_index == metric.labels.len() - 2;
+        let is_secondary_last_label = metric.labels.len() >= 2 && label_index == metric.labels.len() - 2;
 
         MetricBuilderContext {
             metric,
