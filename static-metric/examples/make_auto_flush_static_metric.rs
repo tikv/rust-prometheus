@@ -48,12 +48,13 @@ register_int_counter_vec ! (
 ).unwrap();
 }
 
-thread_local! {
-pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_COUNTER_VEC);
-}
-
 lazy_static! {
-    pub static ref TLS_HTTP_COUNTER: Lhrs = Lhrs::from(&TLS_HTTP_COUNTER_INNER);
+    pub static ref TLS_HTTP_COUNTER: Lhrs = {
+        thread_local! {
+            pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_COUNTER_VEC);
+        }
+        Lhrs::from(&TLS_HTTP_COUNTER_INNER)
+    };
 }
 
 fn main() {
