@@ -130,7 +130,6 @@ impl<T: 'static + MayFlush, D: HistogramDelegator<T>> AFLocalHistogram<T, D> {
     }
 }
 
-#[allow(dead_code)]
 impl<M: 'static + MayFlush, D: HistogramDelegator<M>> AFLocalHistogram<M, D> {
     /// Add a single observation to the [`Histogram`](::Histogram).
     pub fn observe(&self, v: f64) {

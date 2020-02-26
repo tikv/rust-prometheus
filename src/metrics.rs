@@ -34,9 +34,9 @@ pub trait LocalMetric {
 }
 
 /// An interface models a LocalMetric with try to flush functions.
-/// Not intend to be implemented by user manually,used in macro generated code.
+/// Not intend to be implemented by user manually, used in macro generated code.
 pub trait MayFlush: LocalMetric {
-    /// If the LocalMetric is already flushed in last  `flush_interval_sec` seconds,then do nothing,
+    /// If the LocalMetric is already flushed in last `flush_interval_sec` seconds, then do nothing,
     /// else flush and update last flush time.
     fn try_flush(&self, last_flush: &Cell<Instant>, flush_interval_sec: f64) {
         let now = Instant::now();

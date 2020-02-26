@@ -17,7 +17,6 @@ use prometheus_static_metric::make_auto_flush_static_metric;
 
 make_auto_flush_static_metric! {
 
-
     pub label_enum FooBar {
         foo,
         bar,
@@ -41,12 +40,12 @@ make_auto_flush_static_metric! {
 }
 
 lazy_static! {
-pub static ref HTTP_COUNTER_VEC: IntCounterVec =
-register_int_counter_vec ! (
-"http_requests",
-"Total number of HTTP requests.",
-& ["product", "method", "version"]    // it doesn't matter for the label order
-).unwrap();
+    pub static ref HTTP_COUNTER_VEC: IntCounterVec =
+        register_int_counter_vec ! (
+            "http_requests",
+            "Total number of HTTP requests.",
+            & ["product", "method", "version"]    // it doesn't matter for the label order
+        ).unwrap();
 }
 
 // Macro expanded code of auto_flush_from!
@@ -87,7 +86,7 @@ fn main() {
 
 /*
 
-/// Pseudo macro expanded code of make_auto_flush_static_metric.rs
+/// Pseudo macro expanded code of make_auto_flush_static_counter
 #[macro_use]
 extern crate lazy_static;
 extern crate coarsetime;

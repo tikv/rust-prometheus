@@ -16,7 +16,6 @@ use prometheus_static_metric::make_auto_flush_static_metric;
 
 make_auto_flush_static_metric! {
 
-
     pub label_enum FooBar {
         foo,
         bar,
@@ -40,12 +39,12 @@ make_auto_flush_static_metric! {
 }
 
 lazy_static! {
-pub static ref HTTP_HISTO_VEC: HistogramVec =
-register_histogram_vec ! (
-"http_requests",
-"Total number of HTTP requests.",
-& ["product", "method", "version"]    // it doesn't matter for the label order
-).unwrap();
+    pub static ref HTTP_HISTO_VEC: HistogramVec =
+        register_histogram_vec ! (
+            "http_requests",
+            "Total number of HTTP requests.",
+            & ["product", "method", "version"]    // it doesn't matter for the label order
+        ).unwrap();
 }
 
 thread_local! {
