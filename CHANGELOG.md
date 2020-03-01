@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.0
+
+- Add: Reset Counters (#261)
+
+- Add: Discard Histogram timers (#257)
+
+- Add: `observe_closure_duration` for better observing closure duration for local histogram (#296)
+
+- Fix a bug that global labels are not handled correctly (#269)
+
+- Improve linear bucket accuracy by avoiding accumulating error (#276)
+
+- Internal change: Use [thiserror](https://docs.rs/thiserror) to generate the error structure (#285)
+
+- Internal change: Switch from procinfo to [procfs](https://docs.rs/procfs) (#290)
+
+- Internal change: Update to newer dependencies
+
 ## 0.7.0
 
 - Provide immutable interface for local counters.
