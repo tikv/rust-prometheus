@@ -9,8 +9,8 @@ use syn::{Ident, Visibility};
 
 use super::parser::*;
 use super::util;
-use builder::TokensBuilder;
-use builder::SCOPE_ID;
+use crate::builder::TokensBuilder;
+use crate::builder::SCOPE_ID;
 
 pub struct AutoFlushTokensBuilder;
 
