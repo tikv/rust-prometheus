@@ -13,15 +13,13 @@ include = [
     "src/**/*.rs",
 ]
 
-[lib]
-proc-macro = true
-
 [dependencies]
 static-metric-proc-macros = { path = "./proc-macros" }
 
 [dev-dependencies]
 prometheus = { path = "../" }
 coarsetime = "0.1"
+lazy_static = "1.4"
 
 [features]
 default = []
