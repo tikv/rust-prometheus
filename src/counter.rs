@@ -227,7 +227,7 @@ impl<P: Atomic> GenericLocalCounter<P> {
 }
 
 impl<P: Atomic> LocalMetric for GenericLocalCounter<P> {
-    /// Flush the local metrics to the [`Counter`](::Counter).
+    /// Flush the local metrics to the [`Counter`].
     #[inline]
     fn flush(&self) {
         GenericLocalCounter::flush(self);
@@ -297,7 +297,7 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
 }
 
 impl<P: Atomic> LocalMetric for GenericLocalCounterVec<P> {
-    /// Flush the local metrics to the [`CounterVec`](::CounterVec) metric.
+    /// Flush the local metrics to the [`CounterVec`] metric.
     fn flush(&self) {
         GenericLocalCounterVec::flush(self);
     }
