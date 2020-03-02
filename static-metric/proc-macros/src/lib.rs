@@ -25,6 +25,7 @@ Is it reccomended that you consult the [`prometheus` documentation for more info
 extern crate lazy_static;
 extern crate proc_macro;
 extern crate proc_macro2;
+extern crate proc_macro_hack;
 #[macro_use]
 extern crate quote;
 extern crate syn;
@@ -42,7 +43,9 @@ use self::builder::TokensBuilder;
 use self::parser::StaticMetricMacroBody;
 use self::register_macro::RegisterMethodInvoking;
 use auto_flush_builder::AutoFlushTokensBuilder;
-use auto_flush_from::AutoFlushFromDef;
+use auto_flush_from::StaticAutoFlushFromDef;
+use proc_macro_hack::proc_macro_hack;
+use crate::auto_flush_from::AutoFlushFromDef;
 
 /// Build static metrics.
 #[proc_macro]
@@ -59,6 +62,12 @@ pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+pub fn static_auto_flush_from(input: TokenStream) -> TokenStream {
+    let def: StaticAutoFlushFromDef = syn::parse(input).unwrap();
+    def.auto_flush_from().into()
+}
+
+#[proc_macro_hack]
 pub fn auto_flush_from(input: TokenStream) -> TokenStream {
     let def: AutoFlushFromDef = syn::parse(input).unwrap();
     def.auto_flush_from().into()

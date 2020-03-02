@@ -23,5 +23,15 @@ Is it reccomended that you consult the [`prometheus` documentation for more info
 */
 
 extern crate static_metric_proc_macros;
+extern crate proc_macro_hack;
 
-pub use static_metric_proc_macros::*;
+use proc_macro_hack::proc_macro_hack;
+
+#[proc_macro_hack]
+pub use static_metric_proc_macros::auto_flush_from;
+
+pub use static_metric_proc_macros::{make_static_metric, make_auto_flush_static_metric, static_auto_flush_from};
+pub use static_metric_proc_macros::{
+    register_static_counter_vec, register_static_gauge_vec, register_static_histogram_vec,
+    register_static_int_counter_vec, register_static_int_gauge_vec,
+};

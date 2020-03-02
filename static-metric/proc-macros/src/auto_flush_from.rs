@@ -4,14 +4,14 @@ use syn::parse::{Parse, ParseStream};
 use syn::token::*;
 use syn::*;
 
-pub struct AutoFlushFromDef {
+pub struct StaticAutoFlushFromDef {
     class_name: Ident,
     inner_class_name: Ident,
     source_var_name: Ident,
     target_var_name: Ident,
 }
 
-impl Parse for AutoFlushFromDef {
+impl Parse for StaticAutoFlushFromDef {
     fn parse(input: ParseStream) -> Result<Self> {
         let target_var_name: Ident = input.parse()?;
         let _: Colon = input.parse()?;
@@ -20,7 +20,7 @@ impl Parse for AutoFlushFromDef {
         let source_var_name: Ident = input.parse()?;
         let inner_class_name = Ident::new(&format!("{}Inner", class_name), Span::call_site());
 
-        Ok(AutoFlushFromDef {
+        Ok(StaticAutoFlushFromDef {
             target_var_name,
             class_name,
             inner_class_name,
@@ -29,7 +29,7 @@ impl Parse for AutoFlushFromDef {
     }
 }
 
-impl AutoFlushFromDef {
+impl StaticAutoFlushFromDef {
     pub fn auto_flush_from(&self) -> TokenStream2 {
         let target_var_name = self.target_var_name.clone();
         let class_name = self.class_name.clone();
@@ -43,6 +43,47 @@ impl AutoFlushFromDef {
                     }
                     #class_name::from(&INNER)
                 };
+            }
+        }
+    }
+}
+
+pub struct AutoFlushFromDef {
+    class_name: Ident,
+    inner_class_name: Ident,
+    source_var_name: Ident,
+}
+
+impl Parse for AutoFlushFromDef {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let source_var_name: Ident = input.parse()?;
+        let _: Comma = input.parse()?;
+        let class_name: Ident = input.parse()?;
+        let inner_class_name = Ident::new(&format!("{}Inner", class_name), Span::call_site());
+
+        Ok(
+            AutoFlushFromDef {
+                class_name,
+                inner_class_name,
+                source_var_name,
+            }
+        )
+    }
+}
+
+impl AutoFlushFromDef {
+    pub fn auto_flush_from(&self) -> TokenStream2 {
+
+        let inner_class_name = self.inner_class_name.clone();
+        let class_name = self.class_name.clone();
+        let source_var_name = self.source_var_name.clone();
+
+        quote! {
+            {
+                thread_local! {
+                    pub static INNER: #inner_class_name = #inner_class_name::from(& #source_var_name);
+                }
+                #class_name::from(&INNER)
             }
         }
     }
