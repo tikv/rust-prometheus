@@ -6,8 +6,9 @@ use std::hash::BuildHasher;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
+use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
-use reqwest::{Client, Method, StatusCode, Url};
+use reqwest::{Method, StatusCode, Url};
 
 use crate::encoder::{Encoder, ProtobufEncoder};
 use crate::errors::{Error, Result};
