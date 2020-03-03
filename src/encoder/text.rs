@@ -13,7 +13,7 @@ pub const TEXT_FORMAT: &str = "text/plain; version=0.0.4";
 
 const POSITIVE_INF: &str = "+Inf";
 
-/// An implementation of an [`Encoder`](::Encoder) that converts a `MetricFamily` proto message
+/// An implementation of an [`Encoder`] that converts a [`MetricFamily`] proto message
 /// into text format.
 #[derive(Debug, Default)]
 pub struct TextEncoder;

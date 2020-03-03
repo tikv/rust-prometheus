@@ -36,7 +36,7 @@ macro_rules! labels {
     };
 }
 
-/// Create an [`Opts`](::Opts).
+/// Create an [`Opts`].
 ///
 /// # Examples
 ///
@@ -82,7 +82,7 @@ macro_rules! opts {
     }
 }
 
-/// Create a [`HistogramOpts`](::HistogramOpts).
+/// Create a [`HistogramOpts`].
 ///
 /// # Examples
 ///
@@ -130,7 +130,7 @@ macro_rules! histogram_opts {
     }};
 }
 
-/// Create a [`Counter`](::Counter) and registers to default registry.
+/// Create a [`Counter`] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -161,7 +161,7 @@ macro_rules! register_counter {
     }};
 }
 
-/// Create an [`IntCounter`](::IntCounter) and registers to default registry.
+/// Create an [`IntCounter`] and registers to default registry.
 ///
 /// View docs of `register_counter` for examples.
 #[macro_export(local_inner_macros)]
@@ -184,7 +184,7 @@ macro_rules! __register_counter_vec {
     }};
 }
 
-/// Create a [`CounterVec`](::CounterVec) and registers to default registry.
+/// Create a [`CounterVec`] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -210,7 +210,7 @@ macro_rules! register_counter_vec {
     }};
 }
 
-/// Create an [`IntCounterVec`](::IntCounterVec) and registers to default registry.
+/// Create an [`IntCounterVec`] and registers to default registry.
 ///
 /// View docs of `register_counter_vec` for examples.
 #[macro_export(local_inner_macros)]
@@ -233,7 +233,7 @@ macro_rules! __register_gauge {
     }};
 }
 
-/// Create a [`Gauge`](::Gauge) and registers to default registry.
+/// Create a [`Gauge`] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -259,7 +259,7 @@ macro_rules! register_gauge {
     }};
 }
 
-/// Create an [`IntGauge`](::IntGauge) and registers to default registry.
+/// Create an [`IntGauge`] and registers to default registry.
 ///
 /// View docs of `register_gauge` for examples.
 #[macro_export(local_inner_macros)]
@@ -282,7 +282,7 @@ macro_rules! __register_gauge_vec {
     }};
 }
 
-/// Create a [`GaugeVec`](::GaugeVec) and registers to default registry.
+/// Create a [`GaugeVec`] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -308,7 +308,7 @@ macro_rules! register_gauge_vec {
     }};
 }
 
-/// Create an [`IntGaugeVec`](::IntGaugeVec) and registers to default registry.
+/// Create an [`IntGaugeVec`] and registers to default registry.
 ///
 /// View docs of `register_gauge_vec` for examples.
 #[macro_export(local_inner_macros)]
@@ -322,7 +322,7 @@ macro_rules! register_int_gauge_vec {
     }};
 }
 
-/// Create a [`Histogram`](::Histogram) and registers to default registry.
+/// Create a [`Histogram`] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -358,7 +358,7 @@ macro_rules! register_histogram {
     }};
 }
 
-/// Create a [`HistogramVec`](::HistogramVec) and registers to default registry.
+/// Create a [`HistogramVec`] and registers to default registry.
 ///
 /// # Examples
 ///

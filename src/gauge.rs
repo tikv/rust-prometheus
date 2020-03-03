@@ -12,17 +12,17 @@ use crate::proto;
 use crate::value::{Value, ValueType};
 use crate::vec::{MetricVec, MetricVecBuilder};
 
-/// The underlying implementation for [`Gauge`](::Gauge) and [`IntGauge`](::IntGauge).
+/// The underlying implementation for [`Gauge`] and [`IntGauge`].
 #[derive(Debug)]
 pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
 
-/// A [`Metric`](::core::Metric) represents a single numerical value that can arbitrarily go up
+/// A [`Metric`] represents a single numerical value that can arbitrarily go up
 /// and down.
 pub type Gauge = GenericGauge<AtomicF64>;
 
-/// The integer version of [`Gauge`](::Gauge). Provides better performance if metric values are
+/// The integer version of [`Gauge`]. Provides better performance if metric values are
 /// all integers.
 pub type IntGauge = GenericGauge<AtomicI64>;
 
@@ -35,13 +35,13 @@ impl<P: Atomic> Clone for GenericGauge<P> {
 }
 
 impl<P: Atomic> GenericGauge<P> {
-    /// Create a [`GenericGauge`](::core::GenericGauge) with the `name` and `help` arguments.
+    /// Create a [`GenericGauge`] with the `name` and `help` arguments.
     pub fn new<S: Into<String>>(name: S, help: S) -> Result<Self> {
         let opts = Opts::new(name, help);
         Self::with_opts(opts)
     }
 
-    /// Create a [`GenericGauge`](::core::GenericGauge) with the `opts` options.
+    /// Create a [`GenericGauge`] with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Self> {
         Self::with_opts_and_label_values(&opts, &[])
     }
@@ -134,22 +134,22 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
     }
 }
 
-/// The underlying implementation for [`GaugeVec`](::GaugeVec) and [`IntGaugeVec`](::IntGaugeVec).
+/// The underlying implementation for [`GaugeVec`] and [`IntGaugeVec`].
 pub type GenericGaugeVec<P> = MetricVec<GaugeVecBuilder<P>>;
 
-/// A [`Collector`](::core::Collector) that bundles a set of [`Gauge`](::Gauge)s that all share
-/// the same [`Desc`](::core::Desc), but have different values for their variable labels. This is
+/// A [`Collector`] that bundles a set of [`Gauge`]s that all share
+/// the same [`Desc`], but have different values for their variable labels. This is
 /// used if you want to count the same thing partitioned by various dimensions
 /// (e.g. number of operations queued, partitioned by user and operation type).
 pub type GaugeVec = GenericGaugeVec<AtomicF64>;
 
-/// The integer version of [`GaugeVec`](::GaugeVec). Provides better performance if metric values
+/// The integer version of [`GaugeVec`]. Provides better performance if metric values
 /// are all integers.
 pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
 
 impl<P: Atomic> GenericGaugeVec<P> {
-    /// Create a new [`GenericGaugeVec`](::core::GenericGaugeVec) based on the provided
-    /// [`Opts`](::Opts) and partitioned by the given label names. At least one label name must
+    /// Create a new [`GenericGaugeVec`] based on the provided
+    /// [`Opts`] and partitioned by the given label names. At least one label name must
     /// be provided.
     pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
