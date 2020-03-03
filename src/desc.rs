@@ -54,9 +54,9 @@ fn is_valid_label_name(name: &str) -> bool {
     name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
 }
 
-/// The descriptor used by every Prometheus [`Metric`](::core::Metric). It is essentially
+/// The descriptor used by every Prometheus [`Metric`](crate::core::Metric). It is essentially
 /// the immutable meta-data of a metric. The normal metric implementations
-/// included in this package manage their [`Desc`](::core::Desc) under the hood.
+/// included in this package manage their [`Desc`] under the hood.
 ///
 /// Descriptors registered with the same registry have to fulfill certain
 /// consistency and uniqueness criteria if they share the same fully-qualified
@@ -89,7 +89,7 @@ pub struct Desc {
 }
 
 impl Desc {
-    /// Initializes a new [`Desc`](::core::Desc). Errors are recorded in the Desc
+    /// Initializes a new [`Desc`]. Errors are recorded in the Desc
     /// and will be reported on registration time. variableLabels and constLabels can
     /// be nil if no such labels should be set. fqName and help must not be empty.
     pub fn new(
@@ -195,9 +195,9 @@ impl Desc {
     }
 }
 
-/// An interface for describing the immutable meta-data of a [`Metric`](::core::Metric).
+/// An interface for describing the immutable meta-data of a [`Metric`](crate::core::Metric).
 pub trait Describer {
-    /// `describe` returns a [`Desc`](::core::Desc).
+    /// `describe` returns a [`Desc`].
     fn describe(&self) -> Result<Desc>;
 }
 
