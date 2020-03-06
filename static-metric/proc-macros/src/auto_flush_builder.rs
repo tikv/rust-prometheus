@@ -202,7 +202,7 @@ impl AutoFlushTokensBuilder {
             quote! {
                 CounterDelegator<#inner_struct, #metric_type>
             }
-        } else if metric_type.to_string().contains("Histogram"){
+        } else if metric_type.to_string().contains("Histogram") {
             quote! {
                 HistogramDelegator<#inner_struct>
             }
@@ -315,6 +315,7 @@ impl<'a> MetricBuilderContext<'a> {
         let last_flush = if self.label_index == 0 {
             quote! {
                 last_flush: Cell<Instant>,
+                flush_duration: coarsetime::Duration,
             }
         } else {
             Tokens::new()
@@ -420,7 +421,7 @@ impl<'a> MetricBuilderContext<'a> {
 
                 impl ::prometheus::local::MayFlush for #struct_name {
                     fn may_flush(&self) {
-                        MayFlush::try_flush(self, &self.last_flush, 1.0)
+                        MayFlush::try_flush(self, &self.last_flush, self.flush_duration)
                     }
                 }
             }
@@ -465,9 +466,7 @@ impl<'a> MetricBuilderContext<'a> {
         let next_member_type = self.inner_next_member_type.clone();
         let metric_type = self.metric.metric_type.clone();
         let known_offsets = (1..=(self.label_index + 1))
-            .map(|m| {
-                Ident::new(&format!("offset{}", m), Span::call_site())
-            })
+            .map(|m| Ident::new(&format!("offset{}", m), Span::call_site()))
             .collect::<Vec<Ident>>();
         let known_offsets_tokens = quote! {
           #(
@@ -674,6 +673,7 @@ impl<'a> MetricBuilderContext<'a> {
         let init_instant = if self.label_index == 0 {
             quote! {
             last_flush: Cell::new(Instant::now()),
+            flush_duration: coarsetime::Duration::from_secs(1),
             }
         } else {
             Tokens::new()
