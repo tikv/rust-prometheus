@@ -370,7 +370,7 @@ impl<'a> MetricBuilderContext<'a> {
         let struct_name = self.inner_struct_name();
         let impl_from = self.build_inner_impl_from();
         let impl_flush = self.build_inner_impl_flush();
-        let update_flush_duration = self.build_update_flush_duration();
+        let update_flush_duration = self.build_with_flush_duration();
 
         quote! {
             impl #struct_name {
@@ -744,11 +744,12 @@ impl<'a> MetricBuilderContext<'a> {
         }
     }
 
-    fn build_update_flush_duration(&self) -> Tokens {
+    fn build_with_flush_duration(&self) -> Tokens {
         if self.label_index == 0 {
             quote! {
-                pub fn update_flush_duration(mut self, duration: coarsetime::Duration) {
+                pub fn with_flush_duration(mut self, duration: coarsetime::Duration) -> Self {
                     self.flush_duration = duration;
+                    self
                 }
             }
         } else {

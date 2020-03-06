@@ -12,6 +12,7 @@ extern crate prometheus;
 extern crate prometheus_static_metric;
 
 use prometheus::*;
+use prometheus_static_metric::auto_flush_from;
 use prometheus_static_metric::make_auto_flush_static_metric;
 
 make_auto_flush_static_metric! {
@@ -47,12 +48,9 @@ lazy_static! {
         ).unwrap();
 }
 
-thread_local! {
-pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_HISTO_VEC);
-}
-
 lazy_static! {
-    pub static ref TLS_HTTP_COUNTER: Lhrs = Lhrs::from(&TLS_HTTP_COUNTER_INNER);
+    pub static ref TLS_HTTP_COUNTER: Lhrs =
+        auto_flush_from!(HTTP_HISTO_VEC, Lhrs, std::time::Duration::from_secs(1));
 }
 
 fn main() {
