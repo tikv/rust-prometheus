@@ -370,11 +370,13 @@ impl<'a> MetricBuilderContext<'a> {
         let struct_name = self.inner_struct_name();
         let impl_from = self.build_inner_impl_from();
         let impl_flush = self.build_inner_impl_flush();
+        let update_flush_duration = self.build_update_flush_duration();
 
         quote! {
             impl #struct_name {
                 #impl_from
                 #impl_flush
+                #update_flush_duration
             }
         }
     }
@@ -739,6 +741,18 @@ impl<'a> MetricBuilderContext<'a> {
             pub fn flush(&self) {
                 #(self.#names.flush();)*
             }
+        }
+    }
+
+    fn build_update_flush_duration(&self) -> Tokens {
+        if self.label_index == 0 {
+            quote! {
+                pub fn update_flush_duration(mut self, duration: coarsetime::Duration) {
+                    self.flush_duration = duration;
+                }
+            }
+        } else {
+            Tokens::new()
         }
     }
 
