@@ -92,7 +92,7 @@ fn main() {
 }
 
 /*
-/// Pseudo macro expanded code of make_auto_flush_static_metric_histo.rs
+/// Pseudo macro expanded code of make_auto_flush_static_metric_histogram
 #[macro_use]
 extern crate lazy_static;
 extern crate coarsetime;
