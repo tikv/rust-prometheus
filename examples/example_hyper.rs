@@ -60,8 +60,8 @@ async fn main() {
     let addr = ([127, 0, 0, 1], 9898).into();
     println!("Listening on http://{}", addr);
 
-    let serve_future = Server::bind(&addr).serve(make_service_fn(|_| async {
-        Ok::<_, hyper::Error>(service_fn(serve_req))
+    let serve_future = Server::bind(&addr).serve(make_service_fn(|_| {
+        async { Ok::<_, hyper::Error>(service_fn(serve_req)) }
     }));
 
     if let Err(err) = serve_future.await {

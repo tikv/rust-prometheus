@@ -17,13 +17,11 @@ impl Parse for AutoFlushFromDef {
         let class_name: Ident = input.parse()?;
         let inner_class_name = Ident::new(&format!("{}Inner", class_name), Span::call_site());
 
-        Ok(
-            AutoFlushFromDef {
-                class_name,
-                inner_class_name,
-                source_var_name,
-            }
-        )
+        Ok(AutoFlushFromDef {
+            class_name,
+            inner_class_name,
+            source_var_name,
+        })
     }
 }
 
