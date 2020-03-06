@@ -7,12 +7,12 @@ use syn::*;
 pub struct AutoFlushFromDef {
     class_name: Ident,
     inner_class_name: Ident,
-    source_var_name: Ident,
+    source_var_name: Expr,
 }
 
 impl Parse for AutoFlushFromDef {
     fn parse(input: ParseStream) -> Result<Self> {
-        let source_var_name: Ident = input.parse()?;
+        let source_var_name: Expr = input.parse()?;
         let _: Comma = input.parse()?;
         let class_name: Ident = input.parse()?;
         let inner_class_name = Ident::new(&format!("{}Inner", class_name), Span::call_site());
