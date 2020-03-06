@@ -202,10 +202,12 @@ impl AutoFlushTokensBuilder {
             quote! {
                 CounterDelegator<#inner_struct, #metric_type>
             }
-        } else {
+        } else if metric_type.to_string().contains("Histogram"){
             quote! {
                 HistogramDelegator<#inner_struct>
             }
+        } else {
+            panic!("Metric type must be one of LocalCounter or LocalHistogram")
         };
 
         quote! {
@@ -215,9 +217,9 @@ impl AutoFlushTokensBuilder {
                 }
                 fn get_local<'a>(&self, root_metric: &'a #inner_struct) -> &'a #metric_type {
                    unsafe {
-                    #(
-                      #offset_fetchers
-                    )*
+                       #(
+                            #offset_fetchers
+                       )*
                    }
                 }
             }
