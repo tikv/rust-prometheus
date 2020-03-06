@@ -37,7 +37,7 @@ pub fn get_member_type(
     if is_last_label {
         metric_type
     } else {
-        get_label_struct_name(struct_name.clone(), label_index + 1)
+        get_label_struct_name(struct_name, label_index + 1)
     }
 }
 
@@ -53,7 +53,7 @@ pub fn get_inner_member_type(
         Ident::new(
             &format!(
                 "{}Inner",
-                get_label_struct_name(struct_name.clone(), label_index + 1)
+                get_label_struct_name(struct_name, label_index + 1)
             ),
             Span::call_site(),
         )
@@ -71,7 +71,7 @@ pub fn get_delegator_member_type(
         Ident::new(
             &format!(
                 "{}{}",
-                get_label_struct_name(struct_name.clone(), label_index + 1),
+                get_label_struct_name(struct_name, label_index + 1),
                 "Delegator"
             ),
             Span::call_site(),

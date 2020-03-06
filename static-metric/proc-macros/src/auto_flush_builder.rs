@@ -141,7 +141,7 @@ impl AutoFlushTokensBuilder {
 
     fn build_auto_flush_delegator(
         metric: &MetricDef,
-        builder_contexts: &Vec<MetricBuilderContext>,
+        builder_contexts: &[MetricBuilderContext],
     ) -> Tokens {
         let inner_struct = &builder_contexts[0].inner_struct_name();
         let last_builder_contexts = &builder_contexts
@@ -224,11 +224,11 @@ impl AutoFlushTokensBuilder {
         }
     }
 
-    fn build_outer_struct(builder_contexts: &Vec<MetricBuilderContext>) -> Tokens {
+    fn build_outer_struct(builder_contexts: &[MetricBuilderContext]) -> Tokens {
         builder_contexts[0].build_outer_struct()
     }
 
-    fn build_outer_impl(builder_contexts: &Vec<MetricBuilderContext>) -> Tokens {
+    fn build_outer_impl(builder_contexts: &[MetricBuilderContext]) -> Tokens {
         builder_contexts[0].build_outer_impl()
     }
 }
@@ -464,8 +464,7 @@ impl<'a> MetricBuilderContext<'a> {
         let metric_type = self.metric.metric_type.clone();
         let known_offsets = (1..=(self.label_index + 1))
             .map(|m| {
-                let res = Ident::new(&format!("offset{}", m), Span::call_site());
-                res
+                Ident::new(&format!("offset{}", m), Span::call_site())
             })
             .collect::<Vec<Ident>>();
         let known_offsets_tokens = quote! {

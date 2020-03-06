@@ -13,7 +13,7 @@ use hyper::{
 use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
 
 lazy_static! {
-    static ref HTTP_COUNTER: Counter = register_counter!(opts!(
+    static ref HTTP_COUNTER: Counter = register_counter!(optstatic-metric/proc-macros/src/auto_flush_builder.rs:468:17s!(
         "example_http_requests_total",
         "Total number of HTTP requests made.",
         labels! {"handler" => "all",}
