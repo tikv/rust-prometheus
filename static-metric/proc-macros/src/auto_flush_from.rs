@@ -29,7 +29,6 @@ impl Parse for AutoFlushFromDef {
 
 impl AutoFlushFromDef {
     pub fn auto_flush_from(&self) -> TokenStream2 {
-
         let inner_class_name = self.inner_class_name.clone();
         let class_name = self.class_name.clone();
         let source_var_name = self.source_var_name.clone();
