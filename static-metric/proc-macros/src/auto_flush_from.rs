@@ -19,8 +19,8 @@ impl Parse for AutoFlushFromDef {
         let inner_class_name = Ident::new(&format!("{}Inner", class_name), Span::call_site());
 
         let flush_duration = if input.peek(Comma) {
-            let _ : Comma = input.parse()?;
-            let res : Expr = input.parse()?;
+            let _: Comma = input.parse()?;
+            let res: Expr = input.parse()?;
             Some(res)
         } else {
             None
@@ -46,7 +46,7 @@ impl AutoFlushFromDef {
                     .with_flush_duration(#d.into())
                 }
             }
-            None => quote! {}
+            None => quote! {},
         };
         quote! {
             {
