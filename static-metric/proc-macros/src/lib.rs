@@ -43,7 +43,6 @@ use self::builder::TokensBuilder;
 use self::parser::StaticMetricMacroBody;
 use self::register_macro::RegisterMethodInvoking;
 use auto_flush_builder::AutoFlushTokensBuilder;
-use auto_flush_from::StaticAutoFlushFromDef;
 use proc_macro_hack::proc_macro_hack;
 use crate::auto_flush_from::AutoFlushFromDef;
 
@@ -61,11 +60,6 @@ pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
     AutoFlushTokensBuilder::build(body).into()
 }
 
-#[proc_macro]
-pub fn static_auto_flush_from(input: TokenStream) -> TokenStream {
-    let def: StaticAutoFlushFromDef = syn::parse(input).unwrap();
-    def.auto_flush_from().into()
-}
 
 #[proc_macro_hack]
 pub fn auto_flush_from(input: TokenStream) -> TokenStream {
