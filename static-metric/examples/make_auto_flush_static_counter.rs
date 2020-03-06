@@ -60,7 +60,7 @@ lazy_static! {
 //
 
 lazy_static! {
-    pub static ref TLS_HTTP_COUNTER : Lhrs = auto_flush_from!(HTTP_COUNTER_VEC,Lhrs);
+    pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs);
 }
 
 fn main() {
