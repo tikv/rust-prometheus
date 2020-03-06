@@ -34,7 +34,7 @@ impl AutoFlushFromDef {
         quote! {
             {
                 thread_local! {
-                    pub static INNER: #inner_class_name = #inner_class_name::from(& #source_var_name);
+                    static INNER: #inner_class_name = #inner_class_name::from(& #source_var_name);
                 }
                 #class_name::from(&INNER)
             }
