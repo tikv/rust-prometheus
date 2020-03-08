@@ -123,71 +123,115 @@ pub enum FooBar {
     bar,
 }
 
+use ::std::collections::HashMap;
+use ::prometheus::*;
+use ::prometheus::local::*;
+use ::std::cell::Cell;
+use ::coarsetime::Instant;
+use ::std::thread::LocalKey;
+use std::mem;
+use std::mem::MaybeUninit;
+#[allow(unused_imports)]
+use super::*;
 #[allow(missing_copy_implementations)]
 pub struct LhrsInner {
-    pub foo: LhrsInner2,
-    pub bar: LhrsInner2,
+    pub foo: Lhrs2Inner,
+    pub bar: Lhrs2Inner,
     last_flush: Cell<Instant>,
+    flush_duration: coarsetime::Duration,
 }
-
-#[allow(missing_copy_implementations)]
-pub struct LhrsInner2 {
-    pub post: LhrsInner3,
-    pub get: LhrsInner3,
-    pub put: LhrsInner3,
-    pub delete: LhrsInner3,
-}
-
-#[allow(missing_copy_implementations)]
-pub struct LhrsInner3 {
-    pub http1: LocalIntCounter,
-    pub http2: LocalIntCounter,
-}
-
-pub struct LhrsDelegator {
-    pub post: LhrsDelegator2,
-    pub get: LhrsDelegator2,
-    pub put: LhrsDelegator2,
-    pub delete: LhrsDelegator2,
-}
-
-pub struct LhrsDelegator2 {
-    pub http1: AFLocalCounter<LhrsInner, LocalIntCounter, LhrsDelegator3>,
-    pub http2: AFLocalCounter<LhrsInner, LocalIntCounter, LhrsDelegator3>,
-}
-
-pub struct LhrsDelegator3 {
-    root: &'static LocalKey<LhrsInner>,
-    offset1: usize,
-    offset2: usize,
-    offset3: usize,
-}
-
 impl LhrsInner {
     pub fn from(m: &IntCounterVec) -> LhrsInner {
         LhrsInner {
-            foo: LhrsInner2::from("foo", m),
-            bar: LhrsInner2::from("bar", m),
+            foo: Lhrs2Inner::from("foo", m),
+            bar: Lhrs2Inner::from("bar", m),
             last_flush: Cell::new(Instant::now()),
+            flush_duration: coarsetime::Duration::from_secs(1),
         }
     }
-
     pub fn flush(&self) {
         self.foo.flush();
         self.bar.flush();
     }
+    pub fn with_flush_duration(mut self, duration: coarsetime::Duration) -> Self {
+        self.flush_duration = duration;
+        self
+    }
 }
-
-impl LhrsInner2 {
-    pub fn from(label_0: &str, m: &IntCounterVec) -> LhrsInner2 {
-        LhrsInner2 {
-            post: LhrsInner3::from(label_0, "post", m),
-            get: LhrsInner3::from(label_0, "get", m),
-            put: LhrsInner3::from(label_0, "put", m),
-            delete: LhrsInner3::from(label_0, "delete", m),
+impl ::prometheus::local::LocalMetric for LhrsInner {
+    fn flush(&self) {
+        LhrsInner::flush(self);
+    }
+}
+impl ::prometheus::local::MayFlush for LhrsInner {
+    fn may_flush(&self) {
+        MayFlush::try_flush(self, &self.last_flush, self.flush_duration)
+    }
+}
+#[allow(missing_copy_implementations)]
+pub struct LhrsDelegator {
+    pub post: Lhrs2Delegator,
+    pub get: Lhrs2Delegator,
+    pub put: Lhrs2Delegator,
+    pub delete: Lhrs2Delegator,
+}
+impl LhrsDelegator {
+    pub fn new(root: &'static LocalKey<LhrsInner>, offset1: usize) -> LhrsDelegator {
+        let x = unsafe { MaybeUninit::<Lhrs2Inner>::uninit().assume_init() };
+        let branch_offset = (&x as *const Lhrs2Inner) as usize;
+        let post = Lhrs2Delegator::new(
+            root,
+            offset1,
+            &(x.post) as *const Lhrs3Inner as usize - branch_offset,
+        );
+        let get = Lhrs2Delegator::new(
+            root,
+            offset1,
+            &(x.get) as *const Lhrs3Inner as usize - branch_offset,
+        );
+        let put = Lhrs2Delegator::new(
+            root,
+            offset1,
+            &(x.put) as *const Lhrs3Inner as usize - branch_offset,
+        );
+        let delete = Lhrs2Delegator::new(
+            root,
+            offset1,
+            &(x.delete) as *const Lhrs3Inner as usize - branch_offset,
+        );
+        mem::forget(x);
+        LhrsDelegator {
+            post,
+            get,
+            put,
+            delete,
         }
     }
-
+    pub fn get(&self, enum_value: Methods) -> &Lhrs2Delegator {
+        match enum_value {
+            Methods::post => &self.post,
+            Methods::get => &self.get,
+            Methods::put => &self.put,
+            Methods::delete => &self.delete,
+        }
+    }
+}
+#[allow(missing_copy_implementations)]
+pub struct Lhrs2Inner {
+    pub post: Lhrs3Inner,
+    pub get: Lhrs3Inner,
+    pub put: Lhrs3Inner,
+    pub delete: Lhrs3Inner,
+}
+impl Lhrs2Inner {
+    pub fn from(label_0: &str, m: &IntCounterVec) -> Lhrs2Inner {
+        Lhrs2Inner {
+            post: Lhrs3Inner::from(label_0, "post", m),
+            get: Lhrs3Inner::from(label_0, "get", m),
+            put: Lhrs3Inner::from(label_0, "put", m),
+            delete: Lhrs3Inner::from(label_0, "delete", m),
+        }
+    }
     pub fn flush(&self) {
         self.post.flush();
         self.get.flush();
@@ -195,10 +239,43 @@ impl LhrsInner2 {
         self.delete.flush();
     }
 }
-
-impl LhrsInner3 {
-    pub fn from(label_0: &str, label_1: &str, m: &IntCounterVec) -> LhrsInner3 {
-        LhrsInner3 {
+#[allow(missing_copy_implementations)]
+pub struct Lhrs2Delegator {
+    pub http1: AFLocalCounter<LhrsInner, LocalIntCounter, Lhrs3Delegator>,
+    pub http2: AFLocalCounter<LhrsInner, LocalIntCounter, Lhrs3Delegator>,
+}
+impl Lhrs2Delegator {
+    pub fn new(
+        root: &'static LocalKey<LhrsInner>,
+        offset1: usize,
+        offset2: usize,
+    ) -> Lhrs2Delegator {
+        let x = unsafe { MaybeUninit::<Lhrs3Inner>::uninit().assume_init() };
+        let branch_offset = (&x as *const Lhrs3Inner) as usize;
+        let http1 = Lhrs3Delegator::new(
+            root,
+            offset1,
+            offset2,
+            &(x.http1) as *const LocalIntCounter as usize - branch_offset,
+        );
+        let http2 = Lhrs3Delegator::new(
+            root,
+            offset1,
+            offset2,
+            &(x.http2) as *const LocalIntCounter as usize - branch_offset,
+        );
+        mem::forget(x);
+        Lhrs2Delegator { http1, http2 }
+    }
+}
+#[allow(missing_copy_implementations)]
+pub struct Lhrs3Inner {
+    pub http1: LocalIntCounter,
+    pub http2: LocalIntCounter,
+}
+impl Lhrs3Inner {
+    pub fn from(label_0: &str, label_1: &str, m: &IntCounterVec) -> Lhrs3Inner {
+        Lhrs3Inner {
             http1: m
                 .with(&{
                     let mut coll = HashMap::new();
@@ -219,153 +296,75 @@ impl LhrsInner3 {
                 .local(),
         }
     }
-
     pub fn flush(&self) {
         self.http1.flush();
         self.http2.flush();
     }
 }
-
-impl ::prometheus::local::LocalMetric for LhrsInner {
-    fn flush(&self) {
-        LhrsInner::flush(self);
-    }
+#[allow(missing_copy_implementations)]
+pub struct Lhrs3Delegator {
+    root: &'static LocalKey<LhrsInner>,
+    pub offset1: usize,
+    pub offset2: usize,
+    pub offset3: usize,
 }
-
-impl ::prometheus::local::MayFlush for LhrsInner {
-    fn may_flush(&self) {
-        MayFlush::try_flush(self, &self.last_flush, 1.0)
-    }
-}
-
-impl LhrsDelegator {
-    fn new(root: &'static LocalKey<LhrsInner>, offset: usize) -> LhrsDelegator {
-        let x = unsafe { MaybeUninit::<LhrsInner2>::uninit().assume_init() };
-        let branch_offset = &x as *const LhrsInner2 as usize;
-        let post = LhrsDelegator2::new(
-            root,
-            offset,
-            &(x.post) as *const LhrsInner3 as usize - branch_offset,
-        );
-        let get = LhrsDelegator2::new(
-            root,
-            offset,
-            &(x.get) as *const LhrsInner3 as usize - branch_offset,
-        );
-        let put = LhrsDelegator2::new(
-            root,
-            offset,
-            &(x.put) as *const LhrsInner3 as usize - branch_offset,
-        );
-        let delete = LhrsDelegator2::new(
-            root,
-            offset,
-            &(x.delete) as *const LhrsInner3 as usize - branch_offset,
-        );
-        mem::forget(x);
-        LhrsDelegator {
-            post,
-            get,
-            put,
-            delete,
-        }
-    }
-
-    pub fn get(&self, value: Methods) -> &LhrsDelegator2 {
-        match value {
-            Methods::post => &self.post,
-            Methods::get => &self.get,
-            Methods::put => &self.put,
-            Methods::delete => &self.delete,
-        }
-    }
-}
-
-impl LhrsDelegator2 {
-    fn new(root: &'static LocalKey<LhrsInner>, offset1: usize, offset2: usize) -> LhrsDelegator2 {
-        let x = unsafe { MaybeUninit::<LhrsInner3>::uninit().assume_init() };
-        let branch_offset = (&x as *const LhrsInner3) as usize;
-        let http1 = LhrsDelegator3::new(
-            root,
-            offset1,
-            offset2,
-            &(x.http1) as *const LocalIntCounter as usize - branch_offset,
-        );
-        let http2 = LhrsDelegator3::new(
-            root,
-            offset1,
-            offset2,
-            &(x.http2) as *const LocalIntCounter as usize - branch_offset,
-        );
-        mem::forget(x);
-        LhrsDelegator2 { http1, http2 }
-    }
-}
-
-impl LhrsDelegator3 {
-    fn new(
+impl Lhrs3Delegator {
+    pub fn new(
         root: &'static LocalKey<LhrsInner>,
         offset1: usize,
         offset2: usize,
         offset3: usize,
-    ) -> AFLocalCounter<LhrsInner, LocalIntCounter, LhrsDelegator3> {
-        let delegator = LhrsDelegator3 {
+    ) -> AFLocalCounter<LhrsInner, LocalIntCounter, Lhrs3Delegator> {
+        let delegator = Lhrs3Delegator {
             root,
             offset1,
             offset2,
             offset3,
         };
-
         AFLocalCounter::new(delegator)
     }
 }
-
-impl CounterDelegator<LhrsInner, LocalIntCounter> for LhrsDelegator3 {
+impl CounterDelegator<LhrsInner, LocalIntCounter> for Lhrs3Delegator {
     fn get_root_metric(&self) -> &'static LocalKey<LhrsInner> {
         self.root
     }
-
     fn get_local<'a>(&self, root_metric: &'a LhrsInner) -> &'a LocalIntCounter {
         unsafe {
-            let inner1 = root_metric as *const LhrsInner;
-            let inner2 = (inner1 as usize + self.offset1) as *const LhrsInner2;
-            let inner3 = (inner2 as usize + self.offset2) as *const LhrsInner3;
-            let counter = (inner3 as usize + self.offset3) as *const LocalIntCounter;
-            &*counter
+            let lhrsinner = root_metric as *const LhrsInner;
+            let lhrs2inner = (lhrsinner as usize + self.offset1) as *const Lhrs2Inner;
+            let lhrs3inner = (lhrs2inner as usize + self.offset2) as *const Lhrs3Inner;
+            let localintcounter =
+                (lhrs3inner as usize + self.offset3) as *const LocalIntCounter;
+            &*localintcounter
         }
     }
 }
-
 pub struct Lhrs {
     inner: &'static LocalKey<LhrsInner>,
     pub foo: LhrsDelegator,
     pub bar: LhrsDelegator,
 }
-
 impl Lhrs {
     pub fn from(inner: &'static LocalKey<LhrsInner>) -> Lhrs {
         let x = unsafe { MaybeUninit::<LhrsInner>::uninit().assume_init() };
         let branch_offset = &x as *const LhrsInner as usize;
         let foo = LhrsDelegator::new(
             &inner,
-            &(x.foo) as *const LhrsInner2 as usize - branch_offset,
+            &(x.foo) as *const Lhrs2Inner as usize - branch_offset,
         );
         let bar = LhrsDelegator::new(
             &inner,
-            &(x.bar) as *const LhrsInner2 as usize - branch_offset,
+            &(x.bar) as *const Lhrs2Inner as usize - branch_offset,
         );
         mem::forget(x);
         Lhrs { inner, foo, bar }
     }
-
-    pub fn try_get(&self, value: &str) -> Option<&LhrsDelegator> {
-        match value {
-            "foo" => Some(&self.foo),
-            "bar" => Some(&self.bar),
-            _ => None,
+    pub fn get(&self, enum_value: FooBar) -> &LhrsDelegator {
+        match enum_value {
+            FooBar::foo => &self.foo,
+            FooBar::bar => &self.bar,
         }
     }
-
     pub fn flush(&self) {
         self.inner.with(|m| m.flush())
     }
