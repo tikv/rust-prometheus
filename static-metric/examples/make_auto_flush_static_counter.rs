@@ -60,7 +60,9 @@ lazy_static! {
 //
 
 lazy_static! {
-    pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs);
+    // You can also use default flush duration which is 1 second.
+    // pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs);
+    pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs, std::time::Duration::from_secs(1));
 }
 
 fn main() {

@@ -32,6 +32,7 @@ pub fn make_static_metric(input: TokenStream) -> TokenStream {
 }
 
 /// Build auto flush able static metrics.
+/// refer to https://github.com/tikv/rust-prometheus/tree/master/static-metric for more info.
 #[proc_macro]
 pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
     let body: StaticMetricMacroBody = syn::parse(input).unwrap();
