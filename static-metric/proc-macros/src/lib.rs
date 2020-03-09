@@ -38,6 +38,7 @@ pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
     AutoFlushTokensBuilder::build(body).into()
 }
 
+/// Instantiate a auto flush able static metric struct from a HistogramVec or CounterVec.
 #[proc_macro_hack]
 pub fn auto_flush_from(input: TokenStream) -> TokenStream {
     let def: AutoFlushFromDef = syn::parse(input).unwrap();
