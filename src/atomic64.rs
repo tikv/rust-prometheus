@@ -7,7 +7,7 @@ use std::ops::*;
 use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
 
 /// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
-/// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
+/// [`Counter`](crate::Counter) and [`IntCounter`](crate::Counter).
 pub trait Number:
     Sized + AddAssign + SubAssign + PartialOrd + PartialEq + Copy + Send + Sync
 {
@@ -54,7 +54,7 @@ impl Number for f64 {
 }
 
 /// An interface for atomics. Used to generically model float metrics and integer metrics, i.e.
-/// [`Counter`](::Counter) and [`IntCounter`](::IntCounter).
+/// [`Counter`](crate::Counter) and [`IntCounter`](crate::IntCounter).
 pub trait Atomic: Send + Sync {
     /// The numeric type associated with this atomic.
     type T: Number;

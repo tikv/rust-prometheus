@@ -7,7 +7,7 @@ use crate::errors::{Error, Result};
 use crate::proto::{Counter, Gauge, LabelPair, Metric, MetricFamily, MetricType};
 
 /// `ValueType` is an enumeration of metric types that represent a simple value
-/// for [`Counter`](::Counter) and [`Gauge`](::Gauge).
+/// for [`Counter`] and [`Gauge`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ValueType {
     Counter,
@@ -24,10 +24,10 @@ impl ValueType {
     }
 }
 
-/// A generic metric for [`Counter`](::Counter) and [`Gauge`](::Gauge).
+/// A generic metric for [`Counter`] and [`Gauge`].
 /// Its effective type is determined by `ValueType`. This is a low-level
 /// building block used by the library to back the implementations of
-/// [`Counter`](::Counter) and [`Gauge`](::Gauge).
+/// [`Counter`] and [`Gauge`].
 #[derive(Debug)]
 pub struct Value<P: Atomic> {
     pub desc: Desc,
