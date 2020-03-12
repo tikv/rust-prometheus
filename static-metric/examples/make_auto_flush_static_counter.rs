@@ -68,6 +68,12 @@ lazy_static! {
 fn main() {
     TLS_HTTP_COUNTER.foo.post.http1.inc();
     TLS_HTTP_COUNTER.foo.post.http1.inc();
+    //Non-static call
+    TLS_HTTP_COUNTER
+        .get(FooBar::foo)
+        .get(Methods::post)
+        .http1
+        .inc();
 
     assert_eq!(
         HTTP_COUNTER_VEC
@@ -83,7 +89,7 @@ fn main() {
         HTTP_COUNTER_VEC
             .with_label_values(&["foo", "post", "HTTP/1"])
             .get(),
-        3
+        4
     );
 }
 
