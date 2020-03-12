@@ -1,6 +1,6 @@
 use crate::core::Atomic;
 use crate::counter::{CounterWithValueType, GenericLocalCounter};
-use crate::histogram::{duration_to_seconds, Instant, LocalHistogram};
+use crate::histogram::{Instant, LocalHistogram};
 use crate::metrics::MayFlush;
 use spin::Mutex;
 use std::thread::LocalKey;
@@ -147,7 +147,7 @@ impl<M: 'static + MayFlush, D: HistogramDelegator<M>> AFLocalHistogram<M, D> {
     {
         let instant = Instant::now();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -160,7 +160,7 @@ impl<M: 'static + MayFlush, D: HistogramDelegator<M>> AFLocalHistogram<M, D> {
     {
         let instant = Instant::now_coarse();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }

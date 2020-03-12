@@ -295,6 +295,11 @@ impl Instant {
             }
         }
     }
+
+    #[inline]
+    pub fn elapsed_sec(&self) -> f64 {
+        duration_to_seconds(self.elapsed())
+    }
 }
 
 #[cfg(all(feature = "nightly", target_os = "linux"))]
@@ -383,7 +388,7 @@ impl HistogramTimer {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = self.start.elapsed_sec();
         self.observed = true;
         if record {
             self.histogram.observe(v);
@@ -465,7 +470,7 @@ impl Histogram {
     {
         let instant = Instant::now();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -478,7 +483,7 @@ impl Histogram {
     {
         let instant = Instant::now_coarse();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -720,7 +725,7 @@ impl LocalHistogramTimer {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = self.start.elapsed_sec();
         self.observed = true;
         if record {
             self.local.observe(v);
@@ -838,7 +843,7 @@ impl LocalHistogram {
     {
         let instant = Instant::now();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -851,7 +856,7 @@ impl LocalHistogram {
     {
         let instant = Instant::now_coarse();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
