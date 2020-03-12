@@ -136,6 +136,7 @@ extern crate lazy_static;
 #[macro_use]
 mod macros;
 mod atomic64;
+mod auto_flush;
 mod counter;
 mod desc;
 mod encoder;
@@ -158,9 +159,15 @@ pub mod local {
     Unsync local metrics, provides better performance.
 
     */
-    pub use super::counter::{LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec};
+    pub use super::counter::{
+        CounterWithValueType, LocalCounter, LocalCounterVec, LocalIntCounter, LocalIntCounterVec,
+    };
     pub use super::histogram::{LocalHistogram, LocalHistogramTimer, LocalHistogramVec};
-    pub use super::metrics::LocalMetric;
+    pub use super::metrics::{LocalMetric, MayFlush};
+
+    pub use super::auto_flush::{
+        AFLocalCounter, AFLocalHistogram, CounterDelegator, HistogramDelegator,
+    };
 }
 
 pub mod core {
