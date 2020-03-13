@@ -251,28 +251,28 @@ impl std::fmt::Debug for Timespec {
 }
 
 #[derive(Debug)]
-enum Instant {
+pub enum Instant {
     Monotonic(StdInstant),
     #[cfg(all(feature = "nightly", target_os = "linux"))]
     MonotonicCoarse(Timespec),
 }
 
 impl Instant {
-    fn now() -> Instant {
+    pub fn now() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
     #[cfg(all(feature = "nightly", target_os = "linux"))]
-    fn now_coarse() -> Instant {
+    pub fn now_coarse() -> Instant {
         Instant::MonotonicCoarse(get_time_coarse())
     }
 
     #[cfg(all(feature = "nightly", not(target_os = "linux")))]
-    fn now_coarse() -> Instant {
+    pub fn now_coarse() -> Instant {
         Instant::Monotonic(StdInstant::now())
     }
 
-    fn elapsed(&self) -> Duration {
+    pub fn elapsed(&self) -> Duration {
         match &*self {
             Instant::Monotonic(i) => i.elapsed(),
 
@@ -294,6 +294,11 @@ impl Instant {
                 }
             }
         }
+    }
+
+    #[inline]
+    pub fn elapsed_sec(&self) -> f64 {
+        duration_to_seconds(self.elapsed())
     }
 }
 
@@ -383,7 +388,7 @@ impl HistogramTimer {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = self.start.elapsed_sec();
         self.observed = true;
         if record {
             self.histogram.observe(v);
@@ -466,7 +471,7 @@ impl Histogram {
     {
         let instant = Instant::now();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -479,7 +484,7 @@ impl Histogram {
     {
         let instant = Instant::now_coarse();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -636,7 +641,7 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
 
 /// `duration_to_seconds` converts Duration to seconds.
 #[inline]
-fn duration_to_seconds(d: Duration) -> f64 {
+pub fn duration_to_seconds(d: Duration) -> f64 {
     let nanos = f64::from(d.subsec_nanos()) / 1e9;
     d.as_secs() as f64 + nanos
 }
@@ -721,7 +726,7 @@ impl LocalHistogramTimer {
     }
 
     fn observe(&mut self, record: bool) -> f64 {
-        let v = duration_to_seconds(self.start.elapsed());
+        let v = self.start.elapsed_sec();
         self.observed = true;
         if record {
             self.local.observe(v);
@@ -839,7 +844,7 @@ impl LocalHistogram {
     {
         let instant = Instant::now();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }
@@ -852,7 +857,7 @@ impl LocalHistogram {
     {
         let instant = Instant::now_coarse();
         let res = f();
-        let elapsed = duration_to_seconds(instant.elapsed());
+        let elapsed = instant.elapsed_sec();
         self.observe(elapsed);
         res
     }

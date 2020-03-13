@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use crate::desc::{Desc, Describer};
 use crate::errors::Result;
 use crate::proto::{self, LabelPair};
+use coarsetime::Instant;
+use std::cell::Cell;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
 
@@ -29,6 +31,25 @@ pub trait Metric: Sync + Send + Clone {
 pub trait LocalMetric {
     /// Flush the local metrics to the global one.
     fn flush(&self);
+}
+
+/// An interface models a LocalMetric with try to flush functions.
+/// Not intend to be implemented by user manually, used in macro generated code.
+pub trait MayFlush: LocalMetric {
+    /// If the LocalMetric is already flushed in last `flush_interval_sec` seconds, then do nothing,
+    /// else flush and update last flush time.
+    fn try_flush(&self, last_flush: &Cell<Instant>, flush_interval: coarsetime::Duration) {
+        let now = Instant::now();
+        let last_tick = last_flush.get();
+        if now.duration_since(last_tick) < flush_interval {
+            return;
+        }
+        self.flush();
+        last_flush.set(now);
+    }
+
+    /// Open to implementation to fill try_flush parameters
+    fn may_flush(&self);
 }
 
 /// A struct that bundles the options for creating most [`Metric`] types.

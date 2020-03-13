@@ -13,17 +13,19 @@ use prometheus::*;
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {
+    pub label_enum Methods {
+        post,
+        get,
+        put,
+        delete,
+    }
+
     pub struct LocalHttpRequestStatistics: LocalIntCounter {
         "product" => {
             foo,
             bar,
         },
-        "method" => {
-            post,
-            get,
-            put,
-            delete,
-        },
+        "method" => Methods,
         "version" => {
             http1: "HTTP/1",
             http2: "HTTP/2",

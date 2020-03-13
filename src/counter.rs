@@ -172,6 +172,16 @@ pub struct GenericLocalCounter<P: Atomic> {
     val: RefCell<P::T>,
 }
 
+/// For auto_flush::AFLocalCounter to use to make type inference possible
+pub trait CounterWithValueType {
+    ///the exact type which implements Atomic
+    type ValueType: Atomic;
+}
+
+impl<P: Atomic> CounterWithValueType for GenericLocalCounter<P> {
+    type ValueType = P;
+}
+
 /// An unsync [`Counter`].
 pub type LocalCounter = GenericLocalCounter<AtomicF64>;
 
