@@ -4,6 +4,19 @@ use crate::histogram::{Instant, LocalHistogram};
 use crate::metrics::MayFlush;
 use spin::Mutex;
 use std::thread::LocalKey;
+use coarsetime::Updater;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+lazy_static! {
+    static ref UPDATER_IS_RUNNING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+}
+
+fn ensure_updater() {
+    if !UPDATER_IS_RUNNING.compare_and_swap(false, true, Ordering::SeqCst) {
+        Updater::new(200).start().unwrap();
+    }
+}
 
 /// Delegator for auto flush-able local counter
 pub trait CounterDelegator<T: 'static + MayFlush, V: CounterWithValueType> {
@@ -38,6 +51,7 @@ impl<T: 'static + MayFlush, V: CounterWithValueType, D: CounterDelegator<T, V>>
 {
     /// Construct a new AFLocalCounter from delegator.
     pub fn new(delegator: D) -> AFLocalCounter<T, V, D> {
+        ensure_updater();
         AFLocalCounter {
             delegator,
             _p: std::marker::PhantomData,
@@ -123,6 +137,7 @@ pub struct AFLocalHistogram<T: 'static + MayFlush, D: HistogramDelegator<T>> {
 impl<T: 'static + MayFlush, D: HistogramDelegator<T>> AFLocalHistogram<T, D> {
     /// Construct a new AFLocalHistogram from delegator
     pub fn new(delegator: D) -> AFLocalHistogram<T, D> {
+        ensure_updater();
         AFLocalHistogram {
             delegator,
             _p: std::marker::PhantomData,
