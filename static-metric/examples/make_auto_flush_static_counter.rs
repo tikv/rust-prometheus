@@ -11,9 +11,12 @@ extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
+use coarsetime::Updater;
 use prometheus::*;
 use prometheus_static_metric::auto_flush_from;
 use prometheus_static_metric::make_auto_flush_static_metric;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 make_auto_flush_static_metric! {
 
@@ -65,7 +68,18 @@ lazy_static! {
     pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs, std::time::Duration::from_secs(1));
 }
 
+lazy_static! {
+    static ref UPDATER_IS_RUNNING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+}
+
+fn ensure_updater() {
+    if !UPDATER_IS_RUNNING.compare_and_swap(false, true, Ordering::SeqCst) {
+        Updater::new(200).start().unwrap();
+    }
+}
+
 fn main() {
+    ensure_updater();
     TLS_HTTP_COUNTER.foo.post.http1.inc();
     TLS_HTTP_COUNTER.foo.post.http1.inc();
     //Non-static call
