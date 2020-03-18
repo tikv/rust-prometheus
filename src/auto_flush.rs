@@ -2,11 +2,11 @@ use crate::core::Atomic;
 use crate::counter::{CounterWithValueType, GenericLocalCounter};
 use crate::histogram::{Instant, LocalHistogram};
 use crate::metrics::MayFlush;
-use spin::Mutex;
-use std::thread::LocalKey;
 use coarsetime::Updater;
+use spin::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::thread::LocalKey;
 
 lazy_static! {
     static ref UPDATER_IS_RUNNING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
