@@ -41,13 +41,6 @@ matrix:
 script:
   - cargo test --no-default-features --features="$FEATURES"
   - |
-    if [ $TRAVIS_RUST_VERSION = 'stable' ]; then
-        # Clean up.
-        cargo clean;
-        # Test 32-bit versions. rust-prometheus only supports stable rust on 32-bit platforms.
-        curl -sSL https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/test | bash;
-    fi
-  - |
     if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
         cargo build -p prometheus-static-metric --examples --no-default-features --features="$FEATURES"
         cargo test -p prometheus-static-metric --no-default-features --features="$FEATURES"

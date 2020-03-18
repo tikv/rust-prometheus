@@ -39,7 +39,7 @@ pub trait MayFlush: LocalMetric {
     /// If the LocalMetric is already flushed in last `flush_interval_sec` seconds, then do nothing,
     /// else flush and update last flush time.
     fn try_flush(&self, last_flush: &Cell<Instant>, flush_interval: coarsetime::Duration) {
-        let now = Instant::now();
+        let now = Instant::recent();
         let last_tick = last_flush.get();
         if now.duration_since(last_tick) < flush_interval {
             return;
