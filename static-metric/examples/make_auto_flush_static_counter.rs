@@ -7,7 +7,6 @@ Use metric enums to reuse possible values of a label.
 */
 #[macro_use]
 extern crate lazy_static;
-extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
@@ -98,13 +97,11 @@ fn main() {
 /// Pseudo macro expanded code of make_auto_flush_static_counter
 #[macro_use]
 extern crate lazy_static;
-extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
 use std::cell::Cell;
 
-use coarsetime::Instant;
 #[allow(unused_imports)]
 use prometheus::local::*;
 use prometheus::*;
@@ -135,8 +132,8 @@ use ::std::collections::HashMap;
 use ::prometheus::*;
 use ::prometheus::local::*;
 use ::std::cell::Cell;
-use ::coarsetime::Instant;
 use ::std::thread::LocalKey;
+use ::std::time::Duration;
 use std::mem;
 use std::mem::MaybeUninit;
 #[allow(unused_imports)]
@@ -145,23 +142,23 @@ use super::*;
 pub struct LhrsInner {
     pub foo: Lhrs2Inner,
     pub bar: Lhrs2Inner,
-    last_flush: Cell<Instant>,
-    flush_duration: coarsetime::Duration,
+    last_flush: Cell<u64>,
+    flush_duration: Duration,
 }
 impl LhrsInner {
     pub fn from(m: &IntCounterVec) -> LhrsInner {
         LhrsInner {
             foo: Lhrs2Inner::from("foo", m),
             bar: Lhrs2Inner::from("bar", m),
-            last_flush: Cell::new(Instant::now()),
-            flush_duration: coarsetime::Duration::from_secs(1),
+            last_flush: Cell::new(timer::now_millis()),
+            flush_duration: Duration::from_secs(1),
         }
     }
     pub fn flush(&self) {
         self.foo.flush();
         self.bar.flush();
     }
-    pub fn with_flush_duration(mut self, duration: coarsetime::Duration) -> Self {
+    pub fn with_flush_duration(mut self, duration: Duration) -> Self {
         self.flush_duration = duration;
         self
     }

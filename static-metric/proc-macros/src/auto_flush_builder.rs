@@ -119,7 +119,6 @@ impl AutoFlushTokensBuilder {
                 use ::prometheus::*;
                 use ::prometheus::local::*;
                 use ::std::cell::Cell;
-                use ::coarsetime::Instant;
                 use ::std::thread::LocalKey;
                 use std::mem;
                 use std::mem::MaybeUninit;
@@ -314,8 +313,8 @@ impl<'a> MetricBuilderContext<'a> {
             .collect();
         let last_flush = if self.label_index == 0 {
             quote! {
-                last_flush: Cell<Instant>,
-                flush_duration: coarsetime::Duration,
+                last_flush: Cell<u64>,
+                flush_duration: std::time::Duration,
             }
         } else {
             Tokens::new()
@@ -674,8 +673,8 @@ impl<'a> MetricBuilderContext<'a> {
 
         let init_instant = if self.label_index == 0 {
             quote! {
-            last_flush: Cell::new(Instant::now()),
-            flush_duration: coarsetime::Duration::from_secs(1),
+            last_flush: Cell::new(prometheus::timer::now_millis()),
+            flush_duration: std::time::Duration::from_secs(1),
             }
         } else {
             Tokens::new()
@@ -747,7 +746,7 @@ impl<'a> MetricBuilderContext<'a> {
     fn build_with_flush_duration(&self) -> Tokens {
         if self.label_index == 0 {
             quote! {
-                pub fn with_flush_duration(mut self, duration: coarsetime::Duration) -> Self {
+                pub fn with_flush_duration(mut self, duration: std::time::Duration) -> Self {
                     self.flush_duration = duration;
                     self
                 }

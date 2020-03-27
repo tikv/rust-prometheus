@@ -150,6 +150,10 @@ mod registry;
 mod value;
 mod vec;
 
+// Public for generated code.
+#[doc(hidden)]
+pub mod timer;
+
 #[cfg(all(feature = "process", target_os = "linux"))]
 pub mod process_collector;
 
