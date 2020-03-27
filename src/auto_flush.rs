@@ -1,8 +1,8 @@
 use crate::core::Atomic;
 use crate::counter::{CounterWithValueType, GenericLocalCounter};
 use crate::histogram::{Instant, LocalHistogram};
-use crate::timer;
 use crate::metrics::MayFlush;
+use crate::timer;
 use spin::Mutex;
 use std::thread::LocalKey;
 

@@ -1,6 +1,6 @@
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
-use std::time::{Instant, Duration};
-use std::sync::atomic::{AtomicU64, AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 /// Milliseconds since ANCHOR.
 static RECENT: AtomicU64 = AtomicU64::new(0);
@@ -9,11 +9,13 @@ lazy_static! {
 }
 
 /// Returns milliseconds since ANCHOR.
-/// 
+///
 /// ANCHOR is some fixed point in history.
 pub fn now_millis() -> u64 {
     let res = Instant::now();
-    let mut t = res.checked_duration_since(*ANCHOR).map_or(0, |d| d.as_secs() * 1000 + d.subsec_millis() as u64);
+    let mut t = res
+        .checked_duration_since(*ANCHOR)
+        .map_or(0, |d| d.as_secs() * 1000 + d.subsec_millis() as u64);
     let mut recent = RECENT.load(Ordering::Relaxed);
     loop {
         if recent > t {
@@ -41,11 +43,12 @@ lazy_static! {
 /// Ensures background updater is running, which will call `now_millis` periodically.
 pub(crate) fn ensure_updater() {
     if !UPDATER_IS_RUNNING.compare_and_swap(false, true, Ordering::SeqCst) {
-        std::thread::Builder::new().name("time updater".to_owned()).spawn(|| {
-            loop {
+        std::thread::Builder::new()
+            .name("time updater".to_owned())
+            .spawn(|| loop {
                 thread::sleep(Duration::from_millis(200));
                 now_millis();
-            }
-        }).unwrap();
+            })
+            .unwrap();
     }
 }

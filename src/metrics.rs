@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use crate::desc::{Desc, Describer};
 use crate::errors::Result;
-use crate::timer;
 use crate::proto::{self, LabelPair};
+use crate::timer;
 use std::cell::Cell;
 use std::time::Duration;
 
