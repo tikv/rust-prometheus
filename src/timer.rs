@@ -19,20 +19,17 @@ pub fn duration_to_millis(dur: Duration) -> u64 {
 /// ANCHOR is some fixed point in history.
 pub fn now_millis() -> u64 {
     let res = Instant::now();
-    let mut t = duration_to_millis(res.saturating_duration_since(*ANCHOR));
+    let t = duration_to_millis(res.saturating_duration_since(*ANCHOR));
     let mut recent = RECENT.load(Ordering::Relaxed);
     loop {
         if recent > t {
-            t = recent;
-            break;
+            return recent;
         }
         match RECENT.compare_exchange_weak(recent, t, Ordering::Relaxed, Ordering::Relaxed) {
-            Ok(_) => break,
+            Ok(_) => return t,
             Err(r) => recent = r,
         }
     }
-    RECENT.store(t, Ordering::Relaxed);
-    t
 }
 
 /// Returns recent returned value by `now_millis`.
