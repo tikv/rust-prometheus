@@ -133,7 +133,6 @@ use ::prometheus::*;
 use ::prometheus::local::*;
 use ::std::cell::Cell;
 use ::std::thread::LocalKey;
-use ::std::time::Duration;
 use std::mem;
 use std::mem::MaybeUninit;
 #[allow(unused_imports)]
@@ -143,7 +142,7 @@ pub struct LhrsInner {
     pub foo: Lhrs2Inner,
     pub bar: Lhrs2Inner,
     last_flush: Cell<u64>,
-    flush_duration: Duration,
+    flush_millis: u64,
 }
 impl LhrsInner {
     pub fn from(m: &IntCounterVec) -> LhrsInner {
@@ -151,7 +150,7 @@ impl LhrsInner {
             foo: Lhrs2Inner::from("foo", m),
             bar: Lhrs2Inner::from("bar", m),
             last_flush: Cell::new(timer::now_millis()),
-            flush_duration: Duration::from_secs(1),
+            flush_millis: 1000,
         }
     }
     pub fn flush(&self) {
@@ -159,7 +158,7 @@ impl LhrsInner {
         self.bar.flush();
     }
     pub fn with_flush_duration(mut self, duration: Duration) -> Self {
-        self.flush_duration = duration;
+        self.flush_duration = prometheus::timer::duration_to_millis(duration);
         self
     }
 }

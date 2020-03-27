@@ -314,7 +314,7 @@ impl<'a> MetricBuilderContext<'a> {
         let last_flush = if self.label_index == 0 {
             quote! {
                 last_flush: Cell<u64>,
-                flush_duration: std::time::Duration,
+                flush_millis: u64,
             }
         } else {
             Tokens::new()
@@ -422,7 +422,7 @@ impl<'a> MetricBuilderContext<'a> {
 
                 impl ::prometheus::local::MayFlush for #struct_name {
                     fn may_flush(&self) {
-                        MayFlush::try_flush(self, &self.last_flush, self.flush_duration)
+                        MayFlush::try_flush(self, &self.last_flush, self.flush_millis)
                     }
                 }
             }
@@ -674,7 +674,7 @@ impl<'a> MetricBuilderContext<'a> {
         let init_instant = if self.label_index == 0 {
             quote! {
             last_flush: Cell::new(prometheus::timer::now_millis()),
-            flush_duration: std::time::Duration::from_secs(1),
+            flush_millis: 1000,
             }
         } else {
             Tokens::new()
@@ -747,7 +747,7 @@ impl<'a> MetricBuilderContext<'a> {
         if self.label_index == 0 {
             quote! {
                 pub fn with_flush_duration(mut self, duration: std::time::Duration) -> Self {
-                    self.flush_duration = duration;
+                    self.flush_millis = prometheus::timer::duration_to_millis(duration);
                     self
                 }
             }
