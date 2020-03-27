@@ -41,7 +41,7 @@ lazy_static! {
 }
 
 /// Ensures background updater is running, which will call `now_millis` periodically.
-pub(crate) fn ensure_updater() {
+pub fn ensure_updater() {
     if !UPDATER_IS_RUNNING.compare_and_swap(false, true, Ordering::SeqCst) {
         std::thread::Builder::new()
             .name("time updater".to_owned())
