@@ -19,7 +19,6 @@ proc-macro-hack = "0.5"
 
 [dev-dependencies]
 prometheus = { path = "../" }
-coarsetime = "0.1"
 lazy_static = "1.4"
 
 [features]

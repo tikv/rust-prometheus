@@ -93,7 +93,6 @@ For heavier scenario that a global shared static-metric might not be effecient e
 ```rust
 #[macro_use]
 extern crate lazy_static;
-extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 

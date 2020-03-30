@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use crate::desc::{Desc, Describer};
 use crate::errors::Result;
 use crate::proto::{self, LabelPair};
-use coarsetime::Instant;
+use crate::timer;
 use std::cell::Cell;
 
 pub const SEPARATOR_BYTE: u8 = 0xFF;
@@ -38,10 +38,10 @@ pub trait LocalMetric {
 pub trait MayFlush: LocalMetric {
     /// If the LocalMetric is already flushed in last `flush_interval_sec` seconds, then do nothing,
     /// else flush and update last flush time.
-    fn try_flush(&self, last_flush: &Cell<Instant>, flush_interval: coarsetime::Duration) {
-        let now = Instant::recent();
+    fn try_flush(&self, last_flush: &Cell<u64>, flush_interval_millis: u64) {
+        let now = timer::recent_millis();
         let last_tick = last_flush.get();
-        if now.duration_since(last_tick) < flush_interval {
+        if now < last_tick + flush_interval_millis {
             return;
         }
         self.flush();

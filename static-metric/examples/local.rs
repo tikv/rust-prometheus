@@ -2,13 +2,11 @@
 
 #[macro_use]
 extern crate lazy_static;
-extern crate coarsetime;
 extern crate prometheus;
 extern crate prometheus_static_metric;
 
 use std::cell::Cell;
 
-use coarsetime::Instant;
 use prometheus::*;
 use prometheus_static_metric::make_static_metric;
 
@@ -43,16 +41,16 @@ lazy_static! {
 }
 
 thread_local! {
-    static THREAD_LAST_TICK_TIME: Cell<Instant> = Cell::new(Instant::now());
+    static THREAD_LAST_TICK_TIME: Cell<u64> = Cell::new(timer::now_millis());
 
     pub static TLS_HTTP_COUNTER: LocalHttpRequestStatistics = LocalHttpRequestStatistics::from(&HTTP_COUNTER_VEC);
 }
 
 pub fn may_flush_metrics() {
     THREAD_LAST_TICK_TIME.with(|tls_last_tick| {
-        let now = Instant::now();
+        let now = timer::now_millis();
         let last_tick = tls_last_tick.get();
-        if now.duration_since(last_tick).as_f64() < 1.0 {
+        if now < last_tick + 1000 {
             return;
         }
         tls_last_tick.set(now);

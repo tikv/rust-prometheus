@@ -25,7 +25,6 @@ process = ["libc", "procfs"]
 gen = ["protobuf-codegen-pure"]
 
 [dependencies]
-coarsetime = "0.1"
 cfg-if = "0.1"
 fnv = "1.0"
 lazy_static = "1.4"
