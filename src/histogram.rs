@@ -335,7 +335,7 @@ mod coarse {
 #[must_use = "Timer should be kept in a variable otherwise it cannot observe duration"]
 #[derive(Debug)]
 pub struct HistogramTimer {
-    /// An histogram for automatic recording of observations.
+    /// A histogram for automatic recording of observations.
     histogram: Histogram,
     /// Whether the timer has already been observed once.
     observed: bool,
@@ -1223,6 +1223,57 @@ mod tests {
             local_vec.with_label_values(&["v1", "v2"]).observe(2.0);
             drop(local_vec);
             check(1, 2.0);
+        }
+    }
+
+    /// Ensure that when an observe and a collect operation interleave, the
+    /// latter does not expose a snapshot of the histogram that does not uphold
+    /// all histogram invariants.
+    #[test]
+    fn atomic_observe_across_collects () {
+        let done = Arc::new(std::sync::atomic::AtomicBool::default());
+        let histogram = Histogram::with_opts(
+            HistogramOpts::new("test_name", "test help").buckets(vec![1.0]),
+        ).unwrap();
+
+        let done_clone = done.clone();
+        let histogram_clone = histogram.clone();
+        let observing_thread = std::thread::spawn(move || {
+            loop {
+                if done_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                    break;
+                }
+
+                for _ in 0..1_000_000 {
+                    histogram_clone.observe(1.0);
+                }
+            }
+        });
+
+        let mut sample_count = 0;
+        let mut cumulative_count = 0;
+        for _ in 0..1_000_000 {
+            let proto = histogram.collect()[0].take_metric()[0].take_histogram();
+
+            sample_count = proto.get_sample_count();
+            cumulative_count = proto.get_bucket()[0].get_cumulative_count();
+
+            if sample_count != cumulative_count {
+                break;
+            }
+        }
+
+        done.store(true, std::sync::atomic::Ordering::Relaxed);
+        observing_thread.join().unwrap();
+
+        if sample_count != cumulative_count {
+            panic!(
+                "Histogram invariant violated: For a histogram with a single \
+                 bucket observing values below the bucket's upper bound only \
+                 the histogram's count should always be equal to the buckets's \
+                 cumulative count, got {:?} and {:?} instead.",
+                sample_count, cumulative_count,
+            );
         }
     }
 }
