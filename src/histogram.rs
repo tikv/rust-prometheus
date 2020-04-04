@@ -4,7 +4,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
-use std::sync::Arc;
+use std::sync::{Arc, atomic::{AtomicU64 as StdAtomicU64, Ordering}, Mutex};
 use std::time::{Duration, Instant as StdInstant};
 
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
@@ -151,16 +151,173 @@ impl From<Opts> for HistogramOpts {
     }
 }
 
+/// Representation of a hot or cold shard.
+///
+/// See [`HistogramCore`] for details.
+#[derive(Debug)]
+struct Shard {
+    sum: AtomicF64,
+    count: AtomicU64,
+    buckets: Vec<AtomicU64>,
+}
+
+impl Shard {
+    fn new(num_buckets: usize) -> Self {
+        let mut buckets = Vec::new();
+        for _ in 0..num_buckets {
+            buckets.push(AtomicU64::new(0));
+        }
+
+        Shard {
+            sum: AtomicF64::new(0.0),
+            count: AtomicU64::new(0),
+            buckets
+        }
+    }
+}
+
+/// Index into an array of [`Shard`]s.
+///
+/// Used in conjunction with [`ShardAndCount`] below.
+#[derive(Debug, Clone, Copy)]
+pub enum ShardIndex {
+    /// First index. Corresponds to 0.
+    First,
+    /// Second index. Corresponds to 1.
+    Second,
+}
+
+impl ShardIndex {
+    /// Inverse the given [`ShardIndex`].
+    pub fn inverse(self) -> ShardIndex {
+        match self {
+            ShardIndex::First => ShardIndex::Second,
+            ShardIndex::Second => ShardIndex::First,
+        }
+    }
+}
+
+impl From<u64> for ShardIndex {
+    fn from(index: u64) -> Self {
+        match index {
+            0 => ShardIndex::First,
+            1 => ShardIndex::Second,
+            _ => panic!("Invalid shard index {:?}. A histogram only has two shards.", index),
+        }
+    }
+}
+
+impl From<ShardIndex> for usize {
+    fn from(index: ShardIndex) -> Self {
+        match index {
+            ShardIndex::First => 0,
+            ShardIndex::Second => 1,
+        }
+    }
+}
+
+/// An atomic u64 with the most significant used as a [`ShardIndex`] and the
+/// remaining 63 bits used to count [`Histogram`] observations.
+#[derive(Debug)]
+pub struct ShardAndCount {
+    inner: StdAtomicU64,
+}
+
+impl ShardAndCount {
+    /// Return a new [`ShardAndCount`] with both the most significant bit
+    /// i.e. the `ShardIndex` and the remaining 63 bit i.e. the observation
+    /// count set to 0.
+    pub fn new() -> Self {
+        ShardAndCount {
+            inner: StdAtomicU64::new(0),
+        }
+    }
+
+    /// Flip the most significant bit i.e. the [`ShardIndex`] leaving the
+    /// remaining 63 bits unchanged.
+    pub fn flip(&self, ordering: Ordering) -> (ShardIndex, u64) {
+        let n = self.inner.fetch_add(1<<63, ordering);
+
+        ShardAndCount::split_shard_index_and_count(n)
+    }
+
+    /// Get the most significant bit i.e. the [`ShardIndex`] as well as the
+    /// remaining 63 bits i.e. the observation count.
+    pub fn get(&self) -> (ShardIndex, u64) {
+        let n = self.inner.load(Ordering::Relaxed);
+
+        ShardAndCount::split_shard_index_and_count(n)
+    }
+
+    /// Increment the observation count leaving the most significant bit i.e.
+    /// the [`ShardIndex`] untouched.
+    pub fn inc_by(&self, delta: u64, ordering: Ordering) -> (ShardIndex, u64) {
+        let n = self.inner.fetch_add(delta, ordering);
+
+        ShardAndCount::split_shard_index_and_count(n)
+    }
+
+    /// Increment the observation count by one leaving the most significant bit
+    /// i.e. the [`ShardIndex`] untouched.
+    pub fn inc(&self, ordering: Ordering) -> (ShardIndex, u64) {
+        self.inc_by(1, ordering)
+    }
+
+    fn split_shard_index_and_count(n: u64) -> (ShardIndex, u64) {
+        let shard = n >> 63;
+        let count = n & ((1 << 63) - 1);
+
+        (shard.into(), count)
+    }
+}
+
+/// Core datastructure of a Prometheus histogram
+///
+/// # Atomicity across collects
+///
+/// A histogram supports two main execution paths:
+///
+/// 1. `observe` which increases the overall observation counter, updates the
+/// observation sum and increases a single bucket counter.
+///
+/// 2. `proto` (aka. collecting the metric, from now on referred to as the
+/// collect operation) which snapshots the state of the histogram and exposes it
+/// as a Protobuf struct.
+///
+/// If an observe and a collect operation interleave, the latter could be
+/// exposing a snapshot of the histogram that does not uphold all histogram
+/// invariants. For example for the invariant that the overall observation
+/// counter should equal the sum of all bucket counters: Say that an `observe`
+/// increases the overall counter but before updating a specific bucket counter
+/// a collect operation snapshots the histogram.
+///
+/// The below implementation of `HistogramCore` prevents such race conditions by
+/// using two shards, one hot shard for `observe` operations to record their
+/// observation and one cold shard for collect operations to collect a
+/// consistent snapshot of the histogram.
+///
+/// `observe` operations hit the hot shard and record their observation. Collect
+/// operations switch hot and cold, wait for all `observe` calls to finish on
+/// the previously hot now cold shard and then expose the consistent snapshot.
 #[derive(Debug)]
 pub struct HistogramCore {
     desc: Desc,
     label_pairs: Vec<proto::LabelPair>,
 
-    sum: AtomicF64,
-    count: AtomicU64,
+    /// Mutual exclusion to serialize collect operations. No two collect
+    /// operations should operate on this datastructure at the same time. (See
+    /// struct documentation for details.) `observe` operations can operate in
+    /// parallel without holding this lock.
+    collect_lock: Mutex<()>,
+
+    /// An atomic u64 where the first bit determines the currently hot shard and
+    /// the remaining 63 bits determine the overall count.
+    shard_and_count: ShardAndCount,
+    /// The two shards where `shard_and_count` determines which one is the hot
+    /// and which one the cold at any given point in time.
+    shards: [Shard; 2],
 
     upper_bounds: Vec<f64>,
-    counts: Vec<AtomicU64>,
 }
 
 impl HistogramCore {
@@ -177,22 +334,36 @@ impl HistogramCore {
 
         let buckets = check_and_adjust_buckets(opts.buckets.clone())?;
 
-        let mut counts = Vec::new();
-        for _ in 0..buckets.len() {
-            counts.push(AtomicU64::new(0));
-        }
-
         Ok(HistogramCore {
             desc,
             label_pairs: pairs,
-            sum: AtomicF64::new(0.0),
-            count: AtomicU64::new(0),
+
+            collect_lock: Mutex::new(()),
+
+            shard_and_count: ShardAndCount::new(),
+            shards: [Shard::new(buckets.len()), Shard::new(buckets.len())],
+
             upper_bounds: buckets,
-            counts,
         })
     }
 
+    /// Observe a given observation (f64) in the histogram.
+    //
+    // First increase the overall observation counter and thus learn which shard
+    // is the current hot shard. Subsequently on the hot shard update the
+    // corresponding bucket count, adjust the shard's sum and finally increase
+    // the shard's count.
     pub fn observe(&self, v: f64) {
+        // The collect code path uses `self.shard_and_count` and
+        // `self.shards[x].count` to ensure not to collect data from a shard
+        // while observe calls are still operating on it.
+        //
+        // To ensure the above, this `inc` needs to use `Acquire` ordering to
+        // force anything below this line to stay below it.
+        let (shard_index, _count) = self.shard_and_count.inc(Ordering::Acquire);
+
+        let shard: &Shard = &self.shards[usize::from(shard_index)];
+
         // Try find the bucket.
         let mut iter = self
             .upper_bounds
@@ -200,38 +371,90 @@ impl HistogramCore {
             .enumerate()
             .filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
-            self.counts[i].inc_by(1);
+            shard.buckets[i].inc_by(1);
         }
 
-        self.count.inc_by(1);
-        self.sum.inc_by(v);
+        shard.sum.inc_by(v);
+        // Use `Release` ordering to ensure all operations above stay above.
+        shard.count.inc_by_with_ordering(1, Ordering::Release);
     }
 
+    /// Make a snapshot of the current histogram state exposed as a Protobuf
+    /// struct.
+    //
+    // Acquire the collect lock, switch the hot and the cold shard, wait for all
+    // remaining `observe` calls to finish on the previously hot now cold shard,
+    // snapshot the data, update the now hot shard and reset the cold shard.
     pub fn proto(&self) -> proto::Histogram {
-        let mut h = proto::Histogram::default();
-        h.set_sample_sum(self.sum.get());
-        h.set_sample_count(self.count.get() as u64);
+        let _guard = self.collect_lock.lock().expect("Lock poisoned");
 
-        let mut count = 0;
+        // `flip` needs to use AcqRel ordering to ensure the lock operation
+        // above stays above and the histogram operations (especially the shard
+        // resets) below stay below.
+        let (cold_shard_index, overall_count) = self.shard_and_count.flip(Ordering::AcqRel);
+
+        let cold_shard = &self.shards[usize::from(cold_shard_index)];
+        let hot_shard = &self.shards[usize::from(cold_shard_index.inverse())];
+
+        // Wait for all currently active `observe` calls on the now cold shard
+        // to finish. The above call to `flip` redirects all future `observe`
+        // calls to the other previously cold, now hot, shard. Thus once the
+        // cold shard counter equals the value of the global counter when the
+        // shards were flipped, all in-progress `observe` calls are done. With
+        // all of them done, the cold shard is now in a consistent state.
+        //
+        // `observe` uses `Release` ordering. `get_with_ordering` needs to use
+        // `Acquire` ordering to ensure that (1) one sees all the previous
+        // `observe` stores to the counter and (2) to ensure the below shard
+        // modifications happen after this point, thus the shard is not modified
+        // by any `observe` operations.
+        while overall_count != cold_shard.count.compare_and_swap(
+            overall_count,
+            // While at it, reset cold shard count on success.
+            0,
+            Ordering::Acquire,
+        ) {}
+
+        // Get cold shard sum and reset to 0.
+        let cold_shard_sum = cold_shard.sum.swap(0.0);
+
+        let mut h = proto::Histogram::default();
+        h.set_sample_sum(cold_shard_sum);
+        h.set_sample_count(overall_count);
+
+        let mut cumulative_count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
-            count += self.counts[i].get();
+            // Reset the cold shard and update the hot shard.
+            let cold_bucket_count = cold_shard.buckets[i].swap(0);
+            hot_shard.buckets[i].inc_by(cold_bucket_count);
+
+            cumulative_count += cold_bucket_count;
             let mut b = proto::Bucket::default();
-            b.set_cumulative_count(count as u64);
+            b.set_cumulative_count(cumulative_count);
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
         }
         h.set_bucket(from_vec!(buckets));
 
+        // Update the hot shard.
+        hot_shard.count.inc_by(overall_count);
+        hot_shard.sum.inc_by(cold_shard_sum);
+
         h
     }
 
     fn sample_sum(&self) -> f64 {
-        self.sum.get() as f64
+        // Make sure to not overlap with any collect calls, as they might flip
+        // the hot and cold shards.
+        let _guard = self.collect_lock.lock().expect("Lock poisoned");
+
+        let (shard_index, _count) = self.shard_and_count.get();
+        self.shards[shard_index as usize].sum.get()
     }
 
     fn sample_count(&self) -> u64 {
-        self.count.get() as u64
+        self.shard_and_count.get().1
     }
 }
 
@@ -744,7 +967,7 @@ impl Drop for LocalHistogramTimer {
 
 impl LocalHistogramCore {
     fn new(histogram: Histogram) -> LocalHistogramCore {
-        let counts = vec![0; histogram.core.counts.len()];
+        let counts = vec![0; histogram.core.upper_bounds.len()];
 
         LocalHistogramCore {
             histogram,
@@ -787,16 +1010,25 @@ impl LocalHistogramCore {
         }
 
         {
-            let h = &self.histogram;
+            // The collect code path uses `self.shard_and_count` and
+            // `self.shards[x].count` to ensure not to collect data from a shard
+            // while observe calls are still operating on it.
+            //
+            // To ensure the above, this `inc` needs to use `Acquire` ordering
+            // to force anything below this line to stay below it.
+            let (shard_index, _count) = self.histogram.core
+                .shard_and_count.inc_by(self.count, Ordering::Acquire);
+            let shard = &self.histogram.core.shards[shard_index as usize];
 
             for (i, v) in self.counts.iter().enumerate() {
                 if *v > 0 {
-                    h.core.counts[i].inc_by(*v);
+                    shard.buckets[i].inc_by(*v);
                 }
             }
 
-            h.core.count.inc_by(self.count);
-            h.core.sum.inc_by(self.sum);
+            shard.sum.inc_by(self.sum);
+            // Use `Release` ordering to ensure all operations above stay above.
+            shard.count.inc_by_with_ordering(self.count, Ordering::Release);
         }
 
         self.clear()
