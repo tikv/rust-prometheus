@@ -15,7 +15,9 @@
 
 extern crate test;
 
-use prometheus::{Histogram, HistogramOpts, HistogramVec};
+use prometheus::{Histogram, HistogramOpts, HistogramVec, core::Collector};
+use std::sync::{atomic, Arc};
+use std::thread;
 use test::Bencher;
 
 #[bench]
@@ -98,4 +100,35 @@ fn bench_local_histogram_coarse_timer(b: &mut Bencher) {
     let local = histogram.local();
     b.iter(|| local.start_coarse_timer());
     local.flush();
+}
+
+#[bench]
+fn concurrent_observe_and_collect(b: &mut Bencher) {
+    let signal_exit = Arc::new(atomic::AtomicBool::new(false));
+    let opts = HistogramOpts::new("test_name", "test help")
+        .buckets(vec![1.0]);
+    let histogram = Histogram::with_opts(opts).unwrap();
+
+    let mut handlers = vec![];
+
+    for _ in 0..4 {
+        let histogram = histogram.clone();
+        let signal_exit = signal_exit.clone();
+        handlers.push(thread::spawn(move || {
+            while !signal_exit.load(atomic::Ordering::Relaxed) {
+                for _ in 0..1_000 {
+                    histogram.observe(1.0);
+                }
+
+                histogram.collect();
+            }
+        }));
+    }
+
+    b.iter(|| histogram.observe(1.0));
+
+    signal_exit.store(true, atomic::Ordering::Relaxed);
+    for handler in handlers {
+        handler.join().unwrap();
+    }
 }
