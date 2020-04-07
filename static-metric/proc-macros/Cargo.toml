@@ -18,4 +18,3 @@ lazy_static = "1.4"
 
 [dev-dependencies]
 prometheus = { path = "../../" }
-coarsetime = "0.1"
