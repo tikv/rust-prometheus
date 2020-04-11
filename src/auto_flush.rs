@@ -90,10 +90,10 @@ impl<T: 'static + MayFlush, V: CounterWithValueType, D: CounterDelegator<T, V>>
 
     /// Return the local counter value.
     #[inline]
-    pub fn get(&self) {
+    pub fn get(&self) -> <V::ValueType as Atomic>::T {
         self.get_root_metric().with(|m| {
             let counter = self.get_counter(m);
-            counter.get();
+            counter.get()
         })
     }
 
