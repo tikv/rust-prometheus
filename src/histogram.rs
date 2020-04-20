@@ -1485,9 +1485,11 @@ mod tests {
         let mut sample_count = 0;
         let mut cumulative_count = 0;
         for _ in 0..1_000_000 {
-            let proto = histogram.collect()[0].take_metric()[0].take_histogram();
+            let metric = &histogram.collect()[0].take_metric()[0];
+            let proto = metric.get_histogram();
 
             sample_count = proto.get_sample_count();
+            // There is only one bucket thus the `[0]`.
             cumulative_count = proto.get_bucket()[0].get_cumulative_count();
 
             if sample_count != cumulative_count {
