@@ -4,7 +4,10 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
-use std::sync::{Arc, atomic::{AtomicU64 as StdAtomicU64, Ordering}, Mutex};
+use std::sync::{
+    atomic::{AtomicU64 as StdAtomicU64, Ordering},
+    Arc, Mutex,
+};
 use std::time::{Duration, Instant as StdInstant};
 
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
@@ -171,7 +174,7 @@ impl Shard {
         Shard {
             sum: AtomicF64::new(0.0),
             count: AtomicU64::new(0),
-            buckets
+            buckets,
         }
     }
 }
@@ -202,7 +205,10 @@ impl From<u64> for ShardIndex {
         match index {
             0 => ShardIndex::First,
             1 => ShardIndex::Second,
-            _ => panic!("Invalid shard index {:?}. A histogram only has two shards.", index),
+            _ => panic!(
+                "Invalid shard index {:?}. A histogram only has two shards.",
+                index
+            ),
         }
     }
 }
@@ -236,7 +242,7 @@ impl ShardAndCount {
     /// Flip the most significant bit i.e. the [`ShardIndex`] leaving the
     /// remaining 63 bits unchanged.
     pub fn flip(&self, ordering: Ordering) -> (ShardIndex, u64) {
-        let n = self.inner.fetch_add(1<<63, ordering);
+        let n = self.inner.fetch_add(1 << 63, ordering);
 
         ShardAndCount::split_shard_index_and_count(n)
     }
@@ -408,12 +414,14 @@ impl HistogramCore {
         // `observe` stores to the counter and (2) to ensure the below shard
         // modifications happen after this point, thus the shard is not modified
         // by any `observe` operations.
-        while overall_count != cold_shard.count.compare_and_swap(
-            overall_count,
-            // While at it, reset cold shard count on success.
-            0,
-            Ordering::Acquire,
-        ) {}
+        while overall_count
+            != cold_shard.count.compare_and_swap(
+                overall_count,
+                // While at it, reset cold shard count on success.
+                0,
+                Ordering::Acquire,
+            )
+        {}
 
         // Get cold shard sum and reset to 0.
         let cold_shard_sum = cold_shard.sum.swap(0.0);
@@ -1016,8 +1024,11 @@ impl LocalHistogramCore {
             //
             // To ensure the above, this `inc` needs to use `Acquire` ordering
             // to force anything below this line to stay below it.
-            let (shard_index, _count) = self.histogram.core
-                .shard_and_count.inc_by(self.count, Ordering::Acquire);
+            let (shard_index, _count) = self
+                .histogram
+                .core
+                .shard_and_count
+                .inc_by(self.count, Ordering::Acquire);
             let shard = &self.histogram.core.shards[shard_index as usize];
 
             for (i, v) in self.counts.iter().enumerate() {
@@ -1028,7 +1039,9 @@ impl LocalHistogramCore {
 
             shard.sum.inc_by(self.sum);
             // Use `Release` ordering to ensure all operations above stay above.
-            shard.count.inc_by_with_ordering(self.count, Ordering::Release);
+            shard
+                .count
+                .inc_by_with_ordering(self.count, Ordering::Release);
         }
 
         self.clear()
@@ -1462,23 +1475,21 @@ mod tests {
     /// latter does not expose a snapshot of the histogram that does not uphold
     /// all histogram invariants.
     #[test]
-    fn atomic_observe_across_collects () {
+    fn atomic_observe_across_collects() {
         let done = Arc::new(std::sync::atomic::AtomicBool::default());
-        let histogram = Histogram::with_opts(
-            HistogramOpts::new("test_name", "test help").buckets(vec![1.0]),
-        ).unwrap();
+        let histogram =
+            Histogram::with_opts(HistogramOpts::new("test_name", "test help").buckets(vec![1.0]))
+                .unwrap();
 
         let done_clone = done.clone();
         let histogram_clone = histogram.clone();
-        let observing_thread = std::thread::spawn(move || {
-            loop {
-                if done_clone.load(std::sync::atomic::Ordering::Relaxed) {
-                    break;
-                }
+        let observing_thread = std::thread::spawn(move || loop {
+            if done_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                break;
+            }
 
-                for _ in 0..1_000_000 {
-                    histogram_clone.observe(1.0);
-                }
+            for _ in 0..1_000_000 {
+                histogram_clone.observe(1.0);
             }
         });
 

@@ -15,7 +15,7 @@
 
 extern crate test;
 
-use prometheus::{Histogram, HistogramOpts, HistogramVec, core::Collector};
+use prometheus::{core::Collector, Histogram, HistogramOpts, HistogramVec};
 use std::sync::{atomic, Arc};
 use std::thread;
 use test::Bencher;
@@ -105,8 +105,7 @@ fn bench_local_histogram_coarse_timer(b: &mut Bencher) {
 #[bench]
 fn concurrent_observe_and_collect(b: &mut Bencher) {
     let signal_exit = Arc::new(atomic::AtomicBool::new(false));
-    let opts = HistogramOpts::new("test_name", "test help")
-        .buckets(vec![1.0]);
+    let opts = HistogramOpts::new("test_name", "test help").buckets(vec![1.0]);
     let histogram = Histogram::with_opts(opts).unwrap();
 
     let mut handlers = vec![];
