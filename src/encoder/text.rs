@@ -12,6 +12,7 @@ use super::{check_metric_family, Encoder};
 pub const TEXT_FORMAT: &str = "text/plain; version=0.0.4";
 
 const POSITIVE_INF: &str = "+Inf";
+const QUANTILE: &str = "quantile";
 
 /// An implementation of an [`Encoder`] that converts a [`MetricFamily`] proto message
 /// into text format.
@@ -96,7 +97,39 @@ impl Encoder for TextEncoder {
                             writer,
                         )?;
                     }
-                    MetricType::SUMMARY | MetricType::UNTYPED => {
+                    MetricType::SUMMARY => {
+                        let s = m.get_summary();
+
+                        for q in s.get_quantile() {
+                            write_sample(
+                                name,
+                                m,
+                                QUANTILE,
+                                &format!("{}", q.get_quantile()),
+                                q.get_value(),
+                                writer,
+                            )?;
+                        }
+
+                        write_sample(
+                            &format!("{}_sum", name),
+                            m,
+                            "",
+                            "",
+                            s.get_sample_sum(),
+                            writer,
+                        )?;
+
+                        write_sample(
+                            &format!("{}_count", name),
+                            m,
+                            "",
+                            "",
+                            s.get_sample_count() as f64,
+                            writer,
+                        )?;
+                    }
+                    MetricType::UNTYPED => {
                         unimplemented!();
                     }
                 }
@@ -223,7 +256,7 @@ mod tests {
     use crate::metrics::{Collector, Opts};
 
     #[test]
-    fn test_ecape_string() {
+    fn test_escape_string() {
         assert_eq!(r"\\", escape_string("\\", false));
         assert_eq!(r"a\\", escape_string("a\\", false));
         assert_eq!(r"\n", escape_string("\n", false));
@@ -305,5 +338,48 @@ test_histogram_sum{a="1"} 0.25
 test_histogram_count{a="1"} 1
 "##;
         assert_eq!(ans.as_bytes(), writer.as_slice());
+    }
+
+    #[test]
+    fn test_text_encoder_summary() {
+        use crate::proto::{Metric, Quantile, Summary};
+        use std::str;
+
+        let mut metric_family = MetricFamily::default();
+        metric_family.set_name("test_summary".to_string());
+        metric_family.set_help("This is a test summary statistic".to_string());
+        metric_family.set_field_type(MetricType::SUMMARY);
+
+        let mut summary = Summary::default();
+        summary.set_sample_count(5.0 as u64);
+        summary.set_sample_sum(15.0);
+
+        let mut quantile1 = Quantile::default();
+        quantile1.set_quantile(50.0);
+        quantile1.set_value(3.0);
+
+        let mut quantile2 = Quantile::default();
+        quantile2.set_quantile(100.0);
+        quantile2.set_value(5.0);
+
+        summary.set_quantile(from_vec!(vec!(quantile1, quantile2)));
+
+        let mut metric = Metric::default();
+        metric.set_summary(summary);
+        metric_family.set_metric(from_vec!(vec!(metric)));
+
+        let mut writer = Vec::<u8>::new();
+        let encoder = TextEncoder::new();
+        let res = encoder.encode(&vec![metric_family], &mut writer);
+        assert!(res.is_ok());
+
+        let ans = r##"# HELP test_summary This is a test summary statistic
+# TYPE test_summary summary
+test_summary{quantile="50"} 3
+test_summary{quantile="100"} 5
+test_summary_sum 15
+test_summary_count 5
+"##;
+        assert_eq!(ans, str::from_utf8(writer.as_slice()).unwrap());
     }
 }

@@ -1,5 +1,7 @@
 # Changelog
 
+- Add: Implement `encode` function for summary type metrics. 
+
 ## 0.8.0
 
 - Add: Reset Counters (#261)
