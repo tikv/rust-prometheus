@@ -3,7 +3,7 @@ use crate::counter::{CounterWithValueType, GenericLocalCounter};
 use crate::histogram::{Instant, LocalHistogram};
 use crate::metrics::MayFlush;
 use crate::timer;
-use spin::Mutex;
+use parking_lot::Mutex;
 use std::thread::LocalKey;
 
 /// Delegator for auto flush-able local counter

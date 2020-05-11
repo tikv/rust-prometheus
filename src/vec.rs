@@ -6,7 +6,7 @@ use std::hash::Hasher;
 use std::sync::Arc;
 
 use fnv::FnvHasher;
-use spin::RwLock;
+use parking_lot::RwLock;
 
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
