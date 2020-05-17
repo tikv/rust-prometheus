@@ -6,7 +6,7 @@ use std::collections::hash_map::Entry as HEntry;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
-use spin::RwLock;
+use parking_lot::RwLock;
 
 use crate::errors::{Error, Result};
 use crate::metrics::Collector;
