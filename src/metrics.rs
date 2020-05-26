@@ -111,7 +111,7 @@ pub struct Opts {
 
 impl Opts {
     /// `new` creates the Opts with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> Opts {
+    pub fn new<S1: Into<String>, S2: Into<String>>(name: S1, help: S2) -> Opts {
         Opts {
             namespace: "".to_owned(),
             subsystem: "".to_owned(),
@@ -141,7 +141,7 @@ impl Opts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<S1: Into<String>, S2: Into<String>>(mut self, name: S1, value: S2) -> Self {
         self.const_labels.insert(name.into(), value.into());
         self
     }
@@ -257,5 +257,10 @@ mod tests {
         for (namespace, subsystem, name, res) in tbl {
             assert_eq!(&build_fq_name(namespace, subsystem, name), res);
         }
+    }
+
+    #[test]
+    fn test_different_generic_types() {
+        Opts::new(format!("{}_{}", "string", "label"), "&str_label");
     }
 }
