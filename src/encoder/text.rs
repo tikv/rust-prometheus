@@ -1,5 +1,7 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
+use regex::{Match, Regex};
+use std::borrow::Cow;
 use std::io::Write;
 
 use crate::errors::Result;
@@ -141,9 +143,10 @@ impl Encoder for TextEncoder {
 }
 
 /// `write_sample` writes a single sample in text format to `writer`, given the
-/// metric name, the metric proto message itself, optionally an additional label
-/// name and value (use empty strings if not required), and the value.
-/// The function returns the number of bytes written and any error encountered.
+/// metric name, an optional metric name postfix, the metric proto message
+/// itself, optionally an additional label name and value (use empty strings if
+/// not required), and the value. The function returns the number of bytes
+/// written and any error encountered.
 fn write_sample(
     writer: &mut dyn Write,
     name: &str,
@@ -215,26 +218,49 @@ fn label_pairs_to_text(
 
 /// `escape_string` replaces `\` by `\\`, new line character by `\n`, and `"` by `\"` if
 /// `include_double_quote` is true.
-fn escape_string(v: &str, include_double_quote: bool) -> String {
-    let mut escaped = String::with_capacity(v.len() * 2);
-
-    for c in v.chars() {
-        match c {
-            '\\' | '\n' => {
-                escaped.extend(c.escape_default());
-            }
-            '"' if include_double_quote => {
-                escaped.extend(c.escape_default());
-            }
-            _ => {
-                escaped.push(c);
-            }
-        }
+///
+/// Implementation adapted from
+/// https://lise-henry.github.io/articles/optimising_strings.html
+fn escape_string(v: &str, include_double_quote: bool) -> Cow<'_, str> {
+    // Regex compilation is expensive. Use `lazy_static` to compile the regexes
+    // once per process lifetime and not once per function invocation.
+    lazy_static! {
+        static ref ESCAPER: Regex = Regex::new("(\\\\|\n)").expect("Regex to be valid.");
+        static ref QUOTED_ESCAPER: Regex = Regex::new("(\\\\|\n|\")").expect("Regex to be valid.");
     }
 
-    escaped.shrink_to_fit();
+    let first_occurence = if include_double_quote {
+        QUOTED_ESCAPER.find(v)
+    } else {
+        ESCAPER.find(v)
+    }
+    .as_ref()
+    .map(Match::start);
 
-    escaped
+    if let Some(first) = first_occurence {
+        let mut escaped = String::with_capacity(v.len() * 2);
+        escaped.push_str(&v[0..first]);
+        let remainder = v[first..].chars();
+
+        for c in remainder {
+            match c {
+                '\\' | '\n' => {
+                    escaped.extend(c.escape_default());
+                }
+                '"' if include_double_quote => {
+                    escaped.extend(c.escape_default());
+                }
+                _ => {
+                    escaped.push(c);
+                }
+            }
+        }
+        escaped.into()
+    } else {
+        // The input string does not contain any characters that would need to
+        // be escaped. Return it as it is.
+        v.into()
+    }
 }
 
 #[cfg(test)]
