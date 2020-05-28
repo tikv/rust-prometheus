@@ -255,6 +255,8 @@ fn escape_string(v: &str, include_double_quote: bool) -> Cow<'_, str> {
                 }
             }
         }
+
+        escaped.shrink_to_fit();
         escaped.into()
     } else {
         // The input string does not contain any characters that would need to
