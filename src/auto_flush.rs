@@ -3,7 +3,7 @@ use crate::counter::{CounterWithValueType, GenericLocalCounter};
 use crate::histogram::{Instant, LocalHistogram};
 use crate::metrics::MayFlush;
 use crate::timer;
-use spin::Mutex;
+use parking_lot::Mutex;
 use std::thread::LocalKey;
 
 /// Delegator for auto flush-able local counter
@@ -90,10 +90,10 @@ impl<T: 'static + MayFlush, V: CounterWithValueType, D: CounterDelegator<T, V>>
 
     /// Return the local counter value.
     #[inline]
-    pub fn get(&self) {
+    pub fn get(&self) -> <V::ValueType as Atomic>::T {
         self.get_root_metric().with(|m| {
             let counter = self.get_counter(m);
-            counter.get();
+            counter.get()
         })
     }
 
