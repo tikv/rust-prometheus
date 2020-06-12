@@ -173,7 +173,8 @@ impl HistogramCore {
         for pair in &desc.const_label_pairs {
             check_bucket_label(pair.get_name())?;
         }
-        let pairs = make_label_pairs(&desc, label_values);
+
+        let label_pairs = make_label_pairs(&desc, label_values)?;
 
         let buckets = check_and_adjust_buckets(opts.buckets.clone())?;
 
@@ -184,7 +185,7 @@ impl HistogramCore {
 
         Ok(HistogramCore {
             desc,
-            label_pairs: pairs,
+            label_pairs,
             sum: AtomicF64::new(0.0),
             count: AtomicU64::new(0),
             upper_bounds: buckets,
@@ -1223,6 +1224,25 @@ mod tests {
             local_vec.with_label_values(&["v1", "v2"]).observe(2.0);
             drop(local_vec);
             check(1, 2.0);
+        }
+    }
+
+    #[test]
+    fn test_error_on_inconsistent_label_cardinality() {
+        let hist = Histogram::with_opts(
+            histogram_opts!(
+                "example_histogram",
+                "Used as an example",
+                vec![0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 5.0]
+            )
+            .variable_label("example_variable"),
+        );
+
+        if let Err(Error::InconsistentCardinality { expect, got }) = hist {
+            assert_eq!(1, expect);
+            assert_eq!(0, got);
+        } else {
+            panic!("Expected InconsistentCardinality error.")
         }
     }
 }
