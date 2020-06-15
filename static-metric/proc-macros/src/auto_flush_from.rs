@@ -1,3 +1,5 @@
+// Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
+
 use proc_macro2::Span;
 use syn::export::TokenStream2;
 use syn::parse::{Parse, ParseStream};
