@@ -4,8 +4,8 @@ version = "0.3.0"
 license = "Apache-2.0"
 authors = ["me@breeswish.org"]
 description = "Static metric helper utilities for rust-prometheus."
-repository = "https://github.com/pingcap/rust-prometheus"
-homepage = "https://github.com/pingcap/rust-prometheus"
+repository = "https://github.com/tikv/rust-prometheus"
+homepage = "https://github.com/tikv/rust-prometheus"
 documentation = "https://docs.rs/prometheus-static-metric"
 include = [
     "LICENSE",
