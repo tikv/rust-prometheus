@@ -44,14 +44,7 @@ impl<P: Atomic> Value<P> {
         label_values: &[&str],
     ) -> Result<Self> {
         let desc = describer.describe()?;
-        if desc.variable_labels.len() != label_values.len() {
-            return Err(Error::InconsistentCardinality {
-                expect: desc.variable_labels.len(),
-                got: label_values.len(),
-            });
-        }
-
-        let label_pairs = make_label_pairs(&desc, label_values);
+        let label_pairs = make_label_pairs(&desc, label_values)?;
 
         Ok(Self {
             desc,
@@ -122,14 +115,21 @@ impl<P: Atomic> Value<P> {
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
+pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Result<Vec<LabelPair>> {
+    if desc.variable_labels.len() != label_values.len() {
+        return Err(Error::InconsistentCardinality {
+            expect: desc.variable_labels.len(),
+            got: label_values.len(),
+        });
+    }
+
     let total_len = desc.variable_labels.len() + desc.const_label_pairs.len();
     if total_len == 0 {
-        return vec![];
+        return Ok(vec![]);
     }
 
     if desc.variable_labels.is_empty() {
-        return desc.const_label_pairs.clone();
+        return Ok(desc.const_label_pairs.clone());
     }
 
     let mut label_pairs = Vec::with_capacity(total_len);
@@ -144,5 +144,5 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Vec<LabelPair> {
         label_pairs.push(label_pair.clone());
     }
     label_pairs.sort();
-    label_pairs
+    Ok(label_pairs)
 }
