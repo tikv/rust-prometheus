@@ -393,7 +393,7 @@ impl HistogramCore {
     // remaining `observe` calls to finish on the previously hot now cold shard,
     // snapshot the data, update the now hot shard and reset the cold shard.
     pub fn proto(&self) -> proto::Histogram {
-        let _collect_guard = self.collect_lock.lock().expect("Lock poisoned");
+        let collect_guard = self.collect_lock.lock().expect("Lock poisoned");
 
         // `flip` needs to use AcqRel ordering to ensure the lock operation
         // above stays above and the histogram operations (especially the shard
@@ -450,7 +450,7 @@ impl HistogramCore {
         hot_shard.count.inc_by(overall_count);
         hot_shard.sum.inc_by(cold_shard_sum);
 
-        drop(_collect_guard);
+        drop(collect_guard);
 
         h
     }
