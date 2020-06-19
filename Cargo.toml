@@ -6,8 +6,8 @@ keywords = ["prometheus", "metrics"]
 authors = ["overvenus@gmail.com", "siddontang@gmail.com", "vistaswx@gmail.com"]
 description = "Prometheus instrumentation library for Rust applications."
 readme = "README.md"
-repository = "https://github.com/pingcap/rust-prometheus"
-homepage = "https://github.com/pingcap/rust-prometheus"
+repository = "https://github.com/tikv/rust-prometheus"
+homepage = "https://github.com/tikv/rust-prometheus"
 documentation = "https://docs.rs/prometheus"
 edition = "2018"
 

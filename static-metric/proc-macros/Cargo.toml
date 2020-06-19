@@ -3,6 +3,9 @@ name = "static-metric-proc-macros"
 version = "0.1.0"
 authors = ["Yilin Chen <sticnarf@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/tikv/rust-prometheus"
+homepage = "https://github.com/tikv/rust-prometheus"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

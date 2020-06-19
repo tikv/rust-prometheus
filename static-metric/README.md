@@ -3,7 +3,7 @@
 [![docs.rs](https://docs.rs/prometheus-static-metric/badge.svg)](https://docs.rs/prometheus-static-metric)
 [![crates.io](http://meritbadge.herokuapp.com/prometheus-static-metric)](https://crates.io/crates/prometheus-static-metric)
 
-Utility macro to build static metrics for the [rust-prometheus](https://github.com/pingcap/rust-prometheus) library.
+Utility macro to build static metrics for the [rust-prometheus](https://github.com/tikv/rust-prometheus) library.
 
 ## Why?
 
