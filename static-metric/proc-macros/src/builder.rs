@@ -123,7 +123,7 @@ impl TokensBuilder {
         quote! {
             #[allow(dead_code)]
             #[allow(non_camel_case_types)]
-            #[derive(Clone, Copy, PartialEq)]
+            #[derive(Clone, Copy, PartialEq, Eq, Hash)]
             #visibility enum #enum_name {
                 #(#enum_item_names),*
             }

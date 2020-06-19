@@ -84,7 +84,7 @@ pub struct HistogramOpts {
 
 impl HistogramOpts {
     /// Create a [`HistogramOpts`] with the `name` and `help` arguments.
-    pub fn new<S: Into<String>>(name: S, help: S) -> HistogramOpts {
+    pub fn new<S1: Into<String>, S2: Into<String>>(name: S1, help: S2) -> HistogramOpts {
         HistogramOpts {
             common_opts: Opts::new(name, help),
             buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
@@ -110,7 +110,7 @@ impl HistogramOpts {
     }
 
     /// `const_label` adds a const label.
-    pub fn const_label<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn const_label<S1: Into<String>, S2: Into<String>>(mut self, name: S1, value: S2) -> Self {
         self.common_opts = self.common_opts.const_label(name, value);
         self
     }
@@ -336,13 +336,14 @@ impl HistogramCore {
         for pair in &desc.const_label_pairs {
             check_bucket_label(pair.get_name())?;
         }
-        let pairs = make_label_pairs(&desc, label_values);
+
+        let label_pairs = make_label_pairs(&desc, label_values)?;
 
         let buckets = check_and_adjust_buckets(opts.buckets.clone())?;
 
         Ok(HistogramCore {
             desc,
-            label_pairs: pairs,
+            label_pairs,
 
             collect_lock: Mutex::new(()),
 
@@ -1519,6 +1520,25 @@ mod tests {
                  cumulative count, got {:?} and {:?} instead.",
                 sample_count, cumulative_count,
             );
+        }
+    }
+
+    #[test]
+    fn test_error_on_inconsistent_label_cardinality() {
+        let hist = Histogram::with_opts(
+            histogram_opts!(
+                "example_histogram",
+                "Used as an example",
+                vec![0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 5.0]
+            )
+            .variable_label("example_variable"),
+        );
+
+        if let Err(Error::InconsistentCardinality { expect, got }) = hist {
+            assert_eq!(1, expect);
+            assert_eq!(0, got);
+        } else {
+            panic!("Expected InconsistentCardinality error.")
         }
     }
 }

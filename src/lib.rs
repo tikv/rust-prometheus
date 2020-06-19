@@ -107,6 +107,7 @@ This library supports four features:
 /// Protocol buffers format of metrics.
 #[cfg(feature = "protobuf")]
 #[allow(warnings)]
+#[rustfmt::skip]
 #[path = "../proto/proto_model.rs"]
 pub mod proto;
 

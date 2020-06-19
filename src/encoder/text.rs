@@ -1,5 +1,7 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
+use regex::{Match, Regex};
+use std::borrow::Cow;
 use std::io::Write;
 
 use crate::errors::Result;
@@ -12,6 +14,7 @@ use super::{check_metric_family, Encoder};
 pub const TEXT_FORMAT: &str = "text/plain; version=0.0.4";
 
 const POSITIVE_INF: &str = "+Inf";
+const QUANTILE: &str = "quantile";
 
 /// An implementation of an [`Encoder`] that converts a [`MetricFamily`] proto message
 /// into text format.
@@ -31,23 +34,33 @@ impl Encoder for TextEncoder {
             // Fail-fast checks.
             check_metric_family(mf)?;
 
+            // Write `# HELP` header.
             let name = mf.get_name();
             let help = mf.get_help();
             if !help.is_empty() {
-                writeln!(writer, "# HELP {} {}", name, escape_string(help, false))?;
+                writer.write_all(b"# HELP ")?;
+                writer.write_all(name.as_bytes())?;
+                writer.write_all(b" ")?;
+                writer.write_all(escape_string(help, false).as_bytes())?;
+                writer.write_all(b"\n")?;
             }
 
+            // Write `# TYPE` header.
             let metric_type = mf.get_field_type();
             let lowercase_type = format!("{:?}", metric_type).to_lowercase();
-            writeln!(writer, "# TYPE {} {}", name, lowercase_type)?;
+            writer.write_all(b"# TYPE ")?;
+            writer.write_all(name.as_bytes())?;
+            writer.write_all(b" ")?;
+            writer.write_all(lowercase_type.as_bytes())?;
+            writer.write_all(b"\n")?;
 
             for m in mf.get_metric() {
                 match metric_type {
                     MetricType::COUNTER => {
-                        write_sample(name, m, "", "", m.get_counter().get_value(), writer)?;
+                        write_sample(writer, name, None, m, None, m.get_counter().get_value())?;
                     }
                     MetricType::GAUGE => {
-                        write_sample(name, m, "", "", m.get_gauge().get_value(), writer)?;
+                        write_sample(writer, name, None, m, None, m.get_gauge().get_value())?;
                     }
                     MetricType::HISTOGRAM => {
                         let h = m.get_histogram();
@@ -56,12 +69,12 @@ impl Encoder for TextEncoder {
                         for b in h.get_bucket() {
                             let upper_bound = b.get_upper_bound();
                             write_sample(
-                                &format!("{}_bucket", name),
-                                m,
-                                BUCKET_LABEL,
-                                &format!("{}", upper_bound),
-                                b.get_cumulative_count() as f64,
                                 writer,
+                                name,
+                                Some("_bucket"),
+                                m,
+                                Some((BUCKET_LABEL, &upper_bound.to_string())),
+                                b.get_cumulative_count() as f64,
                             )?;
                             if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
                                 inf_seen = true;
@@ -69,34 +82,52 @@ impl Encoder for TextEncoder {
                         }
                         if !inf_seen {
                             write_sample(
-                                &format!("{}_bucket", name),
-                                m,
-                                BUCKET_LABEL,
-                                POSITIVE_INF,
-                                h.get_sample_count() as f64,
                                 writer,
+                                name,
+                                Some("_bucket"),
+                                m,
+                                Some((BUCKET_LABEL, POSITIVE_INF)),
+                                h.get_sample_count() as f64,
                             )?;
                         }
 
-                        write_sample(
-                            &format!("{}_sum", name),
-                            m,
-                            "",
-                            "",
-                            h.get_sample_sum(),
-                            writer,
-                        )?;
+                        write_sample(writer, name, Some("_sum"), m, None, h.get_sample_sum())?;
 
                         write_sample(
-                            &format!("{}_count", name),
-                            m,
-                            "",
-                            "",
-                            h.get_sample_count() as f64,
                             writer,
+                            name,
+                            Some("_count"),
+                            m,
+                            None,
+                            h.get_sample_count() as f64,
                         )?;
                     }
-                    MetricType::SUMMARY | MetricType::UNTYPED => {
+                    MetricType::SUMMARY => {
+                        let s = m.get_summary();
+
+                        for q in s.get_quantile() {
+                            write_sample(
+                                writer,
+                                name,
+                                None,
+                                m,
+                                Some((QUANTILE, &q.get_quantile().to_string())),
+                                q.get_value(),
+                            )?;
+                        }
+
+                        write_sample(writer, name, Some("_sum"), m, None, s.get_sample_sum())?;
+
+                        write_sample(
+                            writer,
+                            name,
+                            Some("_count"),
+                            m,
+                            None,
+                            s.get_sample_count() as f64,
+                        )?;
+                    }
+                    MetricType::UNTYPED => {
                         unimplemented!();
                     }
                 }
@@ -112,31 +143,32 @@ impl Encoder for TextEncoder {
 }
 
 /// `write_sample` writes a single sample in text format to `writer`, given the
-/// metric name, the metric proto message itself, optionally an additional label
-/// name and value (use empty strings if not required), and the value.
-/// The function returns the number of bytes written and any error encountered.
+/// metric name, an optional metric name postfix, the metric proto message
+/// itself, optionally an additional label name and value (use empty strings if
+/// not required), and the value. The function returns the number of bytes
+/// written and any error encountered.
 fn write_sample(
-    name: &str,
-    mc: &proto::Metric,
-    additional_label_name: &str,
-    additional_label_value: &str,
-    value: f64,
     writer: &mut dyn Write,
+    name: &str,
+    name_postfix: Option<&str>,
+    mc: &proto::Metric,
+    additional_label: Option<(&str, &str)>,
+    value: f64,
 ) -> Result<()> {
     writer.write_all(name.as_bytes())?;
+    if let Some(postfix) = name_postfix {
+        writer.write_all(postfix.as_bytes())?;
+    }
 
-    label_pairs_to_text(
-        mc.get_label(),
-        additional_label_name,
-        additional_label_value,
-        writer,
-    )?;
+    label_pairs_to_text(mc.get_label(), additional_label, writer)?;
 
-    write!(writer, " {}", value)?;
+    writer.write_all(b" ")?;
+    writer.write_all(value.to_string().as_bytes())?;
 
     let timestamp = mc.get_timestamp_ms();
     if timestamp != 0 {
-        write!(writer, " {}", timestamp)?;
+        writer.write_all(b" ")?;
+        writer.write_all(timestamp.to_string().as_bytes())?;
     }
 
     writer.write_all(b"\n")?;
@@ -153,35 +185,30 @@ fn write_sample(
 /// bytes written and any error encountered.
 fn label_pairs_to_text(
     pairs: &[proto::LabelPair],
-    additional_label_name: &str,
-    additional_label_value: &str,
+    additional_label: Option<(&str, &str)>,
     writer: &mut dyn Write,
 ) -> Result<()> {
-    if pairs.is_empty() && additional_label_name.is_empty() {
+    if pairs.is_empty() && additional_label.is_none() {
         return Ok(());
     }
 
-    let mut separator = "{";
+    let mut separator = b"{";
     for lp in pairs {
-        write!(
-            writer,
-            "{}{}=\"{}\"",
-            separator,
-            lp.get_name(),
-            escape_string(lp.get_value(), true)
-        )?;
+        writer.write_all(separator)?;
+        writer.write_all(lp.get_name().as_bytes())?;
+        writer.write_all(b"=\"")?;
+        writer.write_all(escape_string(lp.get_value(), true).as_bytes())?;
+        writer.write_all(b"\"")?;
 
-        separator = ",";
+        separator = b",";
     }
 
-    if !additional_label_name.is_empty() {
-        write!(
-            writer,
-            "{}{}=\"{}\"",
-            separator,
-            additional_label_name,
-            escape_string(additional_label_value, true)
-        )?;
+    if let Some((name, value)) = additional_label {
+        writer.write_all(separator)?;
+        writer.write_all(name.as_bytes())?;
+        writer.write_all(b"=\"")?;
+        writer.write_all(escape_string(value, true).as_bytes())?;
+        writer.write_all(b"\"")?;
     }
 
     writer.write_all(b"}")?;
@@ -191,26 +218,51 @@ fn label_pairs_to_text(
 
 /// `escape_string` replaces `\` by `\\`, new line character by `\n`, and `"` by `\"` if
 /// `include_double_quote` is true.
-fn escape_string(v: &str, include_double_quote: bool) -> String {
-    let mut escaped = String::with_capacity(v.len() * 2);
-
-    for c in v.chars() {
-        match c {
-            '\\' | '\n' => {
-                escaped.extend(c.escape_default());
-            }
-            '"' if include_double_quote => {
-                escaped.extend(c.escape_default());
-            }
-            _ => {
-                escaped.push(c);
-            }
-        }
+///
+/// Implementation adapted from
+/// https://lise-henry.github.io/articles/optimising_strings.html
+fn escape_string(v: &str, include_double_quote: bool) -> Cow<'_, str> {
+    // Regex compilation is expensive. Use `lazy_static` to compile the regexes
+    // once per process lifetime and not once per function invocation.
+    lazy_static! {
+        static ref ESCAPER: Regex = Regex::new("(\\\\|\n)").expect("Regex to be valid.");
+        static ref QUOTED_ESCAPER: Regex = Regex::new("(\\\\|\n|\")").expect("Regex to be valid.");
     }
 
-    escaped.shrink_to_fit();
+    let first_occurence = if include_double_quote {
+        QUOTED_ESCAPER.find(v)
+    } else {
+        ESCAPER.find(v)
+    }
+    .as_ref()
+    .map(Match::start);
 
-    escaped
+    if let Some(first) = first_occurence {
+        let mut escaped = String::with_capacity(v.len() * 2);
+        escaped.push_str(&v[0..first]);
+        let remainder = v[first..].chars();
+
+        for c in remainder {
+            match c {
+                '\\' | '\n' => {
+                    escaped.extend(c.escape_default());
+                }
+                '"' if include_double_quote => {
+                    escaped.extend(c.escape_default());
+                }
+                _ => {
+                    escaped.push(c);
+                }
+            }
+        }
+
+        escaped.shrink_to_fit();
+        escaped.into()
+    } else {
+        // The input string does not contain any characters that would need to
+        // be escaped. Return it as it is.
+        v.into()
+    }
 }
 
 #[cfg(test)]
@@ -223,7 +275,7 @@ mod tests {
     use crate::metrics::{Collector, Opts};
 
     #[test]
-    fn test_ecape_string() {
+    fn test_escape_string() {
         assert_eq!(r"\\", escape_string("\\", false));
         assert_eq!(r"a\\", escape_string("a\\", false));
         assert_eq!(r"\n", escape_string("\n", false));
@@ -305,5 +357,48 @@ test_histogram_sum{a="1"} 0.25
 test_histogram_count{a="1"} 1
 "##;
         assert_eq!(ans.as_bytes(), writer.as_slice());
+    }
+
+    #[test]
+    fn test_text_encoder_summary() {
+        use crate::proto::{Metric, Quantile, Summary};
+        use std::str;
+
+        let mut metric_family = MetricFamily::default();
+        metric_family.set_name("test_summary".to_string());
+        metric_family.set_help("This is a test summary statistic".to_string());
+        metric_family.set_field_type(MetricType::SUMMARY);
+
+        let mut summary = Summary::default();
+        summary.set_sample_count(5.0 as u64);
+        summary.set_sample_sum(15.0);
+
+        let mut quantile1 = Quantile::default();
+        quantile1.set_quantile(50.0);
+        quantile1.set_value(3.0);
+
+        let mut quantile2 = Quantile::default();
+        quantile2.set_quantile(100.0);
+        quantile2.set_value(5.0);
+
+        summary.set_quantile(from_vec!(vec!(quantile1, quantile2)));
+
+        let mut metric = Metric::default();
+        metric.set_summary(summary);
+        metric_family.set_metric(from_vec!(vec!(metric)));
+
+        let mut writer = Vec::<u8>::new();
+        let encoder = TextEncoder::new();
+        let res = encoder.encode(&vec![metric_family], &mut writer);
+        assert!(res.is_ok());
+
+        let ans = r##"# HELP test_summary This is a test summary statistic
+# TYPE test_summary summary
+test_summary{quantile="50"} 3
+test_summary{quantile="100"} 5
+test_summary_sum 15
+test_summary_count 5
+"##;
+        assert_eq!(ans, str::from_utf8(writer.as_slice()).unwrap());
     }
 }
