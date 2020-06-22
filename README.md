@@ -13,13 +13,13 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 - Add dependency to your `Cargo.toml`:
 
   ```toml
-  prometheus = "0.8"
+  prometheus = "0.9"
   ```
 
 - Optional: Better performance for Rust nightly.
 
   ```toml
-  prometheus = { version = "0.8", features = ["nightly"] }
+  prometheus = { version = "0.9", features = ["nightly"] }
   ```
 
 ### Note
@@ -27,7 +27,7 @@ The main Structures and APIs are ported from [Go client](https://github.com/prom
 The crate has a pre-generated protobuf binding file for `protobuf` v2.0, if you need use the latest version of `protobuf`, you can generate the binding file on building with the `gen` feature.
 
 ```toml
-prometheus = { version = "0.8", features = ["gen"] }
+prometheus = { version = "0.9", features = ["gen"] }
 ```
 
 ## Example
