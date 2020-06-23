@@ -5,10 +5,16 @@ The Rust client library for [Prometheus](https://prometheus.io/).
 
 Use of this library involves a few core concepts:
 
-* A number of [`Counter`](type.Counter.html)s that represent metrics from your system.
-* A [`Registry`](struct.Registry.html) with a number of registered [`Counter`s](type.Counter.html).
-* An endpoint that calls [`gather`](fn.gather.html) which returns a
-[`MetricFamily`](proto/struct.MetricFamily.html) through an [`Encoder`](trait.Encoder.html).
+* [`Metric`s](core/trait.Metric.html) like [`Counter`s](type.Counter.html) that
+  represent information about your system.
+
+* A [`Registry`](struct.Registry.html) that [`Metric`s](core/trait.Metric.html)
+  are registered with.
+
+* An endpoint that calls [`gather`](fn.gather.html) which returns
+  [`MetricFamily`s](proto/struct.MetricFamily.html) through an
+  [`Encoder`](trait.Encoder.html).
+
 
 # Basic Example
 
@@ -36,10 +42,14 @@ encoder.encode(&metric_families, &mut buffer).unwrap();
 println!("{}", String::from_utf8(buffer).unwrap());
 ```
 
+You can find more examples within
+[`/examples`](https://github.com/tikv/rust-prometheus/tree/master/examples).
+
+
 # Static Metrics
 
 This crate supports staticly built metrics. You can use it with
-[`lazy_static`](https://docs.rs/lazy_static/1.1.0/lazy_static/) to quickly build up and collect
+[`lazy_static`](https://docs.rs/lazy_static/) to quickly build up and collect
 some metrics.
 
 ```rust
@@ -86,13 +96,19 @@ const EXPECTED_OUTPUT: &'static str = "# HELP highfives Number of high fives rec
 assert!(output.starts_with(EXPECTED_OUTPUT));
 ```
 
+See [prometheus_static_metric](https://docs.rs/prometheus-static-metric) for
+additional functionality.
+
+
 # Features
 
 This library supports four features:
 
+* `gen`: To generate protobuf client with the latest protobuf version instead of
+  using the pre-generated client.
 * `nightly`: Enable nightly only features.
-* `push`: Enable push support.
 * `process`: For collecting process info.
+* `push`: Enable push support.
 
 */
 
