@@ -3,16 +3,40 @@
 [![Build Status](https://travis-ci.org/tikv/rust-prometheus.svg?branch=master)](https://travis-ci.org/pingcap/rust-prometheus)
 [![docs.rs](https://docs.rs/prometheus/badge.svg)](https://docs.rs/prometheus)
 [![crates.io](http://meritbadge.herokuapp.com/prometheus)](https://crates.io/crates/prometheus)
-[![Dependency Status](https://deps.rs/repo/github/tikv/rust-prometheus/status.svg)](https://deps.rs/repo/github/tikv/rust-prometheus)
 
 This is the [Rust](https://www.rust-lang.org) client library for
-[Prometheus](http://prometheus.io). The main Structures and APIs are ported from
-[Go client](https://github.com/prometheus/client_golang).
+[Prometheus](http://prometheus.io). The main data structures and APIs are ported
+from [Go client](https://github.com/prometheus/client_golang).
 
 
-### Documentation
+## Documentation
 
 Find the latest documentation at https://docs.rs/prometheus
+
+
+## Advanced
+
+### Features
+
+This library supports four features:
+
+- `gen`: To generate protobuf client with the latest protobuf version instead of
+  using the pre-generated client.
+
+- `nightly`: Enable nightly only features.
+
+- `push`: Enable push support.
+
+- `process`: For collecting process info.
+
+- `push`: Enable push support.
+
+
+### Static Metric
+
+Static metric helps you make metric vectors faster.
+
+See [static-metric](./static-metric) directory for details.
 
 
 ## Thanks
