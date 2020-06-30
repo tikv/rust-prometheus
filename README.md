@@ -25,8 +25,6 @@ This library supports four features:
 
 - `nightly`: Enable nightly only features.
 
-- `push`: Enable push support.
-
 - `process`: For collecting process info.
 
 - `push`: Enable push support.
@@ -34,7 +32,9 @@ This library supports four features:
 
 ### Static Metric
 
-Static metric helps you make metric vectors faster.
+When using a `MetricVec` with label values known at compile time
+prometheus-static-metric reduces the overhead of retrieving the concrete
+`Metric` from a `MetricVec`.
 
 See [static-metric](./static-metric) directory for details.
 
