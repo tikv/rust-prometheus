@@ -16,7 +16,7 @@ use crate::proto;
 pub use libc::pid_t;
 
 // Six metrics per ProcessCollector.
-const MERTICS_NUMBER: usize = 6;
+const MERTICS_NUMBER: usize = 7;
 
 /// A collector which exports the current state of
 /// process metrics including cpu, memory and file descriptor usage as well as
@@ -30,6 +30,7 @@ pub struct ProcessCollector {
     max_fds: Gauge,
     vsize: Gauge,
     rss: Gauge,
+    swap: Gauge,
     start_time: Gauge,
 }
 
@@ -87,6 +88,16 @@ impl ProcessCollector {
         .unwrap();
         descs.extend(rss.desc().into_iter().cloned());
 
+        let swap = Gauge::with_opts(
+            Opts::new(
+                "process_swap_memory_bytes",
+                "Swapped out memory size in bytes.",
+            )
+            .namespace(namespace.clone()),
+        )
+        .unwrap();
+        descs.extend(swap.desc().into_iter().cloned());
+
         let start_time = Gauge::with_opts(
             Opts::new(
                 "process_start_time_seconds",
@@ -106,6 +117,7 @@ impl ProcessCollector {
             max_fds,
             vsize,
             rss,
+            swap,
             start_time,
         }
     }
@@ -144,6 +156,11 @@ impl Collector for ProcessCollector {
         // memory
         self.vsize.set(p.stat.vsize as f64);
         self.rss.set(p.stat.rss as f64 * *PAGESIZE);
+        if let Ok(status) = p.status() {
+            if let Some(swap) = status.vmswap {
+                self.swap.set(swap as f64);
+            }
+        }
 
         // proc_start_time
         if let Some(boot_time) = *BOOT_TIME {
@@ -171,6 +188,7 @@ impl Collector for ProcessCollector {
         mfs.extend(self.max_fds.collect());
         mfs.extend(self.vsize.collect());
         mfs.extend(self.rss.collect());
+        mfs.extend(self.swap.collect());
         mfs.extend(self.start_time.collect());
         mfs
     }
@@ -208,9 +226,21 @@ mod tests {
         {
             // Six metrics per process collector.
             let descs = pc.desc();
-            assert_eq!(descs.len(), super::MERTICS_NUMBER);
+            assert_eq!(
+                descs.len(),
+                super::MERTICS_NUMBER,
+                "descs count ({}) should match expected actual ({})",
+                descs.len(),
+                super::MERTICS_NUMBER
+            );
             let mfs = pc.collect();
-            assert_eq!(mfs.len(), super::MERTICS_NUMBER);
+            assert_eq!(
+                mfs.len(),
+                super::MERTICS_NUMBER,
+                "MetricFamilies count ({}) should match actual {}",
+                mfs.len(),
+                super::MERTICS_NUMBER
+            );
         }
 
         let r = registry::Registry::new();
