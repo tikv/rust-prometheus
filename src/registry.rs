@@ -41,11 +41,7 @@ impl RegistryCore {
             // Is the desc_id unique?
             // (In other words: Is the fqName + constLabel combination unique?)
             if self.desc_ids.contains(&desc.id) {
-                return Err(Error::Msg(format!(
-                    "descriptor {:?} already exists with the same \
-                     fully-qualified name and const label values",
-                    desc
-                )));
+                return Err(Error::AlreadyReg);
             }
 
             if let Some(hash) = self.dim_hashes_by_name.get(&desc.fq_name) {
