@@ -125,6 +125,13 @@ impl Atomic for AtomicF64 {
     }
 }
 
+impl AtomicF64 {
+    /// Store the value, returning the previous value.
+    pub fn swap(&self, val: f64, ordering: Ordering) -> f64 {
+        u64_to_f64(self.inner.swap(f64_to_u64(val), ordering))
+    }
+}
+
 /// A atomic signed integer.
 #[derive(Debug)]
 pub struct AtomicI64 {
@@ -188,12 +195,29 @@ impl Atomic for AtomicU64 {
 
     #[inline]
     fn inc_by(&self, delta: Self::T) {
-        self.inner.fetch_add(delta, Ordering::Relaxed);
+        self.inc_by_with_ordering(delta, Ordering::Relaxed);
     }
 
     #[inline]
     fn dec_by(&self, delta: Self::T) {
         self.inner.fetch_sub(delta, Ordering::Relaxed);
+    }
+}
+
+impl AtomicU64 {
+    /// Get the value with the provided memory ordering.
+    pub fn compare_and_swap(&self, current: u64, new: u64, ordering: Ordering) -> u64 {
+        self.inner.compare_and_swap(current, new, ordering)
+    }
+
+    /// Increment the value by a given amount with the provided memory ordering.
+    pub fn inc_by_with_ordering(&self, delta: u64, ordering: Ordering) {
+        self.inner.fetch_add(delta, ordering);
+    }
+
+    /// Stores a value into the atomic integer, returning the previous value.
+    pub fn swap(&self, val: u64, ordering: Ordering) -> u64 {
+        self.inner.swap(val, ordering)
     }
 }
 
