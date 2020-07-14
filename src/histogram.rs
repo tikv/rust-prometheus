@@ -1504,15 +1504,25 @@ mod tests {
 
         let mut sample_count = 0;
         let mut cumulative_count = 0;
+        let mut sample_sum = 0;
         for _ in 0..1_000_000 {
             let metric = &histogram.collect()[0].take_metric()[0];
             let proto = metric.get_histogram();
 
             sample_count = proto.get_sample_count();
+            sample_sum = proto.get_sample_sum() as u64;
             // There is only one bucket thus the `[0]`.
             cumulative_count = proto.get_bucket()[0].get_cumulative_count();
 
             if sample_count != cumulative_count {
+                break;
+            }
+
+            // Observation value is always `1.0` thus count and sum should
+            // always equal. The number of `observe` calls is limited to
+            // 1_000_000, thus the sum is limited to 1_000_000. A float 64 is
+            // able to represent the sum accurately up to 9_007_199_254_740_992.
+            if sample_count != sample_sum {
                 break;
             }
         }
@@ -1528,6 +1538,15 @@ mod tests {
                  cumulative count, got {:?} and {:?} instead.",
                 sample_count, cumulative_count,
             );
+        }
+
+        if sample_count != sample_sum {
+            panic!(
+                "Histogram invariant violated: For a histogram which is only \
+                 ever observing a value of `1.0` the sample count should equal \
+                 the sum, instead got: {:?} and {:?}",
+                sample_count, sample_sum,
+            )
         }
     }
 
