@@ -183,7 +183,7 @@ impl Shard {
 ///
 /// Used in conjunction with [`ShardAndCount`] below.
 #[derive(Debug, Clone, Copy)]
-pub enum ShardIndex {
+enum ShardIndex {
     /// First index. Corresponds to 0.
     First,
     /// Second index. Corresponds to 1.
@@ -192,7 +192,7 @@ pub enum ShardIndex {
 
 impl ShardIndex {
     /// Inverse the given [`ShardIndex`].
-    pub fn inverse(self) -> ShardIndex {
+    fn inverse(self) -> ShardIndex {
         match self {
             ShardIndex::First => ShardIndex::Second,
             ShardIndex::Second => ShardIndex::First,
@@ -225,7 +225,7 @@ impl From<ShardIndex> for usize {
 /// An atomic u64 with the most significant used as a [`ShardIndex`] and the
 /// remaining 63 bits used to count [`Histogram`] observations.
 #[derive(Debug)]
-pub struct ShardAndCount {
+struct ShardAndCount {
     inner: StdAtomicU64,
 }
 
@@ -233,7 +233,7 @@ impl ShardAndCount {
     /// Return a new [`ShardAndCount`] with both the most significant bit
     /// i.e. the `ShardIndex` and the remaining 63 bit i.e. the observation
     /// count set to 0.
-    pub fn new() -> Self {
+    fn new() -> Self {
         ShardAndCount {
             inner: StdAtomicU64::new(0),
         }
@@ -241,7 +241,7 @@ impl ShardAndCount {
 
     /// Flip the most significant bit i.e. the [`ShardIndex`] leaving the
     /// remaining 63 bits unchanged.
-    pub fn flip(&self, ordering: Ordering) -> (ShardIndex, u64) {
+    fn flip(&self, ordering: Ordering) -> (ShardIndex, u64) {
         let n = self.inner.fetch_add(1 << 63, ordering);
 
         ShardAndCount::split_shard_index_and_count(n)
@@ -249,7 +249,7 @@ impl ShardAndCount {
 
     /// Get the most significant bit i.e. the [`ShardIndex`] as well as the
     /// remaining 63 bits i.e. the observation count.
-    pub fn get(&self) -> (ShardIndex, u64) {
+    fn get(&self) -> (ShardIndex, u64) {
         let n = self.inner.load(Ordering::Relaxed);
 
         ShardAndCount::split_shard_index_and_count(n)
@@ -257,7 +257,7 @@ impl ShardAndCount {
 
     /// Increment the observation count leaving the most significant bit i.e.
     /// the [`ShardIndex`] untouched.
-    pub fn inc_by(&self, delta: u64, ordering: Ordering) -> (ShardIndex, u64) {
+    fn inc_by(&self, delta: u64, ordering: Ordering) -> (ShardIndex, u64) {
         let n = self.inner.fetch_add(delta, ordering);
 
         ShardAndCount::split_shard_index_and_count(n)
@@ -265,7 +265,7 @@ impl ShardAndCount {
 
     /// Increment the observation count by one leaving the most significant bit
     /// i.e. the [`ShardIndex`] untouched.
-    pub fn inc(&self, ordering: Ordering) -> (ShardIndex, u64) {
+    fn inc(&self, ordering: Ordering) -> (ShardIndex, u64) {
         self.inc_by(1, ordering)
     }
 
@@ -354,7 +354,7 @@ impl HistogramCore {
         })
     }
 
-    /// Observe a given observation (f64) in the histogram.
+    /// Record a given observation (f64) in the histogram.
     //
     // First increase the overall observation counter and thus learn which shard
     // is the current hot shard. Subsequently on the hot shard update the
