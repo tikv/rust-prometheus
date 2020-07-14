@@ -410,7 +410,7 @@ impl HistogramCore {
         // shards were flipped, all in-progress `observe` calls are done. With
         // all of them done, the cold shard is now in a consistent state.
         //
-        // `observe` uses `Release` ordering. `get_with_ordering` needs to use
+        // `observe` uses `Release` ordering. `compare_and_swap` needs to use
         // `Acquire` ordering to ensure that (1) one sees all the previous
         // `observe` stores to the counter and (2) to ensure the below shard
         // modifications happen after this point, thus the shard is not modified
@@ -425,7 +425,10 @@ impl HistogramCore {
         {}
 
         // Get cold shard sum and reset to 0.
-        let cold_shard_sum = cold_shard.sum.swap(0.0);
+        //
+        // Use `Acquire` for load and `Release` for store to ensure not to
+        // interfere with previous or upcoming collect calls.
+        let cold_shard_sum = cold_shard.sum.swap(0.0, Ordering::AcqRel);
 
         let mut h = proto::Histogram::default();
         h.set_sample_sum(cold_shard_sum);
@@ -435,7 +438,10 @@ impl HistogramCore {
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
         for (i, upper_bound) in self.upper_bounds.iter().enumerate() {
             // Reset the cold shard and update the hot shard.
-            let cold_bucket_count = cold_shard.buckets[i].swap(0);
+            //
+            // Use `Acquire` for load and `Release` for store to ensure not to
+            // interfere with previous or upcoming collect calls.
+            let cold_bucket_count = cold_shard.buckets[i].swap(0, Ordering::AcqRel);
             hot_shard.buckets[i].inc_by(cold_bucket_count);
 
             cumulative_count += cold_bucket_count;

@@ -127,8 +127,8 @@ impl Atomic for AtomicF64 {
 
 impl AtomicF64 {
     /// Store the value, returning the previous value.
-    pub fn swap(&self, val: f64) -> f64 {
-        u64_to_f64(self.inner.swap(f64_to_u64(val), Ordering::Relaxed))
+    pub fn swap(&self, val: f64, ordering: Ordering) -> f64 {
+        u64_to_f64(self.inner.swap(f64_to_u64(val), ordering))
     }
 }
 
@@ -217,8 +217,8 @@ impl AtomicU64 {
 
     /// Swap the current value with the given value, returning that previously
     /// current value.
-    pub fn swap(&self, val: u64) -> u64 {
-        self.inner.swap(val, Ordering::Relaxed)
+    pub fn swap(&self, val: u64, ordering: Ordering) -> u64 {
+        self.inner.swap(val, ordering)
     }
 }
 
