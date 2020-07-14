@@ -215,8 +215,7 @@ impl AtomicU64 {
         self.inner.fetch_add(delta, ordering);
     }
 
-    /// Swap the current value with the given value, returning that previously
-    /// current value.
+    /// Stores a value into the atomic integer, returning the previous value.
     pub fn swap(&self, val: u64, ordering: Ordering) -> u64 {
         self.inner.swap(val, ordering)
     }
