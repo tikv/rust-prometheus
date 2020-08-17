@@ -36,20 +36,18 @@ introducing a lot of templating code.
 
 ## Getting Started
 
-+ Add to `Cargo.toml`:
+- Add to `Cargo.toml`:
 
-    ```toml
-    [dependencies]
-    prometheus-static-metric = "0.1"
-    ```
+  ```toml
+  [dependencies]
+  prometheus-static-metric = "0.4"
+  ```
 
-+ Add to `lib.rs`:
+- Add to `lib.rs`:
 
-    ```rust
-    #![feature(proc_macro)]
-
-    extern crate prometheus_static_metric;
-    ```
+  ```rust
+  extern crate prometheus_static_metric;
+  ```
 
 ## Example
 
@@ -161,7 +159,5 @@ fn main() {
     );
 }
 ```
-
-
 
 Please take a look at [examples](./examples) directory for more.

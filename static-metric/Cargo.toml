@@ -1,6 +1,6 @@
 [package]
 name = "prometheus-static-metric"
-version = "0.3.0"
+version = "0.4.0"
 license = "Apache-2.0"
 authors = ["me@breeswish.org"]
 description = "Static metric helper utilities for rust-prometheus."
@@ -13,12 +13,17 @@ include = [
     "src/**/*.rs",
 ]
 
+[lib]
+proc-macro = true
+
 [dependencies]
-static-metric-proc-macros = { path = "./proc-macros" }
+syn = { version = "1.0", features = ["full", "extra-traits"] }
+proc-macro2 = "1.0"
+quote = "1.0"
+lazy_static = "1.4"
 
 [dev-dependencies]
-prometheus = { path = "../" }
-lazy_static = "1.4"
+prometheus = { version = "0.9", path = "../" }
 
 [features]
 default = []

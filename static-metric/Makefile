@@ -1,3 +1,5 @@
+.PHONY: all build test format bench clean examples
+
 ENABLE_FEATURES ?= default
 
 all: format build test examples
@@ -18,10 +20,11 @@ clean:
 	cargo clean
 
 examples:
-	cargo build --example simple
-	cargo build --example metric_enum
-	cargo build --example with_lazy_static
 	cargo build --example advanced
+	cargo build --example local
+	cargo build --example make_auto_flush_static_counter
+	cargo build --example make_auto_flush_static_metric_histogram
+	cargo build --example metric_enum
 	cargo build --example register_integration
-
-.PHONY: all
+	cargo build --example simple
+	cargo build --example with_lazy_static
