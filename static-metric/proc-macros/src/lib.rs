@@ -3,7 +3,6 @@
 extern crate lazy_static;
 extern crate proc_macro;
 extern crate proc_macro2;
-extern crate proc_macro_hack;
 #[macro_use]
 extern crate quote;
 extern crate syn;
@@ -22,7 +21,6 @@ use self::parser::StaticMetricMacroBody;
 use self::register_macro::RegisterMethodInvoking;
 use crate::auto_flush_from::AutoFlushFromDef;
 use auto_flush_builder::AutoFlushTokensBuilder;
-use proc_macro_hack::proc_macro_hack;
 
 /// Build static metrics.
 #[proc_macro]
@@ -40,7 +38,7 @@ pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
 }
 
 /// Instantiate a auto flush able static metric struct from a HistogramVec or CounterVec.
-#[proc_macro_hack]
+#[proc_macro]
 pub fn auto_flush_from(input: TokenStream) -> TokenStream {
     let def: AutoFlushFromDef = syn::parse(input).unwrap();
     def.auto_flush_from().into()
