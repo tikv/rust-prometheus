@@ -1,7 +1,4 @@
 [package]
-# When releasing to crates.io:
-# - Remove path dependencies.
-# - Update CHANGELOG.md.
 name = "prometheus-static-metric"
 version = "0.4.0"
 license = "Apache-2.0"
