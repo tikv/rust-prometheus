@@ -1,3 +1,5 @@
+.PHONY: all build test dev bench format clean examples gen_proto
+
 ENABLE_FEATURES ?= default
 
 all: format build test examples
@@ -29,5 +31,3 @@ gen_proto:
 	@ which protoc >/dev/null || { echo "Please install protoc first"; exit 1; }
 	@ which protoc-gen-rust >/dev/null || { echo "Please install protobuf rust plugin, cargo install protobuf"; exit 1; }
 	protoc --rust_out proto proto/metrics.proto
-
-.PHONY: all examples

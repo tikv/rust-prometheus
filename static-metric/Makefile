@@ -1,3 +1,5 @@
+.PHONY: all build test format bench clean examples
+
 ENABLE_FEATURES ?= default
 
 all: format build test examples
@@ -26,5 +28,3 @@ examples:
 	cargo build --example register_integration
 	cargo build --example simple
 	cargo build --example with_lazy_static
-
-.PHONY: all
