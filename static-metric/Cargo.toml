@@ -26,7 +26,7 @@ quote = "1.0"
 lazy_static = "1.4"
 
 [dev-dependencies]
-prometheus = { path = "../" }
+prometheus = { version = "0.9", path = "../" }
 
 [features]
 default = []
