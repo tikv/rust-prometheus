@@ -15,7 +15,6 @@ include = [
 
 [dependencies]
 static-metric-proc-macros = { path = "./proc-macros" }
-proc-macro-hack = "0.5"
 
 [dev-dependencies]
 prometheus = { path = "../" }
