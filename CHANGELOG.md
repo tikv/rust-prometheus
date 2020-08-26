@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0-rc.1
+
+- Improvement: Use different generic parameters for name and help at metric construction (#324).
+
+- Bug fix: Error instead of panic when constructing histogram with unequal label key and label value length (#326).
+
+- Bug fix: Return `Error::AlreadyReg` on duplicate collector registration (#333).
+
+- Bug fix: Make Histogram::observe atomic across collects (#314).
+
+- Internal change: Replace spin with parking_lot (#318).
+
+- Internal change: Optimize metric formatting (#327).
+
+- Internal change: Update parking_lot and procfs dependencies (#337).
+
 ## 0.9.0
 
 - Add: Implement `encode` function for summary type metrics. 
