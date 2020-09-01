@@ -47,7 +47,7 @@ impl<P: Atomic> GenericGauge<P> {
         Self::with_opts_and_label_values(&opts, &empty_labels)
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[impl AsRef<str>]) -> Result<Self> {
+    fn with_opts_and_label_values(opts: &Opts, label_values: &[impl Into<String>]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Gauge, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -130,7 +130,7 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
     type M = GenericGauge<P>;
     type P = Opts;
 
-    fn build(&self, opts: &Opts, vals: &[impl AsRef<str>]) -> Result<Self::M> {
+    fn build(&self, opts: &Opts, vals: &[impl Into<String>]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }

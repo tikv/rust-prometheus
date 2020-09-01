@@ -41,7 +41,7 @@ impl<P: Atomic> Value<P> {
         describer: &D,
         val_type: ValueType,
         val: P::T,
-        label_values: &[impl AsRef<str>],
+        label_values: &[impl Into<String>],
     ) -> Result<Self> {
         let desc = describer.describe()?;
         if desc.variable_labels.len() != label_values.len() {
@@ -122,7 +122,7 @@ impl<P: Atomic> Value<P> {
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: &[impl AsRef<str>]) -> Vec<LabelPair> {
+pub fn make_label_pairs(desc: &Desc, label_values: &[impl Into<String>]) -> Vec<LabelPair> {
     let total_len = desc.variable_labels.len() + desc.const_label_pairs.len();
     if total_len == 0 {
         return vec![];
@@ -135,8 +135,9 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[impl AsRef<str>]) -> Vec<La
     let mut label_pairs = Vec::with_capacity(total_len);
     for (i, n) in desc.variable_labels.iter().enumerate() {
         let mut label_pair = LabelPair::default();
-        label_pair.set_name(n.clone());
-        label_pair.set_value(label_values[i].as_ref().to_owned());
+        label_pair.set_name(n.into());
+        let value = label_values[i].into();
+        label_pair.set_value(value);
         label_pairs.push(label_pair);
     }
 
