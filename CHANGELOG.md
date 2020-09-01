@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.10.0-rc.1
+## 0.10.0
 
 - Improvement: Use different generic parameters for name and help at metric construction (#324).
 
