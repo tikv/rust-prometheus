@@ -8,11 +8,9 @@ This is the [Rust](https://www.rust-lang.org) client library for
 [Prometheus](http://prometheus.io). The main data structures and APIs are ported
 from [Go client](https://github.com/prometheus/client_golang).
 
-
 ## Documentation
 
-Find the latest documentation at https://docs.rs/prometheus
-
+Find the latest documentation at [docs.rs](https://docs.rs/prometheus)
 
 ## Advanced
 
@@ -29,7 +27,6 @@ Some of the crate features need to be enabled before they can be used. Use `feat
 
 - `push`: Enable push support.
 
-
 ### Static Metric
 
 When using a `MetricVec` with label values known at compile time
@@ -37,7 +34,6 @@ prometheus-static-metric reduces the overhead of retrieving the concrete
 `Metric` from a `MetricVec`.
 
 See [static-metric](./static-metric) directory for details.
-
 
 ## Thanks
 
