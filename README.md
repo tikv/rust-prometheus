@@ -16,9 +16,9 @@ Find the latest documentation at https://docs.rs/prometheus
 
 ## Advanced
 
-### Features
+### Crate features
 
-This library supports four features:
+Some of the crate features need to be enabled before they can be used. Use `features = []` flag in `Cargo.toml` to enable them:
 
 - `gen`: To generate protobuf client with the latest protobuf version instead of
   using the pre-generated client.
