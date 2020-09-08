@@ -8,27 +8,24 @@ This is the [Rust](https://www.rust-lang.org) client library for
 [Prometheus](http://prometheus.io). The main data structures and APIs are ported
 from [Go client](https://github.com/prometheus/client_golang).
 
-
 ## Documentation
 
-Find the latest documentation at https://docs.rs/prometheus
-
+Find the latest documentation at <https://docs.rs/prometheus>.
 
 ## Advanced
 
-### Features
+### Crate features
 
-This library supports four features:
+This crate provides several optional components which can be enabled via [Cargo `[features]`](https://doc.rust-lang.org/cargo/reference/features.html):
 
 - `gen`: To generate protobuf client with the latest protobuf version instead of
   using the pre-generated client.
 
 - `nightly`: Enable nightly only features.
 
-- `process`: For collecting process info.
+- `process`: Enable [process metrics](https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics) support.
 
-- `push`: Enable push support.
-
+- `push`: Enable [push metrics](https://prometheus.io/docs/instrumenting/pushing/) support.
 
 ### Static Metric
 
@@ -37,7 +34,6 @@ prometheus-static-metric reduces the overhead of retrieving the concrete
 `Metric` from a `MetricVec`.
 
 See [static-metric](./static-metric) directory for details.
-
 
 ## Thanks
 
