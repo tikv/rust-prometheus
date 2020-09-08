@@ -25,7 +25,7 @@ Some of the crate features need to be enabled before they can be used. Use `feat
 
 - `process`: For collecting process info.
 
-- `push`: Enable push support.
+- `push`: Enable [push metrics](https://prometheus.io/docs/instrumenting/pushing/) support.
 
 ### Static Metric
 
