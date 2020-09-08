@@ -10,20 +10,20 @@ from [Go client](https://github.com/prometheus/client_golang).
 
 ## Documentation
 
-Find the latest documentation at [docs.rs](https://docs.rs/prometheus)
+Find the latest documentation at <https://docs.rs/prometheus>.
 
 ## Advanced
 
 ### Crate features
 
-Some of the crate features need to be enabled before they can be used. Use `features = []` flag in `Cargo.toml` to enable them:
+This crate provides several optional components which can be enabled via [Cargo `[features]`](https://doc.rust-lang.org/cargo/reference/features.html):
 
 - `gen`: To generate protobuf client with the latest protobuf version instead of
   using the pre-generated client.
 
 - `nightly`: Enable nightly only features.
 
-- `process`: For collecting process info.
+- `process`: Enable [process metrics](https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics) support.
 
 - `push`: Enable [push metrics](https://prometheus.io/docs/instrumenting/pushing/) support.
 
