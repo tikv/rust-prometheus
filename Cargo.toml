@@ -23,6 +23,7 @@ gen = ["protobuf-codegen-pure"]
 nightly = ["libc"]
 process = ["libc", "procfs"]
 push = ["reqwest", "libc", "protobuf"]
+metric-name-prefix=[]
 
 [dependencies]
 cfg-if = "^0.1"
