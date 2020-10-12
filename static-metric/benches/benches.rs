@@ -74,7 +74,14 @@ fn bench_static_metrics_macro(b: &mut Bencher) {
 fn bench_static_metrics_macro_with_lookup(b: &mut Bencher) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
     let static_counter = StaticCounter2::from(&counter_vec);
-    b.iter(|| static_counter.try_get("foo").unwrap().try_get("bar").unwrap().inc());
+    b.iter(|| {
+        static_counter
+            .try_get("foo")
+            .unwrap()
+            .try_get("bar")
+            .unwrap()
+            .inc()
+    });
 }
 
 make_static_metric! {
