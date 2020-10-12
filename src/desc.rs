@@ -15,8 +15,8 @@ use crate::proto::LabelPair;
 // https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
 fn is_valid_metric_name(name: &str) -> bool {
     lazy_static! {
-        static ref VALIDATOR: Regex = Regex::new("^[a-zA-Z_:][a-zA-Z0-9_:]*$")
-            .expect("Regex to be valid.");
+        static ref VALIDATOR: Regex =
+            Regex::new("^[a-zA-Z_:][a-zA-Z0-9_:]*$").expect("Regex to be valid.");
     }
 
     VALIDATOR.is_match(name)
@@ -24,8 +24,8 @@ fn is_valid_metric_name(name: &str) -> bool {
 
 fn is_valid_label_name(name: &str) -> bool {
     lazy_static! {
-        static ref VALIDATOR: Regex = Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$")
-            .expect("Regex to be valid.");
+        static ref VALIDATOR: Regex =
+            Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("Regex to be valid.");
     }
 
     VALIDATOR.is_match(name)
