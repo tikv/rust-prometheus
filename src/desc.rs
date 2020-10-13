@@ -5,53 +5,30 @@ use std::collections::{BTreeSet, HashMap};
 use std::hash::Hasher;
 
 use fnv::FnvHasher;
+use regex::Regex;
 
 use crate::errors::{Error, Result};
 use crate::metrics::SEPARATOR_BYTE;
 use crate::proto::LabelPair;
 
 // Details of required format are at
-//   https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+// https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
 fn is_valid_metric_name(name: &str) -> bool {
-    // Valid metric names must match regex [a-zA-Z_:][a-zA-Z0-9_:]*.
-    fn valid_start(c: char) -> bool {
-        c.is_ascii()
-            && match c as u8 {
-                b'a'..=b'z' | b'A'..=b'Z' | b'_' | b':' => true,
-                _ => false,
-            }
+    lazy_static! {
+        static ref VALIDATOR: Regex =
+            Regex::new("^[a-zA-Z_:][a-zA-Z0-9_:]*$").expect("Regex to be valid.");
     }
 
-    fn valid_char(c: char) -> bool {
-        c.is_ascii()
-            && match c as u8 {
-                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' | b':' => true,
-                _ => false,
-            }
-    }
-
-    name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
+    VALIDATOR.is_match(name)
 }
 
 fn is_valid_label_name(name: &str) -> bool {
-    // Valid label names must match regex [a-zA-Z_][a-zA-Z0-9_]*.
-    fn valid_start(c: char) -> bool {
-        c.is_ascii()
-            && match c as u8 {
-                b'a'..=b'z' | b'A'..=b'Z' | b'_' => true,
-                _ => false,
-            }
+    lazy_static! {
+        static ref VALIDATOR: Regex =
+            Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("Regex to be valid.");
     }
 
-    fn valid_char(c: char) -> bool {
-        c.is_ascii()
-            && match c as u8 {
-                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' => true,
-                _ => false,
-            }
-    }
-
-    name.starts_with(valid_start) && !name.contains(|c| !valid_char(c))
+    VALIDATOR.is_match(name)
 }
 
 /// The descriptor used by every Prometheus [`Metric`](crate::core::Metric). It is essentially
