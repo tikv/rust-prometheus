@@ -37,6 +37,10 @@ make_static_metric! {
             bar: "bar_name",
         },
     }
+
+    struct NonPubCounterVec: Counter {
+        "method" => Methods,
+    }
 }
 
 /// Helper method to get a label values of a `Counter`.
