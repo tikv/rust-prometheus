@@ -51,13 +51,17 @@ fn bench_static_metrics_handwrite_2(b: &mut Bencher) {
 }
 
 make_static_metric! {
+    label_enum D1 {
+        foo,
+    }
+
+    label_enum D2 {
+        bar,
+    }
+
     struct StaticCounter2: IntCounter {
-        "d1" => {
-            foo,
-        },
-        "d2" => {
-            bar,
-        },
+        "d1" => D1,
+        "d2" => D2,
     }
 }
 
@@ -74,14 +78,7 @@ fn bench_static_metrics_macro(b: &mut Bencher) {
 fn bench_static_metrics_macro_with_lookup(b: &mut Bencher) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
     let static_counter = StaticCounter2::from(&counter_vec);
-    b.iter(|| {
-        static_counter
-            .try_get("foo")
-            .unwrap()
-            .try_get("bar")
-            .unwrap()
-            .inc()
-    });
+    b.iter(|| static_counter.get(D1::foo).get(D2::bar).inc());
 }
 
 make_static_metric! {
