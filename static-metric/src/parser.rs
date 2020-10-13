@@ -251,7 +251,7 @@ pub enum StaticMetricMacroBodyItem {
 
 impl Parse for StaticMetricMacroBodyItem {
     fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek2(Token!(struct)) || input.peek2(Token!(struct)) {
+        if input.peek(Token!(struct)) || input.peek2(Token!(struct)) {
             Ok(StaticMetricMacroBodyItem::Metric(input.parse()?))
         } else {
             Ok(StaticMetricMacroBodyItem::Enum(input.parse()?))
