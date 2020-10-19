@@ -44,4 +44,8 @@ script:
     if [ $TRAVIS_RUST_VERSION = 'nightly' ]; then
         cargo build -p prometheus-static-metric --examples --no-default-features --features="$FEATURES"
         cargo test -p prometheus-static-metric --no-default-features --features="$FEATURES"
+
+        # Run benchmarks.
+        cargo bench --no-default-features --features="$FEATURES"
+        cargo bench -p prometheus-static-metric --no-default-features --features="$FEATURES"
     fi
