@@ -242,8 +242,18 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     }
 
     /// `with_label_values` works as `get_metric_with_label_values`, but panics if an error
-    /// occurs. The method allows neat syntax like:
-    ///     httpReqs.with_label_values("404", "POST").inc()
+    /// occurs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use prometheus::{CounterVec, Opts};
+    /// let vec = CounterVec::new(
+    ///     Opts::new("requests", "Number of requests"),
+    ///     &["code", "http_method"]
+    /// ).unwrap();
+    /// vec.with_label_values(&["404", "POST"]).inc()
+    /// ```
     pub fn with_label_values(&self, vals: &[&str]) -> T::M {
         self.get_metric_with_label_values(vals).unwrap()
     }
