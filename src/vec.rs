@@ -249,7 +249,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// ```
     /// use prometheus::{CounterVec, Opts};
     /// let vec = CounterVec::new(
-    ///     Opts::new("requests", "Number of requests"),
+    ///     Opts::new("requests_total", "Number of requests."),
     ///     &["code", "http_method"]
     /// ).unwrap();
     /// vec.with_label_values(&["404", "POST"]).inc()

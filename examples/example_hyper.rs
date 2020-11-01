@@ -15,7 +15,7 @@ use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
 lazy_static! {
     static ref HTTP_COUNTER: Counter = register_counter!(opts!(
         "example_http_requests_total",
-        "Total number of HTTP requests made.",
+        "Number of HTTP requests made.",
         labels! {"handler" => "all",}
     ))
     .unwrap();
