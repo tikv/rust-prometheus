@@ -26,8 +26,8 @@ make_static_metric! {
 
 lazy_static! {
     pub static ref HTTP_COUNTER_VEC: CounterVec = register_counter_vec!(
-        "http_requests",
-        "Total number of HTTP requests.",
+        "http_requests_total",
+        "Number of HTTP requests.",
         &["method", "product"]
     )
     .unwrap();

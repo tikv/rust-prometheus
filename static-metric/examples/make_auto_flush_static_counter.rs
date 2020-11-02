@@ -41,8 +41,8 @@ make_auto_flush_static_metric! {
 lazy_static! {
     pub static ref HTTP_COUNTER_VEC: IntCounterVec =
         register_int_counter_vec ! (
-            "http_requests",
-            "Total number of HTTP requests.",
+            "http_requests_total",
+            "Number of HTTP requests.",
             & ["product", "method", "version"]    // it doesn't matter for the label order
         ).unwrap();
 }
@@ -377,8 +377,8 @@ impl Lhrs {
 lazy_static! {
 pub static ref HTTP_COUNTER_VEC: IntCounterVec =
 register_int_counter_vec ! (
-"http_requests",
-"Total number of HTTP requests.",
+"http_requests_total",
+"Number of HTTP requests.",
 & ["product", "method", "version"]    // it doesn't matter for the label order
 ).unwrap();
 }
