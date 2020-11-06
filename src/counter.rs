@@ -24,7 +24,7 @@ pub struct GenericCounter<P: Atomic> {
 pub type Counter = GenericCounter<AtomicF64>;
 
 /// The integer version of [`Counter`]. Provides better performance if metric values
-/// are all integers.
+/// are all positive integers (natural numbers).
 pub type IntCounter = GenericCounter<AtomicU64>;
 
 impl<P: Atomic> Clone for GenericCounter<P> {
@@ -141,7 +141,7 @@ pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
 pub type CounterVec = GenericCounterVec<AtomicF64>;
 
 /// The integer version of [`CounterVec`]. Provides better performance if metric
-/// values are all integers.
+/// are all positive integers (natural numbers).
 pub type IntCounterVec = GenericCounterVec<AtomicU64>;
 
 impl<P: Atomic> GenericCounterVec<P> {
@@ -185,7 +185,7 @@ impl<P: Atomic> CounterWithValueType for GenericLocalCounter<P> {
 pub type LocalCounter = GenericLocalCounter<AtomicF64>;
 
 /// The integer version of [`LocalCounter`]. Provides better performance
-/// if metric values are all integers.
+/// are all positive integers (natural numbers).
 pub type LocalIntCounter = GenericLocalCounter<AtomicU64>;
 
 impl<P: Atomic> GenericLocalCounter<P> {
@@ -271,7 +271,8 @@ impl<P: Atomic> std::fmt::Debug for GenericLocalCounterVec<P> {
 pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
 
 /// The integer version of [`LocalCounterVec`].
-/// Provides better performance if metric values are all integers.
+/// Provides better performance if metric values are all positive
+/// integers (natural numbers).
 pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicU64>;
 
 impl<P: Atomic> GenericLocalCounterVec<P> {
