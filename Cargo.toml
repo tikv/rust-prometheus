@@ -39,6 +39,7 @@ thiserror = "^1.0"
 procfs = { version = "^0.8", optional = true, default-features = false }
 
 [dev-dependencies]
+criterion = "0.3"
 getopts = "^0.2"
 hyper = "^0.13"
 tokio = { version = "^0.3", features = ["macros", "rt-multi-thread"] }
@@ -48,3 +49,27 @@ protobuf-codegen-pure = { version = "^2.0", optional = true }
 
 [workspace]
 members = ["static-metric"]
+
+[[bench]]
+name = "atomic"
+harness = false
+
+[[bench]]
+name = "counter"
+harness = false
+
+[[bench]]
+name = "desc"
+harness = false
+
+[[bench]]
+name = "gauge"
+harness = false
+
+[[bench]]
+name = "histogram"
+harness = false
+
+[[bench]]
+name = "text_encoder"
+harness = false
