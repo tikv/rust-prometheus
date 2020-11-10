@@ -11,28 +11,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(test)]
+use criterion::{criterion_group, criterion_main, Criterion};
+use prometheus::core::*;
 
-extern crate test;
-
-#[path = "../src/atomic64.rs"]
-mod atomic64;
-
-use crate::atomic64::*;
-use test::Bencher;
-
-#[bench]
-fn bench_atomic_f64(b: &mut Bencher) {
+fn bench_atomic_f64(c: &mut Criterion) {
     let val = AtomicF64::new(0.0);
-    b.iter(|| {
-        val.inc_by(12.0);
+    c.bench_function("atomic_f64", |b| {
+        b.iter(|| {
+            val.inc_by(12.0);
+        })
     });
 }
 
-#[bench]
-fn bench_atomic_i64(b: &mut Bencher) {
+fn bench_atomic_i64(c: &mut Criterion) {
     let val = AtomicI64::new(0);
-    b.iter(|| {
-        val.inc_by(12);
+    c.bench_function("atomic_i64", |b| {
+        b.iter(|| {
+            val.inc_by(12);
+        })
     });
 }
+
+criterion_group!(benches, bench_atomic_f64, bench_atomic_i64);
+criterion_main!(benches);

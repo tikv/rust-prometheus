@@ -1,40 +1,40 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#![feature(test)]
-
+extern crate criterion;
 extern crate prometheus;
 extern crate prometheus_static_metric;
-extern crate test;
 
+use criterion::{criterion_group, criterion_main, Criterion};
 use prometheus::{IntCounter, IntCounterVec, Opts};
 use prometheus_static_metric::make_static_metric;
-use test::Bencher;
 
-#[bench]
 /// Single `IntCounter` performance.
-fn bench_single_counter(b: &mut Bencher) {
+fn bench_single_counter(c: &mut Criterion) {
     let counter = IntCounter::new("foo", "bar").unwrap();
-    b.iter(|| counter.inc());
+    c.bench_function("bench_single_counter", |b| {
+        b.iter(|| counter.inc());
+    });
 }
 
-#[bench]
 /// `IntCounterVec` performance.
-fn bench_counter_vec(b: &mut Bencher) {
+fn bench_counter_vec(c: &mut Criterion) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
-    b.iter(|| counter_vec.with_label_values(&["foo", "bar"]).inc());
+    c.bench_function("bench_counter_vec", |b| {
+        b.iter(|| counter_vec.with_label_values(&["foo", "bar"]).inc());
+    });
 }
 
-#[bench]
 /// Manually implemented static metrics performance, metrics are placed outside a struct.
-fn bench_static_metrics_handwrite_1(b: &mut Bencher) {
+fn bench_static_metrics_handwrite_1(c: &mut Criterion) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
     let counter = counter_vec.with_label_values(&["foo", "bar"]);
-    b.iter(|| counter.inc());
+    c.bench_function("bench_static_metrics_handwrite_1", |b| {
+        b.iter(|| counter.inc());
+    });
 }
 
-#[bench]
 /// Manually implemented static metrics performance, metrics are placed nested inside a struct.
-fn bench_static_metrics_handwrite_2(b: &mut Bencher) {
+fn bench_static_metrics_handwrite_2(c: &mut Criterion) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
     struct StaticCounter1 {
         foo: StaticCounter1Field2,
@@ -47,7 +47,9 @@ fn bench_static_metrics_handwrite_2(b: &mut Bencher) {
             bar: counter_vec.with_label_values(&["foo", "bar"]),
         },
     };
-    b.iter(|| static_counter.foo.bar.inc());
+    c.bench_function("bench_static_metrics_handwrite_2", |b| {
+        b.iter(|| static_counter.foo.bar.inc());
+    });
 }
 
 make_static_metric! {
@@ -65,20 +67,22 @@ make_static_metric! {
     }
 }
 
-#[bench]
 /// macro implemented static metrics performance.
-fn bench_static_metrics_macro(b: &mut Bencher) {
+fn bench_static_metrics_macro(c: &mut Criterion) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
     let static_counter = StaticCounter2::from(&counter_vec);
-    b.iter(|| static_counter.foo.bar.inc());
+    c.bench_function("bench_static_metrics_macro", |b| {
+        b.iter(|| static_counter.foo.bar.inc());
+    });
 }
 
-#[bench]
 /// macro implemented static metrics performance, with dynamic lookup.
-fn bench_static_metrics_macro_with_lookup(b: &mut Bencher) {
+fn bench_static_metrics_macro_with_lookup(c: &mut Criterion) {
     let counter_vec = IntCounterVec::new(Opts::new("foo", "bar"), &["d1", "d2"]).unwrap();
     let static_counter = StaticCounter2::from(&counter_vec);
-    b.iter(|| static_counter.get(D1::foo).get(D2::bar).inc());
+    c.bench_function("bench_static_metrics_macro_with_lookup", |b| {
+        b.iter(|| static_counter.get(D1::foo).get(D2::bar).inc());
+    });
 }
 
 make_static_metric! {
@@ -96,27 +100,40 @@ make_static_metric! {
     }
 }
 
-#[bench]
 /// macro implemented static metrics performance, with a deep nesting level.
-fn bench_static_metrics_macro_deep(b: &mut Bencher) {
+fn bench_static_metrics_macro_deep(c: &mut Criterion) {
     let counter_vec = IntCounterVec::new(
         Opts::new("foo", "bar"),
         &["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10"],
     )
     .unwrap();
     let static_counter = StaticCounter3::from(&counter_vec);
-    b.iter(|| {
-        static_counter
-            .val1
-            .val2
-            .val3
-            .val4
-            .val5
-            .val6
-            .val7
-            .val8
-            .val9
-            .val10
-            .inc()
+    c.bench_function("bench_static_metrics_macro_deep", |b| {
+        b.iter(|| {
+            static_counter
+                .val1
+                .val2
+                .val3
+                .val4
+                .val5
+                .val6
+                .val7
+                .val8
+                .val9
+                .val10
+                .inc()
+        });
     });
 }
+
+criterion_group!(
+    benches,
+    bench_counter_vec,
+    bench_single_counter,
+    bench_static_metrics_handwrite_1,
+    bench_static_metrics_handwrite_2,
+    bench_static_metrics_macro,
+    bench_static_metrics_macro_deep,
+    bench_static_metrics_macro_with_lookup,
+);
+criterion_main!(benches);

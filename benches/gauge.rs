@@ -11,31 +11,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(test)]
-
-extern crate test;
-
+use criterion::{criterion_group, criterion_main, Criterion};
 use prometheus::{Gauge, GaugeVec, IntGauge, Opts};
-use test::Bencher;
 
-#[bench]
-fn bench_gauge_with_label_values(b: &mut Bencher) {
+fn bench_gauge_with_label_values(c: &mut Criterion) {
     let gauge = GaugeVec::new(
         Opts::new("benchmark_gauge", "A gauge to benchmark it."),
         &["one", "two", "three"],
     )
     .unwrap();
-    b.iter(|| gauge.with_label_values(&["eins", "zwei", "drei"]).inc())
+    c.bench_function("gauge_with_label_values", |b| {
+        b.iter(|| gauge.with_label_values(&["eins", "zwei", "drei"]).inc())
+    });
 }
 
-#[bench]
-fn bench_gauge_no_labels(b: &mut Bencher) {
+fn bench_gauge_no_labels(c: &mut Criterion) {
     let gauge = Gauge::new("benchmark_gauge", "A gauge to benchmark.").unwrap();
-    b.iter(|| gauge.inc())
+    c.bench_function("gauge_no_labels", |b| b.iter(|| gauge.inc()));
 }
 
-#[bench]
-fn bench_int_gauge_no_labels(b: &mut Bencher) {
+fn bench_int_gauge_no_labels(c: &mut Criterion) {
     let gauge = IntGauge::new("benchmark_int_gauge", "A int_gauge to benchmark.").unwrap();
-    b.iter(|| gauge.inc())
+    c.bench_function("int_gauge_no_labels", |b| b.iter(|| gauge.inc()));
 }
+
+criterion_group!(
+    benches,
+    bench_gauge_with_label_values,
+    bench_gauge_no_labels,
+    bench_int_gauge_no_labels,
+);
+criterion_main!(benches);
