@@ -1,0 +1,45 @@
+---
+name: Rust
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+  # Pinned toolchain for linting and benchmarks
+  ACTIONS_LINTS_TOOLCHAIN: 1.47.0
+
+jobs:
+  linting:
+    name: "Lints, pinned toolchain"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env['ACTIONS_LINTS_TOOLCHAIN']  }}
+          default: true
+          components: rustfmt, clippy
+      - name: cargo fmt (check)
+        run: cargo fmt --all -- --check -l
+      - name: cargo clippy
+        run: cargo clippy --all -- -D clippy
+  criterion:
+    name: "Benchmarks (criterion)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env['ACTIONS_LINTS_TOOLCHAIN']  }}
+          default: true
+      - name: cargo bench (prometheus)
+        run: cargo bench -p prometheus
+      - name: cargo bench (prometheus-static-metric)
+        run: cargo bench -p prometheus-static-metric

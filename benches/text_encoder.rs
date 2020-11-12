@@ -11,23 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(test)]
-
-extern crate test;
-
+use criterion::{criterion_group, criterion_main, Criterion};
 use prometheus::{CounterVec, Encoder, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder};
-use test::Bencher;
 
-#[bench]
-fn bench_text_encoder_without_escaping(b: &mut Bencher) {
+fn bench_text_encoder_without_escaping(c: &mut Criterion) {
     let registry = registry_with_test_metrics(false);
-    run_text_encoder(registry, b)
+    run_text_encoder(c, "text_encoder_without_escaping", registry)
 }
 
-#[bench]
-fn bench_text_encoder_with_escaping(b: &mut Bencher) {
+fn bench_text_encoder_with_escaping(c: &mut Criterion) {
     let registry = registry_with_test_metrics(true);
-    run_text_encoder(registry, b)
+    run_text_encoder(c, "text_encoder_with_escaping", registry)
 }
 
 fn registry_with_test_metrics(with_escaping: bool) -> Registry {
@@ -70,10 +64,18 @@ fn registry_with_test_metrics(with_escaping: bool) -> Registry {
     registry
 }
 
-fn run_text_encoder(registry: Registry, b: &mut Bencher) {
+fn run_text_encoder(c: &mut Criterion, label: &str, registry: Registry) {
     let mut buffer = vec![];
     let encoder = TextEncoder::new();
     let metric_families = registry.gather();
-
-    b.iter(|| encoder.encode(&metric_families, &mut buffer).unwrap());
+    c.bench_function(label, |b| {
+        b.iter(|| encoder.encode(&metric_families, &mut buffer).unwrap());
+    });
 }
+
+criterion_group!(
+    benches,
+    bench_text_encoder_without_escaping,
+    bench_text_encoder_with_escaping,
+);
+criterion_main!(benches);

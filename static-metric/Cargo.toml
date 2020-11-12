@@ -23,7 +23,12 @@ quote = "1.0"
 lazy_static = "1.4"
 
 [dev-dependencies]
+criterion = "0.3"
 prometheus = { version = "0.10.0", path = "../" }
 
 [features]
 default = []
+
+[[bench]]
+name = "benches"
+harness = false

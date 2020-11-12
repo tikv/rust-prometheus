@@ -11,99 +11,74 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(test)]
-
-extern crate test;
-
+use criterion::{criterion_group, criterion_main, Criterion};
 use prometheus::{core::Collector, Histogram, HistogramOpts, HistogramVec};
 use std::sync::{atomic, Arc};
 use std::thread;
-use test::Bencher;
 
-#[bench]
-fn bench_histogram_with_label_values(b: &mut Bencher) {
+fn bench_histogram_with_label_values(c: &mut Criterion) {
     let histogram = HistogramVec::new(
         HistogramOpts::new("benchmark_histogram", "A histogram to benchmark it."),
         &["one", "two", "three"],
     )
     .unwrap();
-    b.iter(|| {
-        histogram
-            .with_label_values(&["eins", "zwei", "drei"])
-            .observe(3.1415)
-    })
+    c.bench_function("bench_histogram_with_label_values", |b| {
+        b.iter(|| {
+            histogram
+                .with_label_values(&["eins", "zwei", "drei"])
+                .observe(3.1415)
+        })
+    });
 }
 
-#[bench]
-fn bench_histogram_no_labels(b: &mut Bencher) {
+fn bench_histogram_no_labels(c: &mut Criterion) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram",
         "A histogram to benchmark it.",
     ))
     .unwrap();
-    b.iter(|| histogram.observe(3.1415))
+    c.bench_function("bench_histogram_no_labels", |b| {
+        b.iter(|| histogram.observe(3.1415))
+    });
 }
 
-#[bench]
-fn bench_histogram_timer(b: &mut Bencher) {
+fn bench_histogram_timer(c: &mut Criterion) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_timer",
         "A histogram to benchmark it.",
     ))
     .unwrap();
-    b.iter(|| histogram.start_timer())
+    c.bench_function("bench_histogram_timer", |b| {
+        b.iter(|| histogram.start_timer())
+    });
 }
-
-#[bench]
-#[cfg(feature = "nightly")]
-fn bench_histogram_coarse_timer(b: &mut Bencher) {
-    let histogram = Histogram::with_opts(HistogramOpts::new(
-        "benchmark_histogram_timer",
-        "A histogram to benchmark it.",
-    ))
-    .unwrap();
-    b.iter(|| histogram.start_coarse_timer())
-}
-
-#[bench]
-fn bench_histogram_local(b: &mut Bencher) {
+fn bench_histogram_local(c: &mut Criterion) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_local",
         "A histogram to benchmark it.",
     ))
     .unwrap();
     let local = histogram.local();
-    b.iter(|| local.observe(3.1415));
+    c.bench_function("bench_histogram_local", |b| {
+        b.iter(|| local.observe(3.1415));
+    });
     local.flush();
 }
 
-#[bench]
-fn bench_local_histogram_timer(b: &mut Bencher) {
+fn bench_local_histogram_timer(c: &mut Criterion) {
     let histogram = Histogram::with_opts(HistogramOpts::new(
         "benchmark_histogram_local_timer",
         "A histogram to benchmark it.",
     ))
     .unwrap();
     let local = histogram.local();
-    b.iter(|| local.start_timer());
+    c.bench_function("bench_local_histogram_timer", |b| {
+        b.iter(|| local.start_timer());
+    });
     local.flush();
 }
 
-#[bench]
-#[cfg(feature = "nightly")]
-fn bench_local_histogram_coarse_timer(b: &mut Bencher) {
-    let histogram = Histogram::with_opts(HistogramOpts::new(
-        "benchmark_histogram_timer",
-        "A histogram to benchmark it.",
-    ))
-    .unwrap();
-    let local = histogram.local();
-    b.iter(|| local.start_coarse_timer());
-    local.flush();
-}
-
-#[bench]
-fn concurrent_observe_and_collect(b: &mut Bencher) {
+fn concurrent_observe_and_collect(c: &mut Criterion) {
     let signal_exit = Arc::new(atomic::AtomicBool::new(false));
     let opts = HistogramOpts::new("test_name", "test help").buckets(vec![1.0]);
     let histogram = Histogram::with_opts(opts).unwrap();
@@ -124,10 +99,49 @@ fn concurrent_observe_and_collect(b: &mut Bencher) {
         }));
     }
 
-    b.iter(|| histogram.observe(1.0));
+    c.bench_function("concurrent_observe_and_collect", |b| {
+        b.iter(|| histogram.observe(1.0));
+    });
 
     signal_exit.store(true, atomic::Ordering::Relaxed);
     for handler in handlers {
         handler.join().unwrap();
     }
 }
+
+criterion_group!(
+    benches,
+    bench_histogram_with_label_values,
+    bench_histogram_no_labels,
+    bench_histogram_timer,
+    bench_histogram_local,
+    bench_local_histogram_timer,
+    concurrent_observe_and_collect,
+);
+criterion_main!(benches);
+
+/*
+#[bench]
+#[cfg(feature = "nightly")]
+fn bench_histogram_coarse_timer(c: &mut Criterion) {
+    let histogram = Histogram::with_opts(HistogramOpts::new(
+        "benchmark_histogram_timer",
+        "A histogram to benchmark it.",
+    ))
+    .unwrap();
+    b.iter(|| histogram.start_coarse_timer())
+}
+
+#[bench]
+#[cfg(feature = "nightly")]
+fn bench_local_histogram_coarse_timer(c: &mut Criterion) {
+    let histogram = Histogram::with_opts(HistogramOpts::new(
+        "benchmark_histogram_timer",
+        "A histogram to benchmark it.",
+    ))
+    .unwrap();
+    let local = histogram.local();
+    b.iter(|| local.start_coarse_timer());
+    local.flush();
+}
+*/
