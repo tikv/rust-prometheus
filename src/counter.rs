@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::atomic64::{Atomic, AtomicF64, AtomicI64, Number};
+use crate::atomic64::{Atomic, AtomicF64, AtomicU64, Number};
 use crate::desc::Desc;
 use crate::errors::Result;
 use crate::metrics::{Collector, LocalMetric, Metric, Opts};
@@ -24,8 +24,8 @@ pub struct GenericCounter<P: Atomic> {
 pub type Counter = GenericCounter<AtomicF64>;
 
 /// The integer version of [`Counter`]. Provides better performance if metric values
-/// are all integers.
-pub type IntCounter = GenericCounter<AtomicI64>;
+/// are all positive integers (natural numbers).
+pub type IntCounter = GenericCounter<AtomicU64>;
 
 impl<P: Atomic> Clone for GenericCounter<P> {
     fn clone(&self) -> Self {
@@ -141,8 +141,8 @@ pub type GenericCounterVec<P> = MetricVec<CounterVecBuilder<P>>;
 pub type CounterVec = GenericCounterVec<AtomicF64>;
 
 /// The integer version of [`CounterVec`]. Provides better performance if metric
-/// values are all integers.
-pub type IntCounterVec = GenericCounterVec<AtomicI64>;
+/// are all positive integers (natural numbers).
+pub type IntCounterVec = GenericCounterVec<AtomicU64>;
 
 impl<P: Atomic> GenericCounterVec<P> {
     /// Create a new [`GenericCounterVec`] based on the provided
@@ -185,8 +185,8 @@ impl<P: Atomic> CounterWithValueType for GenericLocalCounter<P> {
 pub type LocalCounter = GenericLocalCounter<AtomicF64>;
 
 /// The integer version of [`LocalCounter`]. Provides better performance
-/// if metric values are all integers.
-pub type LocalIntCounter = GenericLocalCounter<AtomicI64>;
+/// are all positive integers (natural numbers).
+pub type LocalIntCounter = GenericLocalCounter<AtomicU64>;
 
 impl<P: Atomic> GenericLocalCounter<P> {
     fn new(counter: GenericCounter<P>) -> Self {
@@ -271,8 +271,9 @@ impl<P: Atomic> std::fmt::Debug for GenericLocalCounterVec<P> {
 pub type LocalCounterVec = GenericLocalCounterVec<AtomicF64>;
 
 /// The integer version of [`LocalCounterVec`].
-/// Provides better performance if metric values are all integers.
-pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicI64>;
+/// Provides better performance if metric values are all positive
+/// integers (natural numbers).
+pub type LocalIntCounterVec = GenericLocalCounterVec<AtomicU64>;
 
 impl<P: Atomic> GenericLocalCounterVec<P> {
     fn new(vec: GenericCounterVec<P>) -> Self {
@@ -587,22 +588,5 @@ mod tests {
         let counter = Counter::new("foo", "bar").unwrap();
         let local = counter.local();
         local.inc_by(-42.0);
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    #[should_panic(expected = "assertion failed")]
-    fn test_int_counter_negative_inc() {
-        let counter = IntCounter::new("foo", "bar").unwrap();
-        counter.inc_by(-42);
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    #[should_panic(expected = "assertion failed")]
-    fn test_int_local_counter_negative_inc() {
-        let counter = IntCounter::new("foo", "bar").unwrap();
-        let local = counter.local();
-        local.inc_by(-42);
     }
 }
