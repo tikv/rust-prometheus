@@ -132,8 +132,8 @@ impl Collector for ProcessCollector {
         };
 
         // file descriptors
-        if let Ok(fd_list) = p.fd() {
-            self.open_fds.set(fd_list.len() as f64);
+        if let Ok(fd_count) = p.fd_count() {
+            self.open_fds.set(fd_count as f64);
         }
         if let Ok(limits) = p.limits() {
             if let procfs::process::LimitValue::Value(max) = limits.max_open_files.soft_limit {
