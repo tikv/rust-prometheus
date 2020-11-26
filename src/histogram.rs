@@ -92,8 +92,8 @@ impl HistogramOpts {
     }
 
     /// `namespace` sets the namespace.
-    pub fn namespace<S: Into<String>>(mut self, namesapce: S) -> Self {
-        self.common_opts.namespace = namesapce.into();
+    pub fn namespace<S: Into<String>>(mut self, namespace: S) -> Self {
+        self.common_opts.namespace = namespace.into();
         self
     }
 
