@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0
+
+- Improvement: Switch to more efficient `fd_count()` for `process_open_fds` (#357).
+
+- API change: Change Integer Counter type from AtomicI64 to AtomicU64 (#365).
+
+- Internal change: Update dependencies.
+
 ## 0.10.0
 
 - Improvement: Use different generic parameters for name and help at metric construction (#324).
