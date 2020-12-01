@@ -1,6 +1,6 @@
 # Changelog for prometheus-static-metric
 
-## 0.5.0 [unreleased]
+## 0.5.0
 
 - Bug fix: Allow not specifying visibility token (e.g. `pub(crate)`) for metric definition.
 
