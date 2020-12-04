@@ -11,6 +11,7 @@ include = [
     "LICENSE",
     "Cargo.toml",
     "src/**/*.rs",
+    "benches/*.rs",
 ]
 
 [lib]
