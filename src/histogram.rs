@@ -4,6 +4,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
+use std::Num;
 use std::sync::{
     atomic::{AtomicU64 as StdAtomicU64, Ordering},
     Arc, Mutex,
@@ -22,8 +23,12 @@ use crate::vec::{MetricVec, MetricVecBuilder};
 /// tailored to broadly measure the response time (in seconds) of a
 /// network service. Most likely, however, you will be required to define
 /// buckets customized to your use case.
-pub const DEFAULT_BUCKETS: &[f64; 11] = &[
+pub const DEFAULT_BUCKETS_FLOAT: &[f64; 11] = &[
     0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+];
+
+pub const DEFAULT_BUCKETS_INT: &[u64; 11] = &[
+    5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000,
 ];
 
 /// Used for the label that defines the upper bound of a
@@ -41,9 +46,34 @@ fn check_bucket_label(label: &str) -> Result<()> {
     Ok(())
 }
 
+fn check_and_adjust_buckets(mut buckets: Vec<u64>) -> Result<Vec<u64>> {
+    if buckets.is_empty() {
+        buckets = Vec::from(DEFAULT_BUCKETS_INT as &'static [u64]);
+    }
+
+    for (i, upper_bound) in buckets.iter().enumerate() {
+        if i < (buckets.len() - 1) && *upper_bound >= buckets[i + 1] {
+            return Err(Error::Msg(format!(
+                "histogram buckets must be in increasing \
+                 order: {} >= {}",
+                upper_bound,
+                buckets[i + 1]
+            )));
+        }
+    }
+
+    let tail = *buckets.last().unwrap();
+    if tail.is_sign_positive() && tail.is_infinite() {
+        // The +Inf bucket is implicit. Remove it here.
+        buckets.pop();
+    }
+
+    Ok(buckets)
+}
+
 fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
     if buckets.is_empty() {
-        buckets = Vec::from(DEFAULT_BUCKETS as &'static [f64]);
+        buckets = Vec::from(DEFAULT_BUCKETS_FLOAT as &'static [f64]);
     }
 
     for (i, upper_bound) in buckets.iter().enumerate() {
@@ -70,7 +100,7 @@ fn check_and_adjust_buckets(mut buckets: Vec<f64>) -> Result<Vec<f64>> {
 /// mandatory to set Name and Help to a non-empty string. All other fields are
 /// optional and can safely be left at their zero value.
 #[derive(Clone, Debug)]
-pub struct HistogramOpts {
+struct HistogramContainer<T> where T: Num  {
     /// A container holding various options.
     pub common_opts: Opts,
 
@@ -79,17 +109,35 @@ pub struct HistogramOpts {
     /// values must be sorted in strictly increasing order. There is no need
     /// to add a highest bucket with +Inf bound, it will be added
     /// implicitly. The default value is DefBuckets.
-    pub buckets: Vec<f64>,
+    pub buckets: Vec<T>,
 }
 
-impl HistogramOpts {
+type HistogramOpts = HistogramContainer<f64>;
+type IntHistogramOpts = HistogramContainer<u64>;
+
+impl HistogramOptsBase for HistogramOpts {
     /// Create a [`HistogramOpts`] with the `name` and `help` arguments.
-    pub fn new<S1: Into<String>, S2: Into<String>>(name: S1, help: S2) -> HistogramOpts {
+    pub fn new<S1: Into<String>, S2: Into<String>>(name: S1, help: S2) -> HistogramOptsBase {
         HistogramOpts {
             common_opts: Opts::new(name, help),
-            buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
+            buckets: Vec::from(DEFAULT_FLOAT_BUCKETS as &'static [f64]),
         }
     }
+}
+
+impl HistogramOptsBase for IntHistogramOpts {
+    /// Create a [`HistogramOpts`] with the `name` and `help` arguments.
+    pub fn new<S1: Into<String>, S2: Into<String>>(name: S1, help: S2) -> HistogramOptsBase {
+        IntHistogramOpts {
+            common_opts: Opts::new(name, help),
+            buckets: Vec::from(DEFAULT_INT_BUCKETS as &'static [u64]),
+        }
+    }
+}
+
+pub trait HistogramOptsBase {
+    /// Create a [`HistogramOpts`] with the `name` and `help` arguments.
+    pub fn new<S1: Into<String>, S2: Into<String>>(name: S1, help: S2) -> HistogramOptsBase;
 
     /// `namespace` sets the namespace.
     pub fn namespace<S: Into<String>>(mut self, namespace: S) -> Self {
@@ -133,7 +181,7 @@ impl HistogramOpts {
     }
 
     /// `buckets` set the buckets.
-    pub fn buckets(mut self, buckets: Vec<f64>) -> Self {
+    pub fn buckets(mut self, buckets: Vec<T>) -> Self {
         self.buckets = buckets;
         self
     }
@@ -149,7 +197,22 @@ impl From<Opts> for HistogramOpts {
     fn from(opts: Opts) -> HistogramOpts {
         HistogramOpts {
             common_opts: opts,
-            buckets: Vec::from(DEFAULT_BUCKETS as &'static [f64]),
+            buckets: Vec::from(DEFAULT_FLOAT_BUCKETS as &'static [f64]),
+        }
+    }
+}
+
+impl Describer for IntHistogramOpts {
+    fn describe(&self) -> Result<Desc> {
+        self.common_opts.describe()
+    }
+}
+
+impl From<Opts> for IntHistogramOpts {
+    fn from(opts: Opts) -> IntHistogramOpts {
+        IntHistogramOpts {
+            common_opts: opts,
+            buckets: Vec::from(DEFAULT_INT_BUCKETS as &'static [u64]),
         }
     }
 }
