@@ -41,7 +41,7 @@ procfs = { version = "^0.9", optional = true, default-features = false }
 [dev-dependencies]
 criterion = "0.3"
 getopts = "^0.2"
-hyper = "^0.13"
+hyper = "^0.14"
 tokio = { version = "^0.3", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
