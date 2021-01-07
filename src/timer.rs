@@ -45,7 +45,10 @@ const CHECK_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
 
 /// Ensures background updater is running, which will call `now_millis` periodically.
 pub fn ensure_updater() {
-    if !UPDATER_IS_RUNNING.compare_and_swap(false, true, Ordering::SeqCst) {
+    if UPDATER_IS_RUNNING
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_ok()
+    {
         std::thread::Builder::new()
             .name("time updater".to_owned())
             .spawn(|| loop {
