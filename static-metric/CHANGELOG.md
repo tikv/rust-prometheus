@@ -1,5 +1,10 @@
 # Changelog for prometheus-static-metric
 
+## 0.5.1
+
+- Import `TokenStream` via `proc_macro` instead of `syn` to support `syn`
+  `>= 1.0.58` (https://github.com/tikv/rust-prometheus/issues/378).
+
 ## 0.5.0
 
 - Bug fix: Allow not specifying visibility token (e.g. `pub(crate)`) for metric definition.
