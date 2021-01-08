@@ -410,18 +410,21 @@ impl HistogramCore {
         // shards were flipped, all in-progress `observe` calls are done. With
         // all of them done, the cold shard is now in a consistent state.
         //
-        // `observe` uses `Release` ordering. `compare_and_swap` needs to use
+        // `observe` uses `Release` ordering. `compare_exchange` needs to use
         // `Acquire` ordering to ensure that (1) one sees all the previous
         // `observe` stores to the counter and (2) to ensure the below shard
         // modifications happen after this point, thus the shard is not modified
         // by any `observe` operations.
-        while overall_count
-            != cold_shard.count.compare_and_swap(
+        while cold_shard
+            .count
+            .compare_exchange_weak(
                 overall_count,
                 // While at it, reset cold shard count on success.
                 0,
                 Ordering::Acquire,
+                Ordering::Acquire,
             )
+            .is_err()
         {}
 
         // Get cold shard sum and reset to 0.

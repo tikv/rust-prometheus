@@ -110,10 +110,13 @@ impl Atomic for AtomicF64 {
         loop {
             let current = self.inner.load(Ordering::Acquire);
             let new = u64_to_f64(current) + delta;
-            let swapped = self
-                .inner
-                .compare_and_swap(current, f64_to_u64(new), Ordering::Release);
-            if swapped == current {
+            let result = self.inner.compare_exchange_weak(
+                current,
+                f64_to_u64(new),
+                Ordering::Release,
+                Ordering::Relaxed,
+            );
+            if result.is_ok() {
                 return;
             }
         }
@@ -205,9 +208,24 @@ impl Atomic for AtomicU64 {
 }
 
 impl AtomicU64 {
-    /// Get the value with the provided memory ordering.
-    pub fn compare_and_swap(&self, current: u64, new: u64, ordering: Ordering) -> u64 {
-        self.inner.compare_and_swap(current, new, ordering)
+    /// Stores a value into the atomic integer if the current value is the same
+    /// as the current value.
+    ///
+    /// This function is allowed to spuriously fail even when the comparison
+    /// succeeds, which can result in more efficient code on some platforms. The
+    /// return value is a result indicating whether the new value was written
+    /// and containing the previous value.
+    ///
+    /// See [`StdAtomicU64`] for details.
+    pub(crate) fn compare_exchange_weak(
+        &self,
+        current: u64,
+        new: u64,
+        success: Ordering,
+        failure: Ordering,
+    ) -> Result<u64, u64> {
+        self.inner
+            .compare_exchange_weak(current, new, success, failure)
     }
 
     /// Increment the value by a given amount with the provided memory ordering.

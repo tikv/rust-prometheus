@@ -63,7 +63,7 @@ pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn auto_flush_from(input: TokenStream) -> TokenStream {
     let def: AutoFlushFromDef = syn::parse(input).unwrap();
-    def.auto_flush_from().into()
+    def.auto_flush_from()
 }
 
 /// Register a `CounterVec` and create static metrics from it.
