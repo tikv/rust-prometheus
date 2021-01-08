@@ -217,7 +217,7 @@ impl AtomicU64 {
     /// and containing the previous value.
     ///
     /// See [`StdAtomicU64`] for details.
-    pub fn compare_exchange_weak(
+    pub(crate) fn compare_exchange_weak(
         &self,
         current: u64,
         new: u64,
