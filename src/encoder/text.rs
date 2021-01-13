@@ -1,6 +1,5 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-use regex::{Match, Regex};
 use std::borrow::Cow;
 use std::io::Write;
 
@@ -216,12 +215,10 @@ fn label_pairs_to_text(
     Ok(())
 }
 
-/// `escape_string` replaces `\` by `\\`, new line character by `\n`, and `"` by `\"` if
-/// `include_double_quote` is true.
-///
-/// Implementation adapted from
-/// https://lise-henry.github.io/articles/optimising_strings.html
-fn escape_string(v: &str, include_double_quote: bool) -> Cow<'_, str> {
+#[cfg(feature = "regex")]
+fn find_first_occurence(v: &str, include_double_quote: bool) -> Option<usize> {
+    use regex::{Match, Regex};
+
     // Regex compilation is expensive. Use `lazy_static` to compile the regexes
     // once per process lifetime and not once per function invocation.
     lazy_static! {
@@ -229,13 +226,31 @@ fn escape_string(v: &str, include_double_quote: bool) -> Cow<'_, str> {
         static ref QUOTED_ESCAPER: Regex = Regex::new("(\\\\|\n|\")").expect("Regex to be valid.");
     }
 
-    let first_occurence = if include_double_quote {
+    if include_double_quote {
         QUOTED_ESCAPER.find(v)
     } else {
         ESCAPER.find(v)
     }
     .as_ref()
-    .map(Match::start);
+    .map(Match::start)
+}
+
+#[cfg(not(feature = "regex"))]
+fn find_first_occurence(v: &str, include_double_quote: bool) -> Option<usize> {
+    if include_double_quote {
+        memchr::memchr3(b'\\', b'\n', b'\"', v.as_bytes())
+    } else {
+        memchr::memchr2(b'\\', b'\n', v.as_bytes())
+    }
+}
+
+/// `escape_string` replaces `\` by `\\`, new line character by `\n`, and `"` by `\"` if
+/// `include_double_quote` is true.
+///
+/// Implementation adapted from
+/// https://lise-henry.github.io/articles/optimising_strings.html
+fn escape_string(v: &str, include_double_quote: bool) -> Cow<'_, str> {
+    let first_occurence = find_first_occurence(v, include_double_quote);
 
     if let Some(first) = first_occurence {
         let mut escaped = String::with_capacity(v.len() * 2);
