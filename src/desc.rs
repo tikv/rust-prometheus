@@ -20,11 +20,7 @@ mod validation {
         matches_charset_without_colon(c) || c == ':'
     }
 
-    // check if there's at least one char
-    // the charset_validator returns true on zeroth char
-    // the charset_validator returns true on all remaining chars or they are digits if it returned
-    // false
-    // Equivalent to regex ^[?][?0-9]*$ where ? denotes char set as validated by charset_validator
+    /// Equivalent to regex `^[?][?0-9]*$` where `?` denotes char set as validated by `charset_validator`.
     fn is_valid_ident<F: FnMut(char) -> bool>(input: &str, mut charset_validator: F) -> bool {
         let mut chars = input.chars();
         let zeroth = chars.next();
