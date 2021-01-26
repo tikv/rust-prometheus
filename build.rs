@@ -2,13 +2,12 @@
 
 #[cfg(feature = "gen")]
 fn generate_protobuf_binding_file() {
-    protobuf_codegen_pure::run(protobuf_codegen_pure::Args {
-        out_dir: "proto",
-        input: &["proto/proto_model.proto"],
-        includes: &["proto"],
-        ..Default::default()
-    })
-    .unwrap();
+    use prost_build::Config;
+    use std::path::Path;
+
+    let mut cfg = Config::new();
+    cfg.out_dir(Path::new("proto"));
+    cfg.compile_protos(&["proto/proto_model.proto"], &["proto"]).unwrap();
 }
 
 #[cfg(not(feature = "gen"))]
