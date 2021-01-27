@@ -273,11 +273,11 @@ mod tests {
 
         for case in table {
             let mut l = proto::LabelPair::new();
-            l.set_name(case.0.to_owned());
+            l.name = Some(case.0.to_owned());
             let mut m = proto::Metric::new();
-            m.set_label(from_vec!(vec![l]));
+            m.label = vec![l];
             let mut mf = proto::MetricFamily::new();
-            mf.set_metric(from_vec!(vec![m]));
+            mf.metric = vec![m];
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(format!("{}", res.unwrap_err()).contains(case.1));
         }

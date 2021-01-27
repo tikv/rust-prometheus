@@ -152,7 +152,7 @@ impl<P: Atomic> GenericCounterVec<P> {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec =
-            MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder::new(), opts)?;
+            MetricVec::create(proto::MetricType::Counter, CounterVecBuilder::new(), opts)?;
 
         Ok(metric_vec as Self)
     }

@@ -334,7 +334,9 @@ impl HistogramCore {
             check_bucket_label(name)?;
         }
         for pair in &desc.const_label_pairs {
-            check_bucket_label(pair.get_name())?;
+            if let Some(name) = &pair.name {
+                check_bucket_label(name)?;
+            }
         }
 
         let label_pairs = make_label_pairs(&desc, label_values)?;
@@ -434,8 +436,8 @@ impl HistogramCore {
         let cold_shard_sum = cold_shard.sum.swap(0.0, Ordering::AcqRel);
 
         let mut h = proto::Histogram::default();
-        h.set_sample_sum(cold_shard_sum);
-        h.set_sample_count(overall_count);
+        h.sample_sum = Some(cold_shard_sum);
+        h.sample_count = Some(overall_count);
 
         let mut cumulative_count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
@@ -449,11 +451,11 @@ impl HistogramCore {
 
             cumulative_count += cold_bucket_count;
             let mut b = proto::Bucket::default();
-            b.set_cumulative_count(cumulative_count);
-            b.set_upper_bound(*upper_bound);
+            b.cumulative_count = Some(cumulative_count);
+            b.upper_bound = Some(*upper_bound);
             buckets.push(b);
         }
-        h.set_bucket(from_vec!(buckets));
+        h.bucket = buckets;
 
         // Update the hot shard.
         hot_shard.count.inc_by(overall_count);
@@ -750,10 +752,8 @@ impl Histogram {
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
         let mut m = proto::Metric::default();
-        m.set_label(from_vec!(self.core.label_pairs.clone()));
-
-        let h = self.core.proto();
-        m.set_histogram(h);
+        m.label = self.core.label_pairs.clone();
+        m.histogram = Some(self.core.proto());
 
         m
     }
@@ -766,10 +766,10 @@ impl Collector for Histogram {
 
     fn collect(&self) -> Vec<proto::MetricFamily> {
         let mut m = proto::MetricFamily::default();
-        m.set_name(self.core.desc.fq_name.clone());
-        m.set_help(self.core.desc.help.clone());
-        m.set_field_type(proto::MetricType::HISTOGRAM);
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.name = Some(self.core.desc.fq_name.clone());
+        m.help = Some(self.core.desc.help.clone());
+        m.r#type = Some(proto::MetricType::Histogram.into());
+        m.metric = vec![self.metric()];
 
         vec![m]
     }
@@ -801,7 +801,7 @@ impl HistogramVec {
         let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec =
-            MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
+            MetricVec::create(proto::MetricType::Histogram, HistogramVecBuilder {}, opts)?;
 
         Ok(metric_vec as HistogramVec)
     }

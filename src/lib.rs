@@ -123,27 +123,14 @@ This library supports four features:
 /// Protocol buffers format of metrics.
 #[cfg(feature = "protobuf")]
 #[allow(warnings)]
+#[allow(missing_docs)]
 #[rustfmt::skip]
-#[path = "../proto/proto_model.rs"]
+#[path = "../proto/io.prometheus.client.rs"]
 pub mod proto;
-
-#[cfg(feature = "protobuf")]
-macro_rules! from_vec {
-    ($e: expr) => {
-        ::protobuf::RepeatedField::from_vec($e)
-    };
-}
 
 #[cfg(not(feature = "protobuf"))]
 #[path = "plain_model.rs"]
 pub mod proto;
-
-#[cfg(not(feature = "protobuf"))]
-macro_rules! from_vec {
-    ($e: expr) => {
-        $e
-    };
-}
 
 #[macro_use]
 extern crate cfg_if;

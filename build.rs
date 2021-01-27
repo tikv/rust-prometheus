@@ -7,7 +7,8 @@ fn generate_protobuf_binding_file() {
 
     let mut cfg = Config::new();
     cfg.out_dir(Path::new("proto"));
-    cfg.compile_protos(&["proto/proto_model.proto"], &["proto"]).unwrap();
+    cfg.compile_protos(&["proto/proto_model.proto"], &["proto"])
+        .unwrap();
 }
 
 #[cfg(not(feature = "gen"))]

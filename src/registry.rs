@@ -117,24 +117,27 @@ impl RegistryCore {
 
         for c in self.collectors_by_id.values() {
             let mfs = c.collect();
-            for mut mf in mfs {
+            for mf in mfs {
                 // Prune empty MetricFamilies.
-                if mf.get_metric().is_empty() {
+                if mf.metric.is_empty() {
                     continue;
                 }
 
-                let name = mf.get_name().to_owned();
+                let name = match &mf.name {
+                    Some(v) => v.to_owned(),
+                    None => "".to_owned(),
+                };
                 match mf_by_name.entry(name) {
                     BEntry::Vacant(entry) => {
                         entry.insert(mf);
                     }
                     BEntry::Occupied(mut entry) => {
                         let existent_mf = entry.get_mut();
-                        let existent_metrics = existent_mf.mut_metric();
+                        let existent_metrics = &mut existent_mf.metric;
 
                         // TODO: check type.
                         // TODO: check consistency.
-                        for metric in mf.take_metric().into_iter() {
+                        for metric in mf.metric.into_iter() {
                             existent_metrics.push(metric);
                         }
                     }
@@ -147,9 +150,9 @@ impl RegistryCore {
         // Now that MetricFamilies are all set, sort their Metrics
         // lexicographically by their label values.
         for mf in mf_by_name.values_mut() {
-            mf.mut_metric().sort_by(|m1, m2| {
-                let lps1 = m1.get_label();
-                let lps2 = m2.get_label();
+            &mut mf.metric.sort_by(|m1, m2| {
+                let lps1 = &m1.label;
+                let lps2 = &m2.label;
 
                 if lps1.len() != lps2.len() {
                     // This should not happen. The metrics are
@@ -162,8 +165,8 @@ impl RegistryCore {
                 }
 
                 for (lp1, lp2) in lps1.iter().zip(lps2.iter()) {
-                    if lp1.get_value() != lp2.get_value() {
-                        return lp1.get_value().cmp(lp2.get_value());
+                    if lp1.value != lp2.value {
+                        return lp1.value.cmp(&lp2.value);
                     }
                 }
 
@@ -173,7 +176,7 @@ impl RegistryCore {
                 // here, even for inconsistent metrics. So sort equal metrics
                 // by their timestamp, with missing timestamps (implying "now")
                 // coming last.
-                m1.get_timestamp_ms().cmp(&m2.get_timestamp_ms())
+                m1.timestamp_ms.cmp(&m2.timestamp_ms)
             });
         }
 
@@ -183,8 +186,8 @@ impl RegistryCore {
             .map(|(_, mut m)| {
                 // Add registry namespace prefix, if any.
                 if let Some(ref namespace) = self.prefix {
-                    let prefixed = format!("{}_{}", namespace, m.get_name());
-                    m.set_name(prefixed);
+                    let prefixed = format!("{}_{}", namespace, m.name.unwrap_or_default());
+                    m.name = Some(prefixed);
                 }
 
                 // Add registry common labels, if any.
@@ -193,16 +196,16 @@ impl RegistryCore {
                         .iter()
                         .map(|(k, v)| {
                             let mut label = proto::LabelPair::default();
-                            label.set_name(k.to_string());
-                            label.set_value(v.to_string());
+                            label.name = Some(k.to_string());
+                            label.value = Some(v.to_string());
                             label
                         })
                         .collect();
 
-                    for metric in m.mut_metric().iter_mut() {
-                        let mut labels: Vec<_> = metric.take_label().into();
+                    for metric in &mut m.metric.iter_mut() {
+                        let mut labels: Vec<_> = std::mem::replace(&mut metric.label, Vec::new());
                         labels.append(&mut pairs.clone());
-                        metric.set_label(labels.into());
+                        metric.label = labels;
                     }
                 }
                 m
