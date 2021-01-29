@@ -67,7 +67,7 @@ mod tests {
         let mut mfs = cv.collect();
 
         // Empty name
-        (&mut mfs[0]).clear_name();
+        (&mut mfs[0]).name.take();
         check_metric_family(&mfs[0]).unwrap_err();
         pb_encoder.encode(&mfs, &mut writer).unwrap_err();
         assert_eq!(writer.len(), 0);
@@ -94,7 +94,7 @@ mod tests {
         let mut mfs = cv.collect();
 
         // Empty name
-        (&mut mfs[0]).clear_name();
+        (&mut mfs[0]).name.take();
         check_metric_family(&mfs[0]).unwrap_err();
         text_encoder.encode(&mfs, &mut writer).unwrap_err();
         assert_eq!(writer.len(), 0);

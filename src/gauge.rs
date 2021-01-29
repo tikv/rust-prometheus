@@ -188,9 +188,9 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
-        assert_eq!(m.get_label().len(), 2);
-        assert_eq!(m.get_gauge().get_value() as u64, 42);
+        let m = mf.metric.get(0).unwrap();
+        assert_eq!(m.label.len(), 2);
+        assert_eq!(m.gauge.as_ref().unwrap().value.unwrap_or(0.0) as u64, 42);
     }
 
     #[test]

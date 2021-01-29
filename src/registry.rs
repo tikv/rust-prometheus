@@ -416,9 +416,9 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 3);
-        assert_eq!(mfs[0].get_name(), "test_2_counter");
-        assert_eq!(mfs[1].get_name(), "test_a_counter");
-        assert_eq!(mfs[2].get_name(), "test_b_counter");
+        assert_eq!(mfs[0].name, Some("test_2_counter".into()));
+        assert_eq!(mfs[1].name, Some("test_a_counter".into()));
+        assert_eq!(mfs[2].name, Some("test_b_counter".into()));
 
         let r = Registry::new();
         let opts = Opts::new("test", "test help")
@@ -470,12 +470,12 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 1);
-        let ms = mfs[0].get_metric();
+        let ms = &mfs[0].metric;
         assert_eq!(ms.len(), 4);
-        assert_eq!(ms[0].get_counter().get_value() as u64, 2);
-        assert_eq!(ms[1].get_counter().get_value() as u64, 1);
-        assert_eq!(ms[2].get_counter().get_value() as u64, 3);
-        assert_eq!(ms[3].get_counter().get_value() as u64, 4);
+        assert_eq!(ms[0].counter.as_ref().unwrap().value.unwrap() as u64, 2);
+        assert_eq!(ms[1].counter.as_ref().unwrap().value.unwrap() as u64, 1);
+        assert_eq!(ms[2].counter.as_ref().unwrap().value.unwrap() as u64, 3);
+        assert_eq!(ms[3].counter.as_ref().unwrap().value.unwrap() as u64, 4);
     }
 
     #[test]
@@ -488,7 +488,7 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 1);
-        assert_eq!(mfs[0].get_name(), "common_prefix_test_a_counter");
+        assert_eq!(mfs[0].name, Some("common_prefix_test_a_counter".into()));
     }
 
     #[test]
@@ -508,19 +508,19 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 2);
-        assert_eq!(mfs[0].get_name(), "test_a_counter");
-        assert_eq!(mfs[1].get_name(), "test_vec");
+        assert_eq!(mfs[0].name, Some("test_a_counter".into()));
+        assert_eq!(mfs[1].name, Some("test_vec".into()));
 
         let mut needle = proto::LabelPair::default();
-        needle.set_name("tkey".to_string());
-        needle.set_value("tvalue".to_string());
-        let metrics = mfs[0].get_metric();
+        needle.name = Some("tkey".to_string());
+        needle.value = Some("tvalue".to_string());
+        let metrics = &mfs[0].metric;
         for m in metrics {
-            assert!(m.get_label().contains(&needle));
+            assert!(m.label.contains(&needle));
         }
-        let metrics = mfs[1].get_metric();
+        let metrics = &mfs[1].metric;
         for m in metrics {
-            assert!(m.get_label().contains(&needle));
+            assert!(m.label.contains(&needle));
         }
     }
 

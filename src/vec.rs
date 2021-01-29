@@ -425,10 +425,13 @@ mod tests {
         labels.insert("c", "a");
         let c = vec.get_metric_with(&labels).unwrap();
         let m = c.metric();
-        let label_pairs = m.get_label();
+        let label_pairs = m.label;
         assert_eq!(label_pairs.len(), labels.len());
         for lp in label_pairs.iter() {
-            assert_eq!(lp.get_value(), labels[lp.get_name()]);
+            assert_eq!(
+                lp.value.as_ref().unwrap(),
+                labels[lp.name.as_ref().unwrap().as_str()]
+            );
         }
     }
 }

@@ -401,7 +401,7 @@ test_histogram_count{a="1"} 1
         let mut metric_family = MetricFamily::default();
         metric_family.name = Some("test_summary".to_string());
         metric_family.help = Some("This is a test summary statistic".to_string());
-        metric_family.r#type = Some(MetricType::Summary);
+        metric_family.r#type = Some(MetricType::Summary.into());
 
         let mut summary = Summary::default();
         summary.sample_count = Some(5.0 as u64);

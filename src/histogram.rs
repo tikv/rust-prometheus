@@ -1236,12 +1236,12 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
-        assert_eq!(m.get_label().len(), 2);
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 3);
-        assert!(proto_histogram.get_sample_sum() >= 1.5);
-        assert_eq!(proto_histogram.get_bucket().len(), DEFAULT_BUCKETS.len());
+        let m = mf.metric.get(0).unwrap();
+        assert_eq!(m.label.len(), 2);
+        let proto_histogram = m.histogram.as_ref().unwrap();
+        assert_eq!(proto_histogram.sample_count.unwrap_or(0), 3);
+        assert!(proto_histogram.sample_sum.unwrap_or(0.0) >= 1.5);
+        assert_eq!(proto_histogram.bucket.len(), DEFAULT_BUCKETS.len());
 
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test2", "test help").buckets(buckets.clone());
@@ -1250,12 +1250,12 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
-        assert_eq!(m.get_label().len(), 0);
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 0);
-        assert!((proto_histogram.get_sample_sum() - 0.0) < EPSILON);
-        assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
+        let m = mf.metric.get(0).unwrap();
+        assert_eq!(m.label.len(), 0);
+        let proto_histogram = m.histogram.as_ref().unwrap();
+        assert_eq!(proto_histogram.sample_count.unwrap_or(0), 0);
+        assert!((proto_histogram.sample_sum.unwrap_or(0.0) - 0.0) < EPSILON);
+        assert_eq!(proto_histogram.bucket.len(), buckets.len())
     }
 
     #[test]
@@ -1400,12 +1400,12 @@ mod tests {
         histogram.observe(1.0);
 
         let m = histogram.metric();
-        assert_eq!(m.get_label().len(), labels.len());
+        assert_eq!(m.label.len(), labels.len());
 
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 1);
-        assert!((proto_histogram.get_sample_sum() - 1.0) < EPSILON);
-        assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
+        let proto_histogram = m.histogram.unwrap();
+        assert_eq!(proto_histogram.sample_count.unwrap_or(0), 1);
+        assert!((proto_histogram.sample_sum.unwrap_or(0.0) - 1.0) < EPSILON);
+        assert_eq!(proto_histogram.bucket.len(), buckets.len())
     }
 
     #[test]
@@ -1418,9 +1418,9 @@ mod tests {
 
         let check = |count, sum| {
             let m = histogram.metric();
-            let proto_histogram = m.get_histogram();
-            assert_eq!(proto_histogram.get_sample_count(), count);
-            assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
+            let proto_histogram = m.histogram.unwrap();
+            assert_eq!(proto_histogram.sample_count.unwrap_or(0), count);
+            assert!((proto_histogram.sample_sum.unwrap_or(0.0) - sum) < EPSILON);
         };
 
         local.observe(1.0);
@@ -1452,10 +1452,10 @@ mod tests {
         local_vec.remove_label_values(&["v1", "v2"]).unwrap_err();
 
         let check = |count, sum| {
-            let ms = vec.collect()[0].take_metric();
-            let proto_histogram = ms[0].get_histogram();
-            assert_eq!(proto_histogram.get_sample_count(), count);
-            assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
+            let ms = &vec.collect()[0].metric;
+            let proto_histogram = &ms[0].histogram.as_ref().unwrap();
+            assert_eq!(proto_histogram.sample_count.unwrap_or(0), count);
+            assert!((proto_histogram.sample_sum.unwrap_or(0.0) - sum) < EPSILON);
         };
 
         {
@@ -1509,13 +1509,13 @@ mod tests {
         let mut cumulative_count = 0;
         let mut sample_sum = 0;
         for _ in 0..1_000_000 {
-            let metric = &histogram.collect()[0].take_metric()[0];
-            let proto = metric.get_histogram();
+            let metric = &histogram.collect()[0].metric[0];
+            let proto = metric.histogram.as_ref().unwrap();
 
-            sample_count = proto.get_sample_count();
-            sample_sum = proto.get_sample_sum() as u64;
+            sample_count = proto.sample_count.unwrap_or(0);
+            sample_sum = proto.sample_sum.unwrap_or(0.0) as u64;
             // There is only one bucket thus the `[0]`.
-            cumulative_count = proto.get_bucket()[0].get_cumulative_count();
+            cumulative_count = proto.bucket[0].cumulative_count.unwrap_or(0);
 
             if sample_count != cumulative_count {
                 break;
