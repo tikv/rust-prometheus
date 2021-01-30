@@ -1286,10 +1286,10 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
-        let proto_histogram = m.get_histogram();
-        assert_eq!(proto_histogram.get_sample_count(), 3);
-        assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
+        let m = mf.metric.get(0).unwrap();
+        let proto_histogram = m.histogram.as_ref().unwrap();
+        assert_eq!(proto_histogram.sample_count.unwrap_or(0), 3);
+        assert!((proto_histogram.sample_sum.unwrap_or(0.0) - 0.0) > EPSILON);
     }
 
     #[test]

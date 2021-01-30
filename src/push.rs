@@ -123,22 +123,25 @@ fn push<S: BuildHasher>(
 
     for mf in mfs {
         // Check for pre-existing grouping labels:
-        for m in mf.get_metric() {
-            for lp in m.get_label() {
-                if lp.get_name() == LABEL_NAME_JOB {
-                    return Err(Error::Msg(format!(
-                        "pushed metric {} already contains a \
-                         job label",
-                        mf.get_name()
-                    )));
-                }
-                if grouping.contains_key(lp.get_name()) {
-                    return Err(Error::Msg(format!(
-                        "pushed metric {} already contains \
-                         grouping label {}",
-                        mf.get_name(),
-                        lp.get_name()
-                    )));
+        for m in &mf.metric {
+            for lp in &m.label {
+                if let Some(name) = &lp.name {
+                    if name == LABEL_NAME_JOB {
+                        return Err(Error::Msg(format!(
+                            "pushed metric {} already contains a \
+                             job label",
+                            mf.name.unwrap_or("".into()),
+                        )));
+                    }
+
+                    if grouping.contains_key(name.as_str()) {
+                        return Err(Error::Msg(format!(
+                            "pushed metric {} already contains \
+                             grouping label {}",
+                            mf.name.unwrap_or("".into()),
+                            name,
+                        )));
+                    }
                 }
             }
         }
@@ -272,11 +275,11 @@ mod tests {
         ];
 
         for case in table {
-            let mut l = proto::LabelPair::new();
+            let mut l = proto::LabelPair::default();
             l.name = Some(case.0.to_owned());
-            let mut m = proto::Metric::new();
+            let mut m = proto::Metric::default();
             m.label = vec![l];
-            let mut mf = proto::MetricFamily::new();
+            let mut mf = proto::MetricFamily::default();
             mf.metric = vec![m];
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(format!("{}", res.unwrap_err()).contains(case.1));
