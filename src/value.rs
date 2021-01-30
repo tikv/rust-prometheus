@@ -85,20 +85,22 @@ impl<P: Atomic> Value<P> {
     }
 
     pub fn metric(&self) -> Metric {
-        let mut m = Metric::default();
-        m.label = self.label_pairs.clone();
+        let mut m = Metric {
+            label: self.label_pairs.clone(),
+            ..Default::default()
+        };
 
         let val = self.get();
         match self.val_type {
             ValueType::Counter => {
-                let mut counter = Counter::default();
-                counter.value = Some(val.into_f64());
-                m.counter = Some(counter);
+                m.counter = Some(Counter {
+                    value: Some(val.into_f64()),
+                });
             }
             ValueType::Gauge => {
-                let mut gauge = Gauge::default();
-                gauge.value = Some(val.into_f64());
-                m.gauge = Some(gauge);
+                m.gauge = Some(Gauge {
+                    value: Some(val.into_f64()),
+                });
             }
         }
 
@@ -106,12 +108,12 @@ impl<P: Atomic> Value<P> {
     }
 
     pub fn collect(&self) -> MetricFamily {
-        let mut m = MetricFamily::default();
-        m.name = Some(self.desc.fq_name.clone());
-        m.help = Some(self.desc.help.clone());
-        m.r#type = Some(self.val_type.metric_type().into());
-        m.metric = vec![self.metric()];
-        m
+        MetricFamily {
+            name: Some(self.desc.fq_name.clone()),
+            help: Some(self.desc.help.clone()),
+            r#type: Some(self.val_type.metric_type().into()),
+            metric: vec![self.metric()],
+        }
     }
 }
 
@@ -134,10 +136,10 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Result<Vec<LabelP
 
     let mut label_pairs = Vec::with_capacity(total_len);
     for (i, n) in desc.variable_labels.iter().enumerate() {
-        let mut label_pair = LabelPair::default();
-        label_pair.name = Some(n.clone());
-        label_pair.value = Some(label_values[i].to_owned());
-        label_pairs.push(label_pair);
+        label_pairs.push(LabelPair {
+            name: Some(n.clone()),
+            value: Some(label_values[i].to_owned()),
+        });
     }
 
     for label_pair in &desc.const_label_pairs {

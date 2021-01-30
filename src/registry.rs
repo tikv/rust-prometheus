@@ -150,7 +150,7 @@ impl RegistryCore {
         // Now that MetricFamilies are all set, sort their Metrics
         // lexicographically by their label values.
         for mf in mf_by_name.values_mut() {
-            &mut mf.metric.sort_by(|m1, m2| {
+            mf.metric.sort_by(|m1, m2| {
                 let lps1 = &m1.label;
                 let lps2 = &m2.label;
 
@@ -194,11 +194,9 @@ impl RegistryCore {
                 if let Some(ref hmap) = self.labels {
                     let pairs: Vec<proto::LabelPair> = hmap
                         .iter()
-                        .map(|(k, v)| {
-                            let mut label = proto::LabelPair::default();
-                            label.name = Some(k.to_string());
-                            label.value = Some(v.to_string());
-                            label
+                        .map(|(k, v)| proto::LabelPair {
+                            name: Some(k.to_string()),
+                            value: Some(v.to_string()),
                         })
                         .collect();
 

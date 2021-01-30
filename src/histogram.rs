@@ -435,9 +435,11 @@ impl HistogramCore {
         // interfere with previous or upcoming collect calls.
         let cold_shard_sum = cold_shard.sum.swap(0.0, Ordering::AcqRel);
 
-        let mut h = proto::Histogram::default();
-        h.sample_sum = Some(cold_shard_sum);
-        h.sample_count = Some(overall_count);
+        let mut h = proto::Histogram {
+            sample_sum: Some(cold_shard_sum),
+            sample_count: Some(overall_count),
+            ..Default::default()
+        };
 
         let mut cumulative_count = 0;
         let mut buckets = Vec::with_capacity(self.upper_bounds.len());
@@ -450,10 +452,10 @@ impl HistogramCore {
             hot_shard.buckets[i].inc_by(cold_bucket_count);
 
             cumulative_count += cold_bucket_count;
-            let mut b = proto::Bucket::default();
-            b.cumulative_count = Some(cumulative_count);
-            b.upper_bound = Some(*upper_bound);
-            buckets.push(b);
+            buckets.push(proto::Bucket {
+                cumulative_count: Some(cumulative_count),
+                upper_bound: Some(*upper_bound),
+            });
         }
         h.bucket = buckets;
 
@@ -751,11 +753,11 @@ impl Histogram {
 
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
-        let mut m = proto::Metric::default();
-        m.label = self.core.label_pairs.clone();
-        m.histogram = Some(self.core.proto());
-
-        m
+        proto::Metric {
+            label: self.core.label_pairs.clone(),
+            histogram: Some(self.core.proto()),
+            ..Default::default()
+        }
     }
 }
 
@@ -765,11 +767,12 @@ impl Collector for Histogram {
     }
 
     fn collect(&self) -> Vec<proto::MetricFamily> {
-        let mut m = proto::MetricFamily::default();
-        m.name = Some(self.core.desc.fq_name.clone());
-        m.help = Some(self.core.desc.help.clone());
-        m.r#type = Some(proto::MetricType::Histogram.into());
-        m.metric = vec![self.metric()];
+        let m = proto::MetricFamily {
+            name: Some(self.core.desc.fq_name.clone()),
+            help: Some(self.core.desc.help.clone()),
+            r#type: Some(proto::MetricType::Histogram.into()),
+            metric: vec![self.metric()],
+        };
 
         vec![m]
     }

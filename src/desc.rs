@@ -160,9 +160,10 @@ impl Desc {
         desc.dim_hash = lh.finish();
 
         for (key, value) in const_labels {
-            let mut label_pair = LabelPair::default();
-            label_pair.name = Some(key);
-            label_pair.value = Some(value);
+            let label_pair = LabelPair {
+                name: Some(key),
+                value: Some(value),
+            };
             desc.const_label_pairs.push(label_pair);
         }
 

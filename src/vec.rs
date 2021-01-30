@@ -35,18 +35,17 @@ pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
 
 impl<T: MetricVecBuilder> MetricVecCore<T> {
     pub fn collect(&self) -> MetricFamily {
-        let mut m = MetricFamily::default();
-        m.name = Some(self.desc.fq_name.clone());
-        m.help = Some(self.desc.help.clone());
-        m.r#type = Some(self.metric_type.into());
-
         let children = self.children.read();
         let mut metrics = Vec::with_capacity(children.len());
         for child in children.values() {
             metrics.push(child.metric());
         }
-        m.metric = metrics;
-        m
+        MetricFamily {
+            name: Some(self.desc.fq_name.clone()),
+            help: Some(self.desc.help.clone()),
+            r#type: Some(self.metric_type.into()),
+            metric: metrics,
+        }
     }
 
     pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
