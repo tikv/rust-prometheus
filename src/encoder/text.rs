@@ -215,27 +215,6 @@ fn label_pairs_to_text(
     Ok(())
 }
 
-#[cfg(feature = "regex")]
-fn find_first_occurence(v: &str, include_double_quote: bool) -> Option<usize> {
-    use regex::{Match, Regex};
-
-    // Regex compilation is expensive. Use `lazy_static` to compile the regexes
-    // once per process lifetime and not once per function invocation.
-    lazy_static! {
-        static ref ESCAPER: Regex = Regex::new("(\\\\|\n)").expect("Regex to be valid.");
-        static ref QUOTED_ESCAPER: Regex = Regex::new("(\\\\|\n|\")").expect("Regex to be valid.");
-    }
-
-    if include_double_quote {
-        QUOTED_ESCAPER.find(v)
-    } else {
-        ESCAPER.find(v)
-    }
-    .as_ref()
-    .map(Match::start)
-}
-
-#[cfg(not(feature = "regex"))]
 fn find_first_occurence(v: &str, include_double_quote: bool) -> Option<usize> {
     if include_double_quote {
         memchr::memchr3(b'\\', b'\n', b'\"', v.as_bytes())

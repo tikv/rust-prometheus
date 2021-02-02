@@ -10,66 +10,40 @@ use crate::errors::{Error, Result};
 use crate::metrics::SEPARATOR_BYTE;
 use crate::proto::LabelPair;
 
-#[cfg(not(feature = "regex"))]
-mod validation {
-    fn matches_charset_without_colon(c: char) -> bool {
-        c.is_ascii_alphabetic() || c == '_'
-    }
-
-    fn matches_charset_with_colon(c: char) -> bool {
-        matches_charset_without_colon(c) || c == ':'
-    }
-
-    /// Equivalent to regex `^[?][?0-9]*$` where `?` denotes char set as validated by `charset_validator`.
-    fn is_valid_ident<F: FnMut(char) -> bool>(input: &str, mut charset_validator: F) -> bool {
-        let mut chars = input.chars();
-        let zeroth = chars.next();
-        zeroth
-            .and_then(|zeroth| {
-                if charset_validator(zeroth) {
-                    Some(chars.all(|c| charset_validator(c) || c.is_digit(10)))
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(false)
-    }
-
-    // Details of required format are at
-    // https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-    pub(super) fn is_valid_metric_name(name: &str) -> bool {
-        is_valid_ident(name, matches_charset_with_colon)
-    }
-
-    pub(super) fn is_valid_label_name(name: &str) -> bool {
-        is_valid_ident(name, matches_charset_without_colon)
-    }
+// [a-zA-Z_]
+fn matches_charset_without_colon(c: char) -> bool {
+    c.is_ascii_alphabetic() || c == '_'
 }
 
-#[cfg(feature = "regex")]
-mod validation {
-    use regex::Regex;
-
-    pub(super) fn is_valid_metric_name(name: &str) -> bool {
-        lazy_static! {
-            static ref VALIDATOR: Regex =
-                Regex::new("^[a-zA-Z_:][a-zA-Z0-9_:]*$").expect("Regex to be valid.");
-        }
-
-        VALIDATOR.is_match(name)
-    }
-
-    pub(super) fn is_valid_label_name(name: &str) -> bool {
-        lazy_static! {
-            static ref VALIDATOR: Regex =
-                Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("Regex to be valid.");
-        }
-
-        VALIDATOR.is_match(name)
-    }
+// [a-zA-Z_:]
+fn matches_charset_with_colon(c: char) -> bool {
+    matches_charset_without_colon(c) || c == ':'
 }
 
-use validation::*;
+// Equivalent to regex ^[?][?0-9]*$ where ? denotes char set as validated by charset_validator
+fn is_valid_ident<F: FnMut(char) -> bool>(input: &str, mut charset_validator: F) -> bool {
+    let mut chars = input.chars();
+    let zeroth = chars.next();
+    zeroth
+        .and_then(|zeroth| {
+            if charset_validator(zeroth) {
+                Some(chars.all(|c| charset_validator(c) || c.is_digit(10)))
+            } else {
+                None
+            }
+        })
+        .unwrap_or(false)
+}
+
+// Details of required format are at
+// https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+pub(super) fn is_valid_metric_name(name: &str) -> bool {
+    is_valid_ident(name, matches_charset_with_colon)
+}
+
+pub(super) fn is_valid_label_name(name: &str) -> bool {
+    is_valid_ident(name, matches_charset_without_colon)
+}
 
 /// The descriptor used by every Prometheus [`Metric`](crate::core::Metric). It is essentially
 /// the immutable meta-data of a metric. The normal metric implementations
