@@ -104,8 +104,10 @@ additional functionality.
 
 This library supports four features:
 
-* `gen`: To generate protobuf client with the latest protobuf version instead of
-  using the pre-generated client.
+* `protobuf`: Enable [Protocol Buffers](https://developers.google.com/protocol-buffers/) (aka Protobuf)  based exposition format. (Enabled by default)
+
+> Notice: Since version 2.0, Prometheus no longer supports the Protobuf-based format. You can read about the reasoning behind this change in [this document](https://github.com/OpenObservability/OpenMetrics/blob/master/legacy/markdown/protobuf_vs_text.md).
+
 * `nightly`: Enable nightly only features.
 * `process`: For collecting process info.
 * `push`: Enable push support.
