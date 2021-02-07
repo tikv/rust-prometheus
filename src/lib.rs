@@ -124,9 +124,9 @@ This library supports four features:
 #[cfg(feature = "protobuf")]
 #[allow(warnings)]
 #[allow(missing_docs)]
-#[rustfmt::skip]
-#[path = "../proto/io.prometheus.client.rs"]
-pub mod proto;
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/io.prometheus.client.rs"));
+}
 
 #[cfg(not(feature = "protobuf"))]
 #[path = "plain_model.rs"]

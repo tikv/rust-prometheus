@@ -1,17 +1,11 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#[cfg(feature = "gen")]
+#[cfg(feature = "protobuf")]
 fn generate_protobuf_binding_file() {
-    use prost_build::Config;
-    use std::path::Path;
-
-    let mut cfg = Config::new();
-    cfg.out_dir(Path::new("proto"));
-    cfg.compile_protos(&["proto/proto_model.proto"], &["proto"])
-        .unwrap();
+    prost_build::compile_protos(&["proto/proto_model.proto"], &["proto"]).unwrap();
 }
 
-#[cfg(not(feature = "gen"))]
+#[cfg(not(feature = "protobuf"))]
 fn generate_protobuf_binding_file() {}
 
 fn main() {

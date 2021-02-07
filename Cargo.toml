@@ -19,10 +19,9 @@ features = ["nightly"]
 
 [features]
 default = ["protobuf"]
-gen = ["prost-build"]
 nightly = ["libc"]
 process = ["libc", "procfs"]
-protobuf = ["prost"]
+protobuf = ["prost", "prost-build"]
 push = ["reqwest", "libc", "protobuf"]
 
 [dependencies]
