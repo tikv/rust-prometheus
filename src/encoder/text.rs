@@ -5,6 +5,8 @@ use std::io::Write;
 
 use crate::errors::Result;
 use crate::histogram::BUCKET_LABEL;
+use crate::exemplars::Exemplar;
+use crate::atomic64::Atomic;
 use crate::proto::{self, MetricFamily, MetricType};
 
 use super::{check_metric_family, Encoder};
@@ -57,6 +59,7 @@ impl Encoder for TextEncoder {
                 match metric_type {
                     MetricType::COUNTER => {
                         write_sample(writer, name, None, m, None, m.get_counter().get_value())?;
+                        write_exemplar(writer, m.ex)?;
                     }
                     MetricType::GAUGE => {
                         write_sample(writer, name, None, m, None, m.get_gauge().get_value())?;
@@ -172,6 +175,21 @@ fn write_sample(
 
     writer.write_all(b"\n")?;
 
+    Ok(())
+}
+
+// Append a hash along with exemplar data if an exemplar is given
+fn write_exemplar<P: Atomic>(writer: &mut dyn Write, exemplar: Option<&Exemplar<P>>) -> Result<()> {
+    // foo_bucket{le="10"} 17 # {trace_id="oHg5SJYRHA0"} 9.8 1520879607.789
+    if let Some(ex) = exemplar {
+        writer.write_all(b"# ");
+        label_pairs_to_text(&ex.labels, None, writer)?;
+        writer.write_all(b" ")?;
+        if ex.timestamp_ms != 0 {
+            writer.write_all(b" ")?;
+            writer.write_all(ex.timestamp_ms.to_string().as_bytes())?;
+        }
+    }
     Ok(())
 }
 
