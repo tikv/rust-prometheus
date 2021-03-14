@@ -158,8 +158,8 @@ mod counter;
 mod desc;
 mod encoder;
 mod errors;
-mod gauge;
 mod exemplars;
+mod gauge;
 mod histogram;
 mod metrics;
 #[cfg(feature = "push")]

@@ -5,8 +5,6 @@ use std::io::Write;
 
 use crate::errors::Result;
 use crate::histogram::BUCKET_LABEL;
-use crate::exemplars::Exemplar;
-use crate::atomic64::Atomic;
 use crate::proto::{self, MetricFamily, MetricType};
 
 use super::{check_metric_family, Encoder};
@@ -58,11 +56,12 @@ impl Encoder for TextEncoder {
             for m in mf.get_metric() {
                 match metric_type {
                     MetricType::COUNTER => {
-                        write_sample(writer, name, None, m, None, m.get_counter().get_value())?;
-                        write_exemplar(writer, m.ex)?;
+                        let value = m.get_counter().get_value();
+                        let exemplar = m.get_counter().get_exemplar();
+                        write_sample(writer, name, None, m, None, value, exemplar)?;
                     }
                     MetricType::GAUGE => {
-                        write_sample(writer, name, None, m, None, m.get_gauge().get_value())?;
+                        write_sample(writer, name, None, m, None, m.get_gauge().get_value(), None)?;
                     }
                     MetricType::HISTOGRAM => {
                         let h = m.get_histogram();
@@ -77,6 +76,7 @@ impl Encoder for TextEncoder {
                                 m,
                                 Some((BUCKET_LABEL, &upper_bound.to_string())),
                                 b.get_cumulative_count() as f64,
+                                None, // TODO: exemplar
                             )?;
                             if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
                                 inf_seen = true;
@@ -90,10 +90,19 @@ impl Encoder for TextEncoder {
                                 m,
                                 Some((BUCKET_LABEL, POSITIVE_INF)),
                                 h.get_sample_count() as f64,
+                                None,
                             )?;
                         }
 
-                        write_sample(writer, name, Some("_sum"), m, None, h.get_sample_sum())?;
+                        write_sample(
+                            writer,
+                            name,
+                            Some("_sum"),
+                            m,
+                            None,
+                            h.get_sample_sum(),
+                            None,
+                        )?;
 
                         write_sample(
                             writer,
@@ -102,6 +111,7 @@ impl Encoder for TextEncoder {
                             m,
                             None,
                             h.get_sample_count() as f64,
+                            None,
                         )?;
                     }
                     MetricType::SUMMARY => {
@@ -115,10 +125,19 @@ impl Encoder for TextEncoder {
                                 m,
                                 Some((QUANTILE, &q.get_quantile().to_string())),
                                 q.get_value(),
+                                None,
                             )?;
                         }
 
-                        write_sample(writer, name, Some("_sum"), m, None, s.get_sample_sum())?;
+                        write_sample(
+                            writer,
+                            name,
+                            Some("_sum"),
+                            m,
+                            None,
+                            s.get_sample_sum(),
+                            None,
+                        )?;
 
                         write_sample(
                             writer,
@@ -127,6 +146,7 @@ impl Encoder for TextEncoder {
                             m,
                             None,
                             s.get_sample_count() as f64,
+                            None,
                         )?;
                     }
                     MetricType::UNTYPED => {
@@ -156,6 +176,7 @@ fn write_sample(
     mc: &proto::Metric,
     additional_label: Option<(&str, &str)>,
     value: f64,
+    exemplar: Option<&proto::Exemplar>,
 ) -> Result<()> {
     writer.write_all(name.as_bytes())?;
     if let Some(postfix) = name_postfix {
@@ -173,22 +194,25 @@ fn write_sample(
         writer.write_all(timestamp.to_string().as_bytes())?;
     }
 
+    if let Some(ex) = exemplar {
+        write_exemplar(writer, ex)?;
+    }
+
     writer.write_all(b"\n")?;
 
     Ok(())
 }
 
 // Append a hash along with exemplar data if an exemplar is given
-fn write_exemplar<P: Atomic>(writer: &mut dyn Write, exemplar: Option<&Exemplar<P>>) -> Result<()> {
+fn write_exemplar(writer: &mut dyn Write, ex: &proto::Exemplar) -> Result<()> {
     // foo_bucket{le="10"} 17 # {trace_id="oHg5SJYRHA0"} 9.8 1520879607.789
-    if let Some(ex) = exemplar {
-        writer.write_all(b"# ");
-        label_pairs_to_text(&ex.labels, None, writer)?;
+    writer.write_all(b"# ");
+    label_pairs_to_text(&ex.get_label(), None, writer)?;
+    writer.write_all(b" ")?;
+    let timestamp = ex.get_timestamp_ms();
+    if timestamp != 0 {
         writer.write_all(b" ")?;
-        if ex.timestamp_ms != 0 {
-            writer.write_all(b" ")?;
-            writer.write_all(ex.timestamp_ms.to_string().as_bytes())?;
-        }
+        writer.write_all(timestamp.to_string().as_bytes())?;
     }
     Ok(())
 }

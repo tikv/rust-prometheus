@@ -9,9 +9,9 @@ use std::sync::Arc;
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64, Number};
 use crate::desc::Desc;
 use crate::errors::Result;
+use crate::exemplars::Exemplar;
 use crate::metrics::{Collector, LocalMetric, Metric, Opts};
 use crate::proto;
-use crate::exemplars::Exemplar;
 use crate::value::{Value, ValueType};
 use crate::vec::{MetricVec, MetricVecBuilder};
 
@@ -33,7 +33,7 @@ impl<P: Atomic> Clone for GenericCounter<P> {
     fn clone(&self) -> Self {
         Self {
             v: Arc::clone(&self.v),
-            ex: Arc::clone(&self.ex)
+            ex: Arc::clone(&self.ex),
         }
     }
 }
@@ -52,7 +52,10 @@ impl<P: Atomic> GenericCounter<P> {
 
     fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
-        Ok(Self { v: Arc::new(v), ex: Arc::new(None) })
+        Ok(Self {
+            v: Arc::new(v),
+            ex: Arc::new(None),
+        })
     }
 
     /// Increase the given value to the counter.

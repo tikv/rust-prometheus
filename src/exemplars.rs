@@ -1,6 +1,6 @@
 use crate::atomic64::Atomic;
-use crate::timer;
 use crate::proto::LabelPair;
+use crate::timer;
 
 /// An OpenMetrics Exemplar
 ///
