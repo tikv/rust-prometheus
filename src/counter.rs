@@ -19,7 +19,7 @@ use crate::vec::{MetricVec, MetricVecBuilder};
 #[derive(Debug)]
 pub struct GenericCounter<P: Atomic> {
     v: Arc<Value<P>>,
-    ex: Arc<Option<Exemplar<P>>>,
+    ex: Arc<Option<Exemplar>>,
 }
 
 /// A [`Metric`] represents a single numerical value that only ever goes up.
@@ -83,7 +83,7 @@ impl<P: Atomic> GenericCounter<P> {
 
     /// Set an [`Exemplar`] for the counter.
     #[inline]
-    pub fn set_exemplar(&mut self, ex: Exemplar<P>) {
+    pub fn set_exemplar(&mut self, ex: Exemplar) {
         *Arc::get_mut(&mut self.ex).unwrap() = Some(ex);
     }
 

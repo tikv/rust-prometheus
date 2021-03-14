@@ -69,6 +69,7 @@ impl Encoder for TextEncoder {
                         let mut inf_seen = false;
                         for b in h.get_bucket() {
                             let upper_bound = b.get_upper_bound();
+                            let exemplar = b.get_exemplar();
                             write_sample(
                                 writer,
                                 name,
@@ -76,7 +77,7 @@ impl Encoder for TextEncoder {
                                 m,
                                 Some((BUCKET_LABEL, &upper_bound.to_string())),
                                 b.get_cumulative_count() as f64,
-                                None, // TODO: exemplar
+                                exemplar,
                             )?;
                             if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
                                 inf_seen = true;
@@ -206,7 +207,7 @@ fn write_sample(
 // Append a hash along with exemplar data if an exemplar is given
 fn write_exemplar(writer: &mut dyn Write, ex: &proto::Exemplar) -> Result<()> {
     // foo_bucket{le="10"} 17 # {trace_id="oHg5SJYRHA0"} 9.8 1520879607.789
-    writer.write_all(b"# ");
+    writer.write_all(b" # ")?;
     label_pairs_to_text(&ex.get_label(), None, writer)?;
     writer.write_all(b" ")?;
     let timestamp = ex.get_timestamp_ms();

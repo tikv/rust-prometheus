@@ -217,6 +217,7 @@ pub use self::encoder::TextEncoder;
 #[cfg(feature = "protobuf")]
 pub use self::encoder::{PROTOBUF_FORMAT, TEXT_FORMAT};
 pub use self::errors::{Error, Result};
+pub use self::exemplars::Exemplar;
 pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::DEFAULT_BUCKETS;
 pub use self::histogram::{exponential_buckets, linear_buckets};

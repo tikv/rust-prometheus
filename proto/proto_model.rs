@@ -1199,6 +1199,16 @@ pub struct Exemplar {
     timestamp_ms: ::std::option::Option<i64>,
     label: ::protobuf::RepeatedField<LabelPair>,
 }
+use crate::exemplars;
+impl From<exemplars::Exemplar> for Exemplar {
+    fn from(e: exemplars::Exemplar) -> Exemplar {
+        Exemplar {
+            value: Some(e.value),
+            timestamp_ms: Some(e.timestamp_ms),
+            label: e.labels.into()
+        }
+    }
+}
 
 impl Exemplar {
     // Timestamp
@@ -1503,6 +1513,7 @@ pub struct Bucket {
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
+    exemplar: ::std::option::Option<Exemplar>,
 }
 
 impl Bucket {
@@ -1546,6 +1557,25 @@ impl Bucket {
 
     pub fn get_upper_bound(&self) -> f64 {
         self.upper_bound.unwrap_or(0.)
+    }
+
+    // optional bytes exemplar = 3;
+
+    pub fn clear_exemplar(&mut self) {
+        self.exemplar = ::std::option::Option::None;
+    }
+
+    pub fn has_exemplar(&self) -> bool {
+        self.exemplar.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_exemplar(&mut self, v: Exemplar) {
+        self.exemplar = ::std::option::Option::Some(v);
+    }
+
+    pub fn get_exemplar(&self) -> Option<&Exemplar> {
+        self.exemplar.as_ref()
     }
 }
 
