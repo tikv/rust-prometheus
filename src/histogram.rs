@@ -163,23 +163,19 @@ struct Shard {
     sum: AtomicF64,
     count: AtomicU64,
     buckets: Vec<AtomicU64>,
-    exemplars: Vec<Arc<Mutex<Option<Exemplar>>>>,
 }
 
 impl Shard {
     fn new(num_buckets: usize) -> Self {
         let mut buckets = Vec::new();
-        let mut exemplars = Vec::new();
         for _ in 0..num_buckets {
             buckets.push(AtomicU64::new(0));
-            exemplars.push(Arc::new(Mutex::new(None)));
         }
 
         Shard {
             sum: AtomicF64::new(0.0),
             count: AtomicU64::new(0),
             buckets,
-            exemplars,
         }
     }
 }
@@ -328,6 +324,9 @@ pub struct HistogramCore {
     /// and which one the cold at any given point in time.
     shards: [Shard; 2],
 
+    /// exemplars (synchronised on write when used)
+    exemplars: Vec<Arc<Mutex<Option<Exemplar>>>>,
+
     upper_bounds: Vec<f64>,
 }
 
@@ -346,6 +345,11 @@ impl HistogramCore {
 
         let buckets = check_and_adjust_buckets(opts.buckets.clone())?;
 
+        let mut exemplars = vec![];
+        for _ in 0..buckets.len() {
+            exemplars.push(Arc::new(Mutex::new(None)));
+        }
+
         Ok(HistogramCore {
             desc,
             label_pairs,
@@ -356,6 +360,7 @@ impl HistogramCore {
             shards: [Shard::new(buckets.len()), Shard::new(buckets.len())],
 
             upper_bounds: buckets,
+            exemplars,
         })
     }
     /// Record a given observation along with an exemplar
@@ -393,8 +398,7 @@ impl HistogramCore {
             .filter(|&(_, f)| v <= *f);
         if let Some((i, _)) = iter.next() {
             shard.buckets[i].inc_by(1);
-            // TODO: maybe use AtomicOption<Exemplar> here?
-            *shard.exemplars[i].lock().unwrap() = ex;
+            *self.exemplars[i].lock().unwrap() = ex;
         }
 
         shard.sum.inc_by(v);
@@ -462,7 +466,7 @@ impl HistogramCore {
             // interfere with previous or upcoming collect calls.
             let cold_bucket_count = cold_shard.buckets[i].swap(0, Ordering::AcqRel);
             hot_shard.buckets[i].inc_by(cold_bucket_count);
-            let exemplar = cold_shard.exemplars[i].lock().unwrap().clone();
+            let exemplar = self.exemplars[i].lock().unwrap().clone();
 
             cumulative_count += cold_bucket_count;
             let mut b = proto::Bucket::default();

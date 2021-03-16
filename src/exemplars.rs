@@ -25,6 +25,7 @@ impl Exemplar {
     /// Create an ['Exemplar'] with value and labels
     pub fn new_with_labels(val: f64, exemplar_labels: HashMap<String, String>) -> Self {
         let mut label_pairs = Vec::with_capacity(exemplar_labels.len());
+        // TODO: verify length of labelset + values as <= 128 UTF8 chars
         for (n, v) in exemplar_labels.iter() {
             let mut label_pair = LabelPair::default();
             label_pair.set_name(n.to_string());
@@ -32,19 +33,10 @@ impl Exemplar {
             label_pairs.push(label_pair);
         }
 
-        let ex = Self {
+        Self {
             value: val,
             labels: label_pairs,
             timestamp_ms: (timer::now_millis() / 1000) as i64,
-        };
-        // TODO: verify length of labelset + values as <= 128 UTF8 chars
-        ex
+        }
     }
-
-    //fn set(&mut self, val: P::T, labels: Vec<LabelPair>) {
-    //    self.value.set(val);
-    //    self.labels = labels;
-    //    self.timestamp_ms = (timer::now_millis() / 1000) as i64;
-    //    // TODO: verify length of labelset + values as <= 128 UTF8 chars
-    //}
 }
