@@ -3,13 +3,11 @@
 //! This examples shows how to use multiple and custom registries,
 //! and how to perform registration across function boundaries.
 
-#[macro_use]
-extern crate lazy_static;
-extern crate prometheus;
-
 use std::collections::HashMap;
 
 use prometheus::{Encoder, IntCounter, Registry};
+
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref DEFAULT_COUNTER: IntCounter = IntCounter::new("default", "generic counter").unwrap();

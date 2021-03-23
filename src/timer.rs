@@ -2,6 +2,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use lazy_static::lazy_static;
+
 /// Milliseconds since ANCHOR.
 static RECENT: AtomicU64 = AtomicU64::new(0);
 lazy_static! {

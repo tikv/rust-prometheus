@@ -5,14 +5,11 @@
 Use metric enums to reuse possible values of a label.
 
 */
-#[macro_use]
-extern crate lazy_static;
-extern crate prometheus;
-extern crate prometheus_static_metric;
 
 use prometheus::*;
-use prometheus_static_metric::auto_flush_from;
-use prometheus_static_metric::make_auto_flush_static_metric;
+
+use lazy_static::lazy_static;
+use prometheus_static_metric::{auto_flush_from, make_auto_flush_static_metric};
 
 make_auto_flush_static_metric! {
 
@@ -90,11 +87,6 @@ fn main() {
 
 /*
 /// Pseudo macro expanded code of make_auto_flush_static_metric_histogram
-#[macro_use]
-extern crate lazy_static;
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use std::cell::Cell;
 
 #[allow(unused_imports)]
@@ -104,6 +96,8 @@ use std::collections::HashMap;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::thread::LocalKey;
+
+use lazy_static::lazy_static;
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]

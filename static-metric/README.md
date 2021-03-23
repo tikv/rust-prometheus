@@ -46,7 +46,7 @@ introducing a lot of templating code.
 - Add to `lib.rs`:
 
   ```rust
-  extern crate prometheus_static_metric;
+  use prometheus_static_metric;
   ```
 
 ## Example
@@ -89,14 +89,10 @@ fn main() {
 For heavier scenario that a global shared static-metric might not be effecient enough, you can use `make_auto_flush_static_metric!` macro, which will store data in local thread storage, with a custom rate to flush to global `MetricVec`.
 
 ```rust
-#[macro_use]
-extern crate lazy_static;
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use prometheus::*;
-use prometheus_static_metric::auto_flush_from;
-use prometheus_static_metric::make_auto_flush_static_metric;
+
+use lazy_static:lazy_static;
+use prometheus_static_metric::{auto_flush_from, make_auto_flush_static_metric};
 
 make_auto_flush_static_metric! {
 

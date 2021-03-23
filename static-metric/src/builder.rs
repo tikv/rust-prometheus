@@ -7,6 +7,8 @@ use proc_macro2::{Span, TokenStream as Tokens};
 use quote::TokenStreamExt;
 use syn::{Ident, Visibility};
 
+use quote::quote;
+
 use super::parser::*;
 use super::util;
 

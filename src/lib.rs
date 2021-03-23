@@ -53,9 +53,10 @@ This crate supports staticly built metrics. You can use it with
 some metrics.
 
 ```rust
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate prometheus;
 use prometheus::{self, IntCounter, TextEncoder, Encoder};
+
+use lazy_static::lazy_static;
+use prometheus::register_int_counter;
 
 lazy_static! {
     static ref HIGH_FIVE_COUNTER: IntCounter =
@@ -71,10 +72,11 @@ By default, this registers with a default registry. To make a report, you can ca
 [`Encoder`](trait.Encoder.html) and report to Promethus.
 
 ```
-# #[macro_use] extern crate lazy_static;
-#[macro_use] extern crate prometheus;
 # use prometheus::IntCounter;
 use prometheus::{self, TextEncoder, Encoder};
+
+use lazy_static::lazy_static;
+use prometheus::register_int_counter;
 
 // Register & measure some metrics.
 # lazy_static! {
@@ -144,11 +146,6 @@ macro_rules! from_vec {
         $e
     };
 }
-
-#[macro_use]
-extern crate cfg_if;
-#[macro_use]
-extern crate lazy_static;
 
 #[macro_use]
 mod macros;

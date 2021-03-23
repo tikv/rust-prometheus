@@ -7,14 +7,13 @@ by using the `register_static_xxx!` macro provided by this crate.
 
 */
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use prometheus::exponential_buckets;
-use prometheus_static_metric::*;
+
+use lazy_static::lazy_static;
+use prometheus::{register_counter_vec, register_histogram_vec};
+use prometheus_static_metric::{
+    make_static_metric, register_static_counter_vec, register_static_histogram_vec,
+};
 
 make_static_metric! {
     pub struct HttpRequestStatistics: Counter {

@@ -12,6 +12,9 @@ use crate::errors::{Error, Result};
 use crate::metrics::Collector;
 use crate::proto;
 
+use cfg_if::cfg_if;
+use lazy_static::lazy_static;
+
 struct RegistryCore {
     pub collectors_by_id: HashMap<u64, Box<dyn Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,

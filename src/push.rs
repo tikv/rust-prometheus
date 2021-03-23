@@ -10,6 +10,8 @@ use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{Method, StatusCode, Url};
 
+use lazy_static::lazy_static;
+
 use crate::encoder::{Encoder, ProtobufEncoder};
 use crate::errors::{Error, Result};
 use crate::metrics::Collector;

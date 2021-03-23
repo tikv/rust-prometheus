@@ -1,13 +1,10 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#[macro_use]
-extern crate lazy_static;
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use std::cell::Cell;
 
 use prometheus::*;
+
+use lazy_static::lazy_static;
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {

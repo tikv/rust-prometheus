@@ -6,10 +6,8 @@ Use metric enums to reuse possible values of a label.
 
 */
 
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use prometheus::{CounterVec, IntCounterVec, Opts};
+
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {
