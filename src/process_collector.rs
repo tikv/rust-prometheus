@@ -6,6 +6,8 @@
 
 use std::sync::Mutex;
 
+use lazy_static::lazy_static;
+
 use crate::counter::Counter;
 use crate::desc::Desc;
 use crate::gauge::Gauge;
