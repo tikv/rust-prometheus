@@ -1,12 +1,9 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use prometheus::IntCounterVec;
+
+use lazy_static::lazy_static;
+use prometheus::register_int_counter_vec;
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {

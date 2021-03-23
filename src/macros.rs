@@ -5,8 +5,8 @@
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
 /// # use std::collections::HashMap;
+/// # use prometheus::labels;
 /// # fn main() {
 /// let labels = labels!{
 ///     "test" => "hello",
@@ -41,7 +41,7 @@ macro_rules! labels {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{labels, opts};
 /// # fn main() {
 /// let name = "test_opts";
 /// let help = "test opts help";
@@ -87,8 +87,8 @@ macro_rules! opts {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
 /// # use prometheus::linear_buckets;
+/// # use prometheus::{histogram_opts, labels};
 /// # fn main() {
 /// let name = "test_histogram_opts";
 /// let help = "test opts help";
@@ -135,7 +135,7 @@ macro_rules! histogram_opts {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{opts, register_counter};
 /// # fn main() {
 /// let opts = opts!("test_macro_counter_1", "help");
 /// let res1 = register_counter!(opts);
@@ -189,7 +189,7 @@ macro_rules! __register_counter_vec {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{opts, register_counter_vec};
 /// # fn main() {
 /// let opts = opts!("test_macro_counter_vec_1", "help");
 /// let counter_vec = register_counter_vec!(opts, &["a", "b"]);
@@ -238,7 +238,7 @@ macro_rules! __register_gauge {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{opts, register_gauge};
 /// # fn main() {
 /// let opts = opts!("test_macro_gauge", "help");
 /// let res1 = register_gauge!(opts);
@@ -287,7 +287,7 @@ macro_rules! __register_gauge_vec {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{opts, register_gauge_vec};
 /// # fn main() {
 /// let opts = opts!("test_macro_gauge_vec_1", "help");
 /// let gauge_vec = register_gauge_vec!(opts, &["a", "b"]);
@@ -327,7 +327,7 @@ macro_rules! register_int_gauge_vec {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{histogram_opts, register_histogram};
 /// # fn main() {
 /// let opts = histogram_opts!("test_macro_histogram", "help");
 /// let res1 = register_histogram!(opts);
@@ -363,7 +363,7 @@ macro_rules! register_histogram {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate prometheus;
+/// # use prometheus::{histogram_opts, register_histogram_vec};
 /// # fn main() {
 /// let opts = histogram_opts!("test_macro_histogram_vec_1", "help");
 /// let histogram_vec = register_histogram_vec!(opts, &["a", "b"]);

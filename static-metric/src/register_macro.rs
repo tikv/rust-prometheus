@@ -5,6 +5,8 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::*;
 
+use quote::quote;
+
 /// Matches `register_static_xxx_vec!(static_struct_name, name, desc, labels, ...)`.
 pub struct RegisterMethodInvoking {
     static_struct_name: Ident,

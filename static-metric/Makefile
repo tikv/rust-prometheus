@@ -10,6 +10,8 @@ build:
 test:
 	cargo test --features="${ENABLE_FEATURES}" -- --nocapture
 
+dev: format test
+
 format:
 	@cargo fmt --all -- --check >/dev/null || cargo fmt --all
 

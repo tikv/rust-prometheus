@@ -2,17 +2,15 @@
 
 #![cfg_attr(not(feature = "push"), allow(unused_imports, dead_code))]
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate prometheus;
-
 use std::env;
 use std::thread;
 use std::time;
 
 use getopts::Options;
 use prometheus::{Counter, Histogram};
+
+use lazy_static::lazy_static;
+use prometheus::{labels, register_counter, register_histogram};
 
 lazy_static! {
     static ref PUSH_COUNTER: Counter = register_counter!(

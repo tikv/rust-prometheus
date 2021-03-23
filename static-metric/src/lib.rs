@@ -6,9 +6,10 @@ This crate provides staticly built metrics to your Prometheus application.
 This is useful since it reduces the amount of branching and processing needed at runtime to collect metrics.
 
 ```rust
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate prometheus;
 use prometheus::{self, IntCounter, TextEncoder, Encoder};
+
+use lazy_static::lazy_static;
+use prometheus::register_int_counter;
 
 lazy_static! {
     static ref HIGH_FIVE_COUNTER: IntCounter =
@@ -21,14 +22,6 @@ assert_eq!(HIGH_FIVE_COUNTER.get(), 1);
 
 Is it reccomended that you consult the [`prometheus` documentation for more information.](https://docs.rs/prometheus/)
 */
-
-extern crate lazy_static;
-extern crate proc_macro;
-extern crate proc_macro2;
-#[macro_use]
-extern crate quote;
-extern crate syn;
-
 mod auto_flush_builder;
 mod auto_flush_from;
 mod builder;

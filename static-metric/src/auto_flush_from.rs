@@ -6,6 +6,8 @@ use syn::parse::{Parse, ParseStream};
 use syn::token::*;
 use syn::*;
 
+use quote::quote;
+
 pub struct AutoFlushFromDef {
     class_name: Ident,
     inner_class_name: Ident,

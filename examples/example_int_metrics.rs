@@ -1,11 +1,11 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate prometheus;
-
 use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
+
+use lazy_static::lazy_static;
+use prometheus::{
+    register_int_counter, register_int_counter_vec, register_int_gauge, register_int_gauge_vec,
+};
 
 lazy_static! {
     static ref A_INT_COUNTER: IntCounter =
