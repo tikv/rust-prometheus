@@ -1196,7 +1196,7 @@ impl ::protobuf::reflect::ProtobufValue for Untyped {
 #[derive(PartialEq,Clone,Default, Debug)]
 pub struct Exemplar {
     value: ::std::option::Option<f64>,
-    timestamp_ms: ::std::option::Option<i64>,
+    timestamp: ::std::option::Option<f64>,
     label: ::protobuf::RepeatedField<LabelPair>,
 }
 use crate::exemplars;
@@ -1204,7 +1204,7 @@ impl From<exemplars::Exemplar> for Exemplar {
     fn from(e: exemplars::Exemplar) -> Exemplar {
         Exemplar {
             value: Some(e.value),
-            timestamp_ms: Some(e.timestamp_ms),
+            timestamp: Some(e.timestamp_epoch),
             label: e.labels.into()
         }
     }
@@ -1213,21 +1213,21 @@ impl From<exemplars::Exemplar> for Exemplar {
 impl Exemplar {
     // Timestamp
 
-    pub fn clear_timestamp_ms(&mut self) {
-        self.timestamp_ms = ::std::option::Option::None;
+    pub fn clear_timestamp(&mut self) {
+        self.timestamp = ::std::option::Option::None;
     }
 
     pub fn has_timestamp_ms(&self) -> bool {
-        self.timestamp_ms.is_some()
+        self.timestamp.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_timestamp_ms(&mut self, v: i64) {
-        self.timestamp_ms = ::std::option::Option::Some(v);
+    pub fn set_timestamp(&mut self, v: f64) {
+        self.timestamp = ::std::option::Option::Some(v);
     }
 
-    pub fn get_timestamp_ms(&self) -> i64 {
-        self.timestamp_ms.unwrap_or(0)
+    pub fn get_timestamp(&self) -> f64 {
+        self.timestamp.unwrap_or(0.0)
     }
 
     // Labels
