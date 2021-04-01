@@ -2,6 +2,17 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+// OpenMetrics require unix epoch timestamps
+// https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#timestamps-2
+pub fn epoch_timestamp() -> f64 {
+    use std::time::SystemTime;
+    let d = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
+    let nanos = f64::from(d.subsec_nanos()) / 1e9;
+    d.as_secs() as f64 + nanos
+}
+
 /// Milliseconds since ANCHOR.
 static RECENT: AtomicU64 = AtomicU64::new(0);
 lazy_static! {

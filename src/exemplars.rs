@@ -1,15 +1,6 @@
 use crate::proto::LabelPair;
-//use crate::timer;
+use crate::timer;
 use std::collections::HashMap;
-
-// OpenMetrics require unix epoch timestamps
-// https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#timestamps-2
-fn epoch_timestamp() -> f64 {
-    use std::time::SystemTime;
-    let d = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
-    let nanos = f64::from(d.subsec_nanos()) / 1e9;
-    d.as_secs() as f64 + nanos
-}
 
 /// An OpenMetrics Exemplar
 ///
@@ -24,11 +15,10 @@ pub struct Exemplar {
 impl Exemplar {
     /// Create an ['Exemplar'] with value
     pub fn new(val: f64) -> Self {
-        println!("making exemplar of you {}", epoch_timestamp());
         Self {
             value: val,
             labels: vec![],
-            timestamp_epoch: epoch_timestamp(),
+            timestamp_epoch: timer::epoch_timestamp(),
         }
     }
 
@@ -43,11 +33,10 @@ impl Exemplar {
             label_pairs.push(label_pair);
         }
 
-        println!("making exemplar of you2 {}", epoch_timestamp());
         Self {
             value: val,
             labels: label_pairs,
-            timestamp_epoch: epoch_timestamp()
+            timestamp_epoch: timer::epoch_timestamp(),
         }
     }
 }
