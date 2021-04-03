@@ -1211,6 +1211,25 @@ impl From<exemplars::Exemplar> for Exemplar {
 }
 
 impl Exemplar {
+    // Value
+
+    pub fn clear_value(&mut self) {
+        self.value = ::std::option::Option::None;
+    }
+
+    pub fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_value(&mut self, v: f64) {
+        self.value = ::std::option::Option::Some(v);
+    }
+
+    pub fn get_value(&self) -> f64 {
+        self.value.unwrap_or(0.)
+    }
+
     // Timestamp
 
     pub fn clear_timestamp(&mut self) {

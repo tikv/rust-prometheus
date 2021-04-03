@@ -209,6 +209,8 @@ fn write_exemplar(writer: &mut dyn Write, ex: &proto::Exemplar) -> Result<()> {
     // foo_bucket{le="10"} 17 # {trace_id="oHg5SJYRHA0"} 9.8 1520879607.789
     writer.write_all(b" # ")?;
     label_pairs_to_text(&ex.get_label(), None, writer)?;
+    writer.write_all(b" ")?;
+    writer.write_all(ex.get_value().to_string().as_bytes())?;
     let timestamp = ex.get_timestamp();
     if timestamp != 0.0 {
         writer.write_all(b" ")?;
