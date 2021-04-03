@@ -7,6 +7,7 @@ description = "Static metric helper utilities for rust-prometheus."
 repository = "https://github.com/tikv/rust-prometheus"
 homepage = "https://github.com/tikv/rust-prometheus"
 documentation = "https://docs.rs/prometheus-static-metric"
+edition = "2018"
 
 [lib]
 proc-macro = true

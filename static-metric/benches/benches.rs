@@ -1,11 +1,8 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-extern crate criterion;
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use criterion::{criterion_group, criterion_main, Criterion};
 use prometheus::{IntCounter, IntCounterVec, Opts};
+
 use prometheus_static_metric::make_static_metric;
 
 /// Single `IntCounter` performance.

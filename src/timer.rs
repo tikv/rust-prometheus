@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
+use lazy_static::lazy_static;
 
 // OpenMetrics require unix epoch timestamps
 // https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#timestamps-2

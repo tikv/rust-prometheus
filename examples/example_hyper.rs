@@ -1,16 +1,14 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate prometheus;
-
 use hyper::{
     header::CONTENT_TYPE,
     service::{make_service_fn, service_fn},
     Body, Request, Response, Server,
 };
 use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
+
+use lazy_static::lazy_static;
+use prometheus::{labels, opts, register_counter, register_gauge, register_histogram_vec};
 
 lazy_static! {
     static ref HTTP_COUNTER: Counter = register_counter!(opts!(

@@ -1,8 +1,5 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-extern crate prometheus;
-extern crate prometheus_static_metric;
-
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {
