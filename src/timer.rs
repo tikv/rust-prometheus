@@ -10,7 +10,7 @@ pub fn epoch_timestamp() -> f64 {
     let d = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default();
-    let nanos = f64::from(d.subsec_nanos()) / 1e9;
+    let nanos = f64::from(d.subsec_millis()) / 1e3;
     d.as_secs() as f64 + nanos
 }
 
