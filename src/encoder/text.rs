@@ -211,11 +211,11 @@ fn write_exemplar(writer: &mut dyn Write, ex: &proto::Exemplar) -> Result<()> {
     label_pairs_to_text(&ex.get_label(), None, writer)?;
     writer.write_all(b" ")?;
     writer.write_all(ex.get_value().to_string().as_bytes())?;
-    let timestamp = ex.get_timestamp();
-    if timestamp != 0.0 {
-        writer.write_all(b" ")?;
-        writer.write_all(timestamp.to_string().as_bytes())?;
-    }
+    //let timestamp = ex.get_timestamp();
+    //if timestamp != 0.0 {
+    //    writer.write_all(b" ")?;
+    //    writer.write_all(timestamp.to_string().as_bytes())?;
+    //}
     Ok(())
 }
 
