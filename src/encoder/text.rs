@@ -156,6 +156,7 @@ impl Encoder for TextEncoder {
                 }
             }
         }
+        writer.write_all(b"# EOF\n")?;
 
         Ok(())
     }
