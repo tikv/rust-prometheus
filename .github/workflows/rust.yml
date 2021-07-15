@@ -9,7 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # Pinned toolchain for linting and benchmarks
-  ACTIONS_LINTS_TOOLCHAIN: 1.47.0
+  ACTIONS_LINTS_TOOLCHAIN: 1.53.0
 
 jobs:
   linting:
@@ -27,7 +27,7 @@ jobs:
       - name: cargo fmt (check)
         run: cargo fmt --all -- --check -l
       - name: cargo clippy
-        run: cargo clippy --all -- -D clippy
+        run: cargo clippy --all -- -D clippy::all
       - name: cargo package
         run : cargo package && cargo package --manifest-path static-metric/Cargo.toml
   criterion:
