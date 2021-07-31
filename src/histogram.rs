@@ -517,7 +517,8 @@ impl Instant {
 
     pub fn elapsed(&self) -> Duration {
         match &*self {
-            Instant::Monotonic(i) => i.elapsed(),
+            // We use `saturating_duration_since` to avoid panics caused by non-monotonic clocks.
+            Instant::Monotonic(i) => StdInstant::now().saturating_duration_since(*i),
 
             // It is different from `Instant::Monotonic`, the resolution here is millisecond.
             // The processors in an SMP system do not start all at exactly the same time
