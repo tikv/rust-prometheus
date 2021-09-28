@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.13.0
+
+- Bug fix: Avoid panics from `Instant::elapsed` (#406)
+
+- Improvement: Allow trailing comma on macros (#390)
+
+- Improvement: Add macros for custom registry (#396)
+
+- Improvement: Export thread count from `process_collector` (#401)
+
+- Improvement: Add convenience TextEncoder functions to encode directly to string (#402)
+
+- Internal change: Clean up the use of macro_use and extern crate (#398)
+
+- Internal change: Update dependencies
+
 ## 0.12.0
 
  - Improvement: Fix format string in panic!() calls (#391)
