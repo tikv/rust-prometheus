@@ -162,7 +162,14 @@ macro_rules! histogram_opts {
 
     ($NAME:expr, $HELP:expr, $BUCKETS:expr, $CONST_LABELS:expr $(,)?) => {{
         let hopts = histogram_opts!($NAME, $HELP, $BUCKETS);
-        hopts.const_labels($CONST_LABELS)
+        
+        let lbs = HashMap::<String, String>::new();
+        $(
+            let mut lbs = lbs;
+            lbs.extend($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
+        )*
+
+        hopts.const_labels(lbs)
     }};
 }
 
