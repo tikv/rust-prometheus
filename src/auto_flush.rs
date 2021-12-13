@@ -134,7 +134,7 @@ impl<T: 'static + MayFlush, D: HistogramDelegator<T>> AFLocalHistogram<T, D> {
 }
 
 impl<M: 'static + MayFlush, D: HistogramDelegator<M>> AFLocalHistogram<M, D> {
-    /// Add a single observation to the [`Histogram`](::Histogram).
+    /// Add a single observation to the [`Histogram`](crate::Histogram).
     pub fn observe(&self, v: f64) {
         self.delegator.get_root_metric().with(|m| {
             let local = self.delegator.get_local(m);
@@ -175,7 +175,7 @@ impl<M: 'static + MayFlush, D: HistogramDelegator<M>> AFLocalHistogram<M, D> {
             .with(|m| self.delegator.get_local(m).clear())
     }
 
-    /// Flush the local metrics to the [`Histogram`](::Histogram) metric.
+    /// Flush the local metrics to the [`Histogram`](crate::Histogram) metric.
     pub fn flush(&self) {
         self.delegator
             .get_root_metric()
