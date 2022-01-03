@@ -47,7 +47,7 @@ fn test_labels_without_trailing_comma() {
     assert_eq!(*(labels.get("test").unwrap()), "hello");
 }
 
-/// Create an [`Opts`].
+/// Create an [`Opts`][crate::Opts].
 ///
 /// # Examples
 ///
@@ -118,7 +118,7 @@ fn test_opts_trailing_comma() {
     assert_eq!(opts.const_labels.get("ans").unwrap(), "42");
 }
 
-/// Create a [`HistogramOpts`].
+/// Create a [`HistogramOpts`][crate::HistogramOpts].
 ///
 /// # Examples
 ///
@@ -195,7 +195,7 @@ fn test_histogram_opts_trailing_comma() {
     assert_eq!(opts.common_opts.const_labels.get("key").unwrap(), "value");
 }
 
-/// Create a [`Counter`] and registers to default registry.
+/// Create a [`Counter`][crate::Counter] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -236,7 +236,7 @@ fn test_register_counter_trailing_comma() {
     assert!(res2.is_ok());
 }
 
-/// Create a [`Counter`] and registers to a custom registry.
+/// Create a [`Counter`][crate::Counter] and registers to a custom registry.
 ///
 /// # Examples
 ///
@@ -288,7 +288,7 @@ fn test_register_counter_with_registry_trailing_comma() {
     assert!(res2.is_ok());
 }
 
-/// Create an [`IntCounter`] and registers to default registry.
+/// Create an [`IntCounter`][crate::IntCounter] and registers to default registry.
 ///
 /// View docs of `register_counter` for examples.
 #[macro_export(local_inner_macros)]
@@ -302,7 +302,7 @@ macro_rules! register_int_counter {
     }};
 }
 
-/// Create an [`IntCounter`] and registers to a custom registry.
+/// Create an [`IntCounter`][crate::IntCounter] and registers to a custom registry.
 ///
 /// View docs of `register_counter_with_registry` for examples.
 #[macro_export(local_inner_macros)]
@@ -372,7 +372,7 @@ macro_rules! __register_counter_vec {
     }};
 }
 
-/// Create a [`CounterVec`] and registers to default registry.
+/// Create a [`CounterVec`][crate::CounterVec] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -408,7 +408,7 @@ fn test_register_counter_vec_trailing_comma() {
     assert!(counter_vec.is_ok());
 }
 
-/// Create a [`CounterVec`] and registers to a custom registry.
+/// Create a [`CounterVec`][crate::CounterVec] and registers to a custom registry.
 ///
 /// # Examples
 ///
@@ -462,7 +462,7 @@ fn test_register_counter_vec_with_registry_trailing_comma() {
     assert!(counter_vec.is_ok());
 }
 
-/// Create an [`IntCounterVec`] and registers to default registry.
+/// Create an [`IntCounterVec`][crate::IntCounterVec] and registers to default registry.
 ///
 /// View docs of `register_counter_vec` for examples.
 #[macro_export(local_inner_macros)]
@@ -476,7 +476,7 @@ macro_rules! register_int_counter_vec {
     }};
 }
 
-/// Create an [`IntCounterVec`] and registers to a custom registry.
+/// Create an [`IntCounterVec`][crate::IntCounterVec] and registers to a custom registry.
 ///
 /// View docs of `register_counter_vec_with_registry` for examples.
 #[macro_export(local_inner_macros)]
@@ -552,7 +552,7 @@ macro_rules! __register_gauge {
     }};
 }
 
-/// Create a [`Gauge`] and registers to default registry.
+/// Create a [`Gauge`][crate::Gauge] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -588,7 +588,7 @@ fn test_register_gauge_trailing_comma() {
     assert!(res2.is_ok());
 }
 
-/// Create a [`Gauge`] and registers to a custom registry.
+/// Create a [`Gauge`][crate::Gauge] and registers to a custom registry.
 ///
 /// # Examples
 ///
@@ -637,7 +637,7 @@ fn test_register_gauge_with_registry_trailing_comma() {
     assert!(res2.is_ok());
 }
 
-/// Create an [`IntGauge`] and registers to default registry.
+/// Create an [`IntGauge`][crate::IntGauge] and registers to default registry.
 ///
 /// View docs of `register_gauge` for examples.
 #[macro_export(local_inner_macros)]
@@ -651,7 +651,7 @@ macro_rules! register_int_gauge {
     }};
 }
 
-/// Create an [`IntGauge`] and registers to a custom registry.
+/// Create an [`IntGauge`][crate::IntGauge] and registers to a custom registry.
 ///
 /// View docs of `register_gauge_with_registry` for examples.
 #[macro_export(local_inner_macros)]
@@ -719,7 +719,7 @@ fn test_register_int_gauge() {
     assert!(res.is_ok());
 }
 
-/// Create a [`GaugeVec`] and registers to default registry.
+/// Create a [`GaugeVec`][crate::GaugeVec] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -755,7 +755,7 @@ fn test_register_gauge_vec_trailing_comma() {
     assert!(gauge_vec.is_ok());
 }
 
-/// Create a [`GaugeVec`] and registers to a custom registry.
+/// Create a [`GaugeVec`][crate::GaugeVec] and registers to a custom registry.
 ///
 /// # Examples
 ///
@@ -809,7 +809,7 @@ fn test_register_gauge_vec_with_registry_trailing_comma() {
     assert!(gauge_vec.is_ok());
 }
 
-/// Create an [`IntGaugeVec`] and registers to default registry.
+/// Create an [`IntGaugeVec`][crate::IntGaugeVec] and registers to default registry.
 ///
 /// View docs of `register_gauge_vec` for examples.
 #[macro_export(local_inner_macros)]
@@ -823,7 +823,7 @@ macro_rules! register_int_gauge_vec {
     }};
 }
 
-/// Create an [`IntGaugeVec`] and registers to a custom registry.
+/// Create an [`IntGaugeVec`][crate::IntGaugeVec] and registers to a custom registry.
 ///
 /// View docs of `register_gauge_vec_with_registry` for examples.
 #[macro_export(local_inner_macros)]
@@ -885,7 +885,7 @@ fn test_register_int_gauge_vec() {
     assert!(res.is_ok());
 }
 
-/// Create a [`Histogram`] and registers to default registry.
+/// Create a [`Histogram`][crate::Histogram] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -934,7 +934,7 @@ fn test_register_histogram_trailing_comma() {
     assert!(res3.is_ok());
 }
 
-/// Create a [`Histogram`] and registers to a custom registry.
+/// Create a [`Histogram`][crate::Histogram] and registers to a custom registry.
 ///
 /// # Examples
 ///
@@ -1004,7 +1004,7 @@ fn test_register_histogram_with_registry_trailing_comma() {
     assert!(res3.is_ok());
 }
 
-/// Create a [`HistogramVec`] and registers to default registry.
+/// Create a [`HistogramVec`][crate::HistogramVec] and registers to default registry.
 ///
 /// # Examples
 ///
@@ -1060,7 +1060,7 @@ fn test_register_histogram_vec_trailing_comma() {
     assert!(histogram_vec.is_ok());
 }
 
-/// Create a [`HistogramVec`] and registers to default registry.
+/// Create a [`HistogramVec`][crate::HistogramVec] and registers to default registry.
 ///
 /// # Examples
 ///
