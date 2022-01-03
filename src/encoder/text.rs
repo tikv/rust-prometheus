@@ -221,7 +221,7 @@ fn label_pairs_to_text(
     let mut separator = "{";
     for lp in pairs {
         writer.write_all(separator)?;
-        writer.write_all(&lp.get_name())?;
+        writer.write_all(lp.get_name())?;
         writer.write_all("=\"")?;
         writer.write_all(&escape_string(lp.get_value(), true))?;
         writer.write_all("\"")?;
