@@ -15,6 +15,7 @@ use crate::proto;
 use cfg_if::cfg_if;
 use lazy_static::lazy_static;
 
+#[derive(Default)]
 struct RegistryCore {
     pub collectors_by_id: HashMap<u64, Box<dyn Collector>>,
     pub dim_hashes_by_name: HashMap<String, u64>,
@@ -216,31 +217,15 @@ impl RegistryCore {
 
 /// A struct for registering Prometheus collectors, collecting their metrics, and gathering
 /// them into `MetricFamilies` for exposition.
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Registry {
     r: Arc<RwLock<RegistryCore>>,
-}
-
-impl Default for Registry {
-    fn default() -> Registry {
-        let r = RegistryCore {
-            collectors_by_id: HashMap::new(),
-            dim_hashes_by_name: HashMap::new(),
-            desc_ids: HashSet::new(),
-            labels: None,
-            prefix: None,
-        };
-
-        Registry {
-            r: Arc::new(RwLock::new(r)),
-        }
-    }
 }
 
 impl Registry {
     /// `new` creates a Registry.
     pub fn new() -> Registry {
-        Registry::default()
+        Default::default()
     }
 
     /// Create a new registry, with optional custom prefix and labels.
