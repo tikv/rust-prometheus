@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.1
+
+- Improvement: ProcessCollector use IntGauge to provide better performance (#430)
+
+- Bug fix: Fix re-export of TEXT_FORMAT to not require protobuf (#416)
+
+- Bug fix: Fix doc for encode (#433)
+
+- Bug fix: Fix broken doc links (#426)
+
+- Bug fix: Fix crates.io badge (#436)
+
+- Internal change: Derive default instead of obvious manual impl (#437)
+
+- Internal change: Remove needless borrow (#427)
+
+- Internal change: Update dependencies
+
 ## 0.13.0
 
 - Bug fix: Avoid panics from `Instant::elapsed` (#406)
