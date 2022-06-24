@@ -190,14 +190,14 @@ lazy_static! {
     static ref CLK_TCK: i64 = {
         unsafe {
             libc::sysconf(libc::_SC_CLK_TCK)
-        }
+        }.into()
     };
 
     // getconf PAGESIZE
     static ref PAGESIZE: i64 = {
         unsafe {
             libc::sysconf(libc::_SC_PAGESIZE)
-        }
+        }.into()
     };
 }
 
