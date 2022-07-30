@@ -9,21 +9,23 @@ use std::time;
 use getopts::Options;
 use prometheus::{Counter, Histogram};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::{labels, register_counter, register_histogram};
 
-lazy_static! {
-    static ref PUSH_COUNTER: Counter = register_counter!(
+static PUSH_COUNTER: Lazy<Counter> = Lazy::new(|| {
+    register_counter!(
         "example_push_total",
         "Total number of prometheus client pushed."
     )
-    .unwrap();
-    static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
+    .unwrap()
+});
+static PUSH_REQ_HISTOGRAM: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
         "example_push_request_duration_seconds",
         "The push request latencies in seconds."
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 #[cfg(feature = "push")]
 fn main() {
@@ -47,7 +49,9 @@ fn main() {
     }
     println!("Pushing, please start Pushgateway first.");
 
-    let address = matches.opt_str("A").unwrap_or_else(|| "127.0.0.1:9091".to_owned());
+    let address = matches
+        .opt_str("A")
+        .unwrap_or_else(|| "127.0.0.1:9091".to_owned());
     for _ in 0..5 {
         thread::sleep(time::Duration::from_secs(2));
         PUSH_COUNTER.inc();

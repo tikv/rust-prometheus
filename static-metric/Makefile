@@ -29,4 +29,4 @@ examples:
 	cargo build --example metric_enum
 	cargo build --example register_integration
 	cargo build --example simple
-	cargo build --example with_lazy_static
+	cargo build --example with_once_cell

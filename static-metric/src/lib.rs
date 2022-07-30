@@ -8,13 +8,11 @@ This is useful since it reduces the amount of branching and processing needed at
 ```rust
 use prometheus::{self, IntCounter, TextEncoder, Encoder};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::register_int_counter;
 
-lazy_static! {
-    static ref HIGH_FIVE_COUNTER: IntCounter =
-        register_int_counter!("highfives", "Number of high fives recieved").unwrap();
-}
+static HIGH_FIVE_COUNTER: Lazy<IntCounter> =
+    Lazy::new(|| register_int_counter!("highfives", "Number of high fives recieved").unwrap());
 
 HIGH_FIVE_COUNTER.inc();
 assert_eq!(HIGH_FIVE_COUNTER.get(), 1);

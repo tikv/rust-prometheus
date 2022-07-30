@@ -13,7 +13,7 @@ use crate::metrics::Collector;
 use crate::proto;
 
 use cfg_if::cfg_if;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
 #[derive(Default)]
 struct RegistryCore {
@@ -293,20 +293,17 @@ cfg_if! {
 }
 
 // Default registry for rust-prometheus.
-lazy_static! {
-    static ref DEFAULT_REGISTRY: Registry = {
-        let reg = Registry::default();
+static DEFAULT_REGISTRY: Lazy<Registry> = Lazy::new(|| {
+    let reg = Registry::default();
 
-        // Register a default process collector.
-        register_default_process_collector(&reg).unwrap();
+    // Register a default process collector.
+    register_default_process_collector(&reg).unwrap();
 
-        reg
-    };
-}
+    reg
+});
 
 /// Default registry (global static).
 pub fn default_registry() -> &'static Registry {
-    lazy_static::initialize(&DEFAULT_REGISTRY);
     &DEFAULT_REGISTRY
 }
 

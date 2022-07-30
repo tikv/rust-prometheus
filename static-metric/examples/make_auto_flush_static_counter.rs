@@ -7,7 +7,7 @@ Use metric enums to reuse possible values of a label.
 */
 use prometheus::*;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus_static_metric::{auto_flush_from, make_auto_flush_static_metric};
 
 make_auto_flush_static_metric! {
@@ -34,31 +34,28 @@ make_auto_flush_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_COUNTER_VEC: IntCounterVec =
-        register_int_counter_vec ! (
-            "http_requests_total",
-            "Number of HTTP requests.",
-            & ["product", "method", "version"]    // it doesn't matter for the label order
-        ).unwrap();
-}
+static HTTP_COUNTER_VEC: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "http_requests_total",
+        "Number of HTTP requests.",
+        &["product", "method", "version"] // it doesn't matter for the label order
+    )
+    .unwrap()
+});
 
 // Macro expanded code of auto_flush_from!
-// lazy_static! {
-//     pub static ref TLS_HTTP_COUNTER: Lhrs = {
-//         thread_local! {
-//             pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_COUNTER_VEC);
-//         }
-//         Lhrs::from(&TLS_HTTP_COUNTER_INNER)
-//     };
-// }
+// static TLS_HTTP_COUNTER: Lazy<Lhrs> = Lazy::new(|| {
+//     thread_local! {
+//         pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_COUNTER_VEC);
+//     }
+//     Lhrs::from(&TLS_HTTP_COUNTER_INNER)
+// });
 //
 
-lazy_static! {
-    // You can also use default flush duration which is 1 second.
-    // pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs);
-    pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs, std::time::Duration::from_secs(1));
-}
+// You can also use default flush duration which is 1 second.
+// pub static ref TLS_HTTP_COUNTER: Lhrs = auto_flush_from!(HTTP_COUNTER_VEC, Lhrs);
+static TLS_HTTP_COUNTER: Lazy<Lhrs> =
+    Lazy::new(|| auto_flush_from!(HTTP_COUNTER_VEC, Lhrs, std::time::Duration::from_secs(1)));
 
 fn main() {
     TLS_HTTP_COUNTER.foo.post.http1.inc();
@@ -101,7 +98,7 @@ use std::mem;
 use std::mem::MaybeUninit;
 use std::thread::LocalKey;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
@@ -367,22 +364,20 @@ impl Lhrs {
     }
 }
 
-lazy_static! {
-pub static ref HTTP_COUNTER_VEC: IntCounterVec =
+static HTTP_COUNTER_VEC: Lazy<IntCounterVec> = Lazy::new(|| {
 register_int_counter_vec ! (
 "http_requests_total",
 "Number of HTTP requests.",
 & ["product", "method", "version"]    // it doesn't matter for the label order
-).unwrap();
-}
+).unwrap()
+});
 
 thread_local! {
 pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_COUNTER_VEC);
 }
 
-lazy_static! {
-    pub static ref TLS_HTTP_COUNTER: Lhrs = Lhrs::from(&TLS_HTTP_COUNTER_INNER);
-}
+static TLS_HTTP_COUNTER: Lazy<Lhrs> = Lazy::new(||
+    Lazy::new(|| Lhrs::from(&TLS_HTTP_COUNTER_INNER));
 
 fn main() {
     TLS_HTTP_COUNTER.foo.post.http1.inc();
