@@ -431,7 +431,7 @@ test_histogram_count{a="1"} 1
 
         let mut writer = Vec::<u8>::new();
         let encoder = TextEncoder::new();
-        let res = encoder.encode(&vec![metric_family], &mut writer);
+        let res = encoder.encode(&[metric_family], &mut writer);
         assert!(res.is_ok());
 
         let ans = r##"# HELP test_summary This is a test summary statistic

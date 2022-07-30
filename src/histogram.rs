@@ -1413,7 +1413,7 @@ mod tests {
     fn test_histogram_local() {
         let buckets = vec![1.0, 2.0, 3.0];
         let opts = HistogramOpts::new("test_histogram_local", "test histogram local help")
-            .buckets(buckets.clone());
+            .buckets(buckets);
         let histogram = Histogram::with_opts(opts).unwrap();
         let local = histogram.local();
 

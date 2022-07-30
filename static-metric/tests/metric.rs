@@ -44,7 +44,7 @@ make_static_metric! {
 fn get_labels(counter: &Counter) -> Vec<String> {
     counter.collect()[0].get_metric()[0]
         .get_label()
-        .into_iter()
+        .iter()
         .map(|label| label.get_value().to_string())
         .collect()
 }
@@ -96,11 +96,11 @@ fn test_try_get() {
         vec!["get", "bar"]
     );
     assert_eq!(
-        get_labels(&metric.get.try_get("bar").unwrap()),
+        get_labels(metric.get.try_get("bar").unwrap()),
         vec!["get", "bar"]
     );
     assert_eq!(
-        get_labels(&metric.try_get("get").unwrap().try_get("bar").unwrap()),
+        get_labels(metric.try_get("get").unwrap().try_get("bar").unwrap()),
         vec!["get", "bar"]
     );
     assert!(metric.try_get("get_foo").is_none());
@@ -116,12 +116,12 @@ fn test_try_get_with_field_value() {
         vec!["get_name", "bar_name"]
     );
     assert_eq!(
-        get_labels(&metric.get.try_get("bar_name").unwrap()),
+        get_labels(metric.get.try_get("bar_name").unwrap()),
         vec!["get_name", "bar_name"]
     );
     assert_eq!(
         get_labels(
-            &metric
+            metric
                 .try_get("get_name")
                 .unwrap()
                 .try_get("bar_name")

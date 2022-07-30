@@ -47,7 +47,7 @@ fn main() {
     }
     println!("Pushing, please start Pushgateway first.");
 
-    let address = matches.opt_str("A").unwrap_or("127.0.0.1:9091".to_owned());
+    let address = matches.opt_str("A").unwrap_or_else(|| "127.0.0.1:9091".to_owned());
     for _ in 0..5 {
         thread::sleep(time::Duration::from_secs(2));
         PUSH_COUNTER.inc();
