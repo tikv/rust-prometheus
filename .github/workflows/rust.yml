@@ -9,7 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # Pinned toolchain for linting and benchmarks
-  ACTIONS_LINTS_TOOLCHAIN: 1.53.0
+  ACTIONS_LINTS_TOOLCHAIN: 1.63.0
   EXTRA_FEATURES: "protobuf push process"
 
 jobs:
@@ -72,7 +72,7 @@ jobs:
       - name: cargo fmt (check)
         run: cargo fmt --all -- --check -l
       - name: cargo clippy
-        run: cargo clippy --all -- -D clippy::all
+        run: cargo clippy --all
   criterion:
     name: "Benchmarks (criterion)"
     runs-on: ubuntu-latest

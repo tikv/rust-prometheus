@@ -196,7 +196,7 @@ impl AutoFlushTokensBuilder {
 
         let offset_fetchers = builder_contexts
             .iter()
-            .map(|m| offset_fetcher(m))
+            .map(offset_fetcher)
             .collect::<Vec<Tokens>>();
 
         let delegator_tokens = if metric_type.to_string().contains("Counter") {

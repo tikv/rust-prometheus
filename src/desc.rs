@@ -27,7 +27,7 @@ fn is_valid_ident<F: FnMut(char) -> bool>(input: &str, mut charset_validator: F)
     zeroth
         .and_then(|zeroth| {
             if charset_validator(zeroth) {
-                Some(chars.all(|c| charset_validator(c) || c.is_digit(10)))
+                Some(chars.all(|c| charset_validator(c) || c.is_ascii_digit()))
             } else {
                 None
             }
