@@ -10,6 +10,7 @@ use syn::*;
 
 /// Matches `label_enum` keyword.
 struct LabelEnum {
+    #[allow(dead_code)]
     pub span: Span,
 }
 

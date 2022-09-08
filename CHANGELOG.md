@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.2
+
+- Bug fix: Fix compilation on 32-bit targets (#446)
+
 ## 0.13.1
 
 - Improvement: ProcessCollector use IntGauge to provide better performance (#430)

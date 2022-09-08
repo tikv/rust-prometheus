@@ -516,7 +516,7 @@ impl Instant {
     }
 
     pub fn elapsed(&self) -> Duration {
-        match &*self {
+        match self {
             // We use `saturating_duration_since` to avoid panics caused by non-monotonic clocks.
             Instant::Monotonic(i) => StdInstant::now().saturating_duration_since(*i),
 
