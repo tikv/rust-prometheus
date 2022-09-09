@@ -99,8 +99,8 @@ impl ProcessCollector {
         .unwrap();
         // proc_start_time init once because it is immutable
         if let Ok(boot_time) = procfs::boot_time_secs() {
-            if let Ok(p) = procfs::process::Process::myself() {
-                start_time.set(p.stat.starttime as i64 / *CLK_TCK + boot_time as i64);
+            if let Ok(stat) = procfs::process::Process::myself().and_then(|p| p.stat()) {
+                start_time.set(stat.starttime as i64 / *CLK_TCK + boot_time as i64);
             }
         }
         descs.extend(start_time.desc().into_iter().cloned());
@@ -156,25 +156,27 @@ impl Collector for ProcessCollector {
             }
         }
 
-        // memory
-        self.vsize.set(p.stat.vsize as i64);
-        self.rss.set(p.stat.rss * *PAGESIZE);
+        let mut cpu_total_mfs = None;
+        if let Ok(stat) = p.stat() {
+            // memory
+            self.vsize.set(stat.vsize as i64);
+            self.rss.set((stat.rss as i64) * *PAGESIZE);
 
-        // cpu
-        let cpu_total_mfs = {
-            let total = (p.stat.utime + p.stat.stime) / *CLK_TCK as u64;
+            // cpu
+            let total = (stat.utime + stat.stime) / *CLK_TCK as u64;
             let past = self.cpu_total.get();
             self.cpu_total.inc_by(total - past);
+            cpu_total_mfs = Some(self.cpu_total.collect());
 
-            self.cpu_total.collect()
-        };
-
-        // threads
-        self.threads.set(p.stat.num_threads);
+            // threads
+            self.threads.set(stat.num_threads);
+        }
 
         // collect MetricFamilys.
         let mut mfs = Vec::with_capacity(METRICS_NUMBER);
-        mfs.extend(cpu_total_mfs);
+        if let Some(cpu) = cpu_total_mfs {
+            mfs.extend(cpu);
+        }
         mfs.extend(self.open_fds.collect());
         mfs.extend(self.max_fds.collect());
         mfs.extend(self.vsize.collect());
