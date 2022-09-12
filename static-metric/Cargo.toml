@@ -19,7 +19,7 @@ quote = "1.0"
 lazy_static = "1.4"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.4"
 prometheus = { path = "../" }
 
 [features]
