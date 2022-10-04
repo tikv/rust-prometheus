@@ -1,7 +1,9 @@
 // Copyright 2014 The Prometheus Authors
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-use portable_atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
+use portable_atomic::{
+    AtomicF64 as StdAtomicF64, AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering,
+};
 use std::cmp::*;
 use std::f64;
 use std::ops::*;
@@ -73,17 +75,7 @@ pub trait Atomic: Send + Sync {
 /// A atomic float.
 #[derive(Debug)]
 pub struct AtomicF64 {
-    inner: StdAtomicU64,
-}
-
-#[inline]
-fn u64_to_f64(val: u64) -> f64 {
-    f64::from_bits(val)
-}
-
-#[inline]
-fn f64_to_u64(val: f64) -> u64 {
-    f64::to_bits(val)
+    inner: StdAtomicF64,
 }
 
 impl Atomic for AtomicF64 {
@@ -91,28 +83,28 @@ impl Atomic for AtomicF64 {
 
     fn new(val: Self::T) -> AtomicF64 {
         AtomicF64 {
-            inner: StdAtomicU64::new(f64_to_u64(val)),
+            inner: StdAtomicF64::new(val),
         }
     }
 
     #[inline]
     fn set(&self, val: Self::T) {
-        self.inner.store(f64_to_u64(val), Ordering::Relaxed);
+        self.inner.store(val, Ordering::Relaxed);
     }
 
     #[inline]
     fn get(&self) -> Self::T {
-        u64_to_f64(self.inner.load(Ordering::Relaxed))
+        self.inner.load(Ordering::Relaxed)
     }
 
     #[inline]
     fn inc_by(&self, delta: Self::T) {
         loop {
             let current = self.inner.load(Ordering::Acquire);
-            let new = u64_to_f64(current) + delta;
+            let new = current + delta;
             let result = self.inner.compare_exchange_weak(
                 current,
-                f64_to_u64(new),
+                new,
                 Ordering::Release,
                 Ordering::Relaxed,
             );
@@ -131,7 +123,7 @@ impl Atomic for AtomicF64 {
 impl AtomicF64 {
     /// Store the value, returning the previous value.
     pub fn swap(&self, val: f64, ordering: Ordering) -> f64 {
-        u64_to_f64(self.inner.swap(f64_to_u64(val), ordering))
+        self.inner.swap(val, ordering)
     }
 }
 
