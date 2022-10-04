@@ -1,10 +1,10 @@
 // Copyright 2014 The Prometheus Authors
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
+use portable_atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
 use std::cmp::*;
 use std::f64;
 use std::ops::*;
-use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
 
 /// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
 /// [`Counter`](crate::Counter) and [`IntCounter`](crate::Counter).

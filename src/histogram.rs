@@ -1,13 +1,11 @@
 // Copyright 2014 The Prometheus Authors
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
+use portable_atomic::{AtomicU64 as StdAtomicU64, Ordering};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
-use std::sync::{
-    atomic::{AtomicU64 as StdAtomicU64, Ordering},
-    Arc, Mutex,
-};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant as StdInstant};
 
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
@@ -1489,7 +1487,7 @@ mod tests {
     /// all histogram invariants.
     #[test]
     fn atomic_observe_across_collects() {
-        let done = Arc::new(std::sync::atomic::AtomicBool::default());
+        let done = Arc::new(portable_atomic::AtomicBool::default());
         let histogram =
             Histogram::with_opts(HistogramOpts::new("test_name", "test help").buckets(vec![1.0]))
                 .unwrap();
@@ -1497,7 +1495,7 @@ mod tests {
         let done_clone = done.clone();
         let histogram_clone = histogram.clone();
         let observing_thread = std::thread::spawn(move || loop {
-            if done_clone.load(std::sync::atomic::Ordering::Relaxed) {
+            if done_clone.load(portable_atomic::Ordering::Relaxed) {
                 break;
             }
 
@@ -1531,7 +1529,7 @@ mod tests {
             }
         }
 
-        done.store(true, std::sync::atomic::Ordering::Relaxed);
+        done.store(true, portable_atomic::Ordering::Relaxed);
         observing_thread.join().unwrap();
 
         if sample_count != cumulative_count {
