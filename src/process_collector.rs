@@ -165,7 +165,10 @@ impl Collector for ProcessCollector {
             // cpu
             let total = (stat.utime + stat.stime) / *CLK_TCK as u64;
             let past = self.cpu_total.get();
-            self.cpu_total.inc_by(total - past);
+            // If two threads are collecting metrics at the same time,
+            // the cpu_total counter may have already been updated,
+            // and the subtraction may underflow.
+            self.cpu_total.inc_by(total.saturating_sub(past));
             cpu_total_mfs = Some(self.cpu_total.collect());
 
             // threads
