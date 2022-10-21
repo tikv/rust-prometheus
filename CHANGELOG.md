@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.3
+
+- Bug fix: Prevent ProcessCollector underflow with CPU time counter (#465)
+
+- Internal change: Update dependencies
+
 ## 0.13.2
 
 - Bug fix: Fix compilation on 32-bit targets (#446)
