@@ -10,6 +10,8 @@ env:
   CARGO_TERM_COLOR: always
   # Pinned toolchain for linting and benchmarks
   ACTIONS_LINTS_TOOLCHAIN: 1.63.0
+  # Minimum supported Rust version (MSRV)
+  ACTION_MSRV_TOOLCHAIN: 1.57.0
   EXTRA_FEATURES: "protobuf push process"
 
 jobs:
@@ -57,6 +59,21 @@ jobs:
         run: cargo build -p prometheus-static-metric --examples --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
       - name: cargo test (static-metric)
         run: cargo test -p prometheus-static-metric --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
+  build-msrv:
+    name: "Build, minimum toolchain"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env['ACTION_MSRV_TOOLCHAIN'] }}
+          default: true
+      - run: cargo build
+      - run: cargo test --no-run
+      - run: cargo build --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
+      - run: cargo test --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
   linting:
     name: "Lints, pinned toolchain"
     runs-on: ubuntu-latest
