@@ -157,6 +157,7 @@ mod encoder;
 mod errors;
 mod gauge;
 mod histogram;
+mod maximum_over_interval_gauge;
 mod metrics;
 mod pulling_gauge;
 #[cfg(feature = "push")]
@@ -219,6 +220,7 @@ pub use self::gauge::{Gauge, GaugeVec, IntGauge, IntGaugeVec};
 pub use self::histogram::DEFAULT_BUCKETS;
 pub use self::histogram::{exponential_buckets, linear_buckets};
 pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
+pub use self::maximum_over_interval_gauge::MaximumOverIntervalGauge;
 pub use self::metrics::Opts;
 pub use self::pulling_gauge::PullingGauge;
 #[cfg(feature = "push")]
