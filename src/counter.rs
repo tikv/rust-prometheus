@@ -81,6 +81,17 @@ impl<P: Atomic> GenericCounter<P> {
         self.v.set(P::T::from_i64(0))
     }
 
+    /// Synchronizes the counter, setting its value to the given one.
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug build if the value is < 0.
+    #[inline]
+    pub fn set(&self, v: P::T) {
+        debug_assert!(v >= P::T::from_i64(0));
+        self.v.set(v);
+    }
+
     /// Return a [`GenericLocalCounter`] for single thread usage.
     pub fn local(&self) -> GenericLocalCounter<P> {
         GenericLocalCounter::new(self.clone())
@@ -225,6 +236,17 @@ impl<P: Atomic> GenericLocalCounter<P> {
         *self.val.borrow_mut() = P::T::from_i64(0);
     }
 
+    /// Synchronizes the counter, setting its value to the given one.
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug build if the value is < 0.
+    #[inline]
+    pub fn set(&self, v: P::T) {
+        debug_assert!(v >= P::T::from_i64(0));
+        *self.val.borrow_mut() = v;
+    }
+
     /// Flush the local metrics to the [`Counter`].
     #[inline]
     pub fn flush(&self) {
@@ -338,6 +360,8 @@ mod tests {
         assert_eq!(counter.get() as u64, 1);
         counter.inc_by(42.0);
         assert_eq!(counter.get() as u64, 43);
+        counter.set(42.0);
+        assert_eq!(counter.get() as u64, 42);
 
         let mut mfs = counter.collect();
         assert_eq!(mfs.len(), 1);
@@ -345,7 +369,7 @@ mod tests {
         let mf = mfs.pop().unwrap();
         let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 2);
-        assert_eq!(m.get_counter().get_value() as u64, 43);
+        assert_eq!(m.get_counter().get_value() as u64, 42);
 
         counter.reset();
         assert_eq!(counter.get() as u64, 0);
@@ -358,6 +382,8 @@ mod tests {
         assert_eq!(counter.get(), 1);
         counter.inc_by(11);
         assert_eq!(counter.get(), 12);
+        counter.set(11);
+        assert_eq!(counter.get(), 11);
 
         let mut mfs = counter.collect();
         assert_eq!(mfs.len(), 1);
@@ -365,7 +391,7 @@ mod tests {
         let mf = mfs.pop().unwrap();
         let m = mf.get_metric().get(0).unwrap();
         assert_eq!(m.get_label().len(), 0);
-        assert_eq!(m.get_counter().get_value() as u64, 12);
+        assert_eq!(m.get_counter().get_value() as u64, 11);
 
         counter.reset();
         assert_eq!(counter.get() as u64, 0);
@@ -385,6 +411,17 @@ mod tests {
         local_counter1.flush();
         assert_eq!(local_counter1.get() as u64, 0);
         assert_eq!(counter.get() as u64, 1);
+        local_counter2.flush();
+        assert_eq!(counter.get() as u64, 2);
+
+        local_counter1.set(4.0);
+        local_counter2.set(2.0);
+        assert_eq!(local_counter1.get() as u64, 4);
+        assert_eq!(local_counter2.get() as u64, 2);
+        assert_eq!(counter.get() as u64, 0);
+        local_counter1.flush();
+        assert_eq!(local_counter1.get() as u64, 0);
+        assert_eq!(counter.get() as u64, 4);
         local_counter2.flush();
         assert_eq!(counter.get() as u64, 2);
 
@@ -411,6 +448,11 @@ mod tests {
         local_counter.flush();
         assert_eq!(local_counter.get(), 0);
         assert_eq!(counter.get(), 6);
+
+        local_counter.set(5);
+        local_counter.flush();
+        assert_eq!(local_counter.get(), 0);
+        assert_eq!(counter.get(), 5);
 
         local_counter.reset();
         counter.reset();
@@ -584,9 +626,26 @@ mod tests {
     #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "assertion failed")]
+    fn test_counter_negative_set() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        counter.set(-42.0);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "assertion failed")]
     fn test_local_counter_negative_inc() {
         let counter = Counter::new("foo", "bar").unwrap();
         let local = counter.local();
         local.inc_by(-42.0);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "assertion failed")]
+    fn test_local_counter_negative_set() {
+        let counter = Counter::new("foo", "bar").unwrap();
+        let local = counter.local();
+        local.set(-42.0);
     }
 }
