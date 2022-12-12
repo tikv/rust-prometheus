@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.4 (unreleased)
+
+- Add: `GenericCounter::set()` operation (#471)
+
 ## 0.13.3
 
 - Bug fix: Prevent ProcessCollector underflow with CPU time counter (#465)
