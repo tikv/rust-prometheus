@@ -16,6 +16,7 @@ use crate::vec::{MetricVec, MetricVecBuilder};
 
 /// The underlying implementation for [`Counter`] and [`IntCounter`].
 #[derive(Debug)]
+#[repr(transparent)]
 pub struct GenericCounter<P: Atomic> {
     v: Arc<Value<P>>,
 }
@@ -84,6 +85,36 @@ impl<P: Atomic> GenericCounter<P> {
     /// Return a [`GenericLocalCounter`] for single thread usage.
     pub fn local(&self) -> GenericLocalCounter<P> {
         GenericLocalCounter::new(self.clone())
+    }
+
+    /// Unwraps this counter into the inner [`Value`] representing it.
+    ///
+    /// # Safety
+    ///
+    /// This function is `unsafe`, because allows to bypass counter's semantics,
+    /// and so, the improper use of the returned [`Value`] may lead to this
+    /// counter behaving incorrectly.
+    ///
+    /// The caller must ensure that the returned [`Value`] will be used in
+    /// accordance with the counter's semantics.
+    #[inline]
+    pub unsafe fn into_arc_value(this: Self) -> Arc<Value<P>> {
+        this.v
+    }
+
+    /// Wraps the provided [`Value`] into a counter.
+    ///
+    /// # Safety
+    ///
+    /// This function is `unsafe`, because allows to bypass counter's semantics,
+    /// and so, specifying the improper [`Value`] may lead to the counter
+    /// behaving incorrectly.
+    ///
+    /// The caller must ensure that the provided [`Value`] withholds counter's
+    /// semantics.
+    #[inline]
+    pub unsafe fn from_arc_value(v: impl Into<Arc<Value<P>>>) -> Self {
+        Self { v: v.into() }
     }
 }
 
