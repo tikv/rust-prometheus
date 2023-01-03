@@ -30,6 +30,8 @@ jobs:
         run: cargo build
       - name: cargo test
         run: cargo test
+      - name: cargo test (no default features)
+        run: cargo test --no-default-features
       - name: cargo test (extra features)
         run: cargo test --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
       - name: cargo package
@@ -72,6 +74,8 @@ jobs:
           default: true
       - run: cargo build
       - run: cargo test --no-run
+      - run: cargo build --no-default-features
+      - run: cargo test --no-default-features --no-run
       - run: cargo build --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
       - run: cargo test --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
   linting:
@@ -90,6 +94,10 @@ jobs:
         run: cargo fmt --all -- --check -l
       - name: cargo clippy
         run: cargo clippy --all
+      - name: cargo clippy (no default features)
+        run: cargo clippy --all --no-default-features
+      - name: cargo clippy (extra features)
+        run: cargo clippy --all --no-default-features --features="${{ env['EXTRA_FEATURES'] }}"
   criterion:
     name: "Benchmarks (criterion)"
     runs-on: ubuntu-latest

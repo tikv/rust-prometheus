@@ -4,7 +4,6 @@ use crate::{
     core::Collector,
     proto::{Gauge, Metric, MetricFamily, MetricType},
 };
-use protobuf::RepeatedField;
 
 /// A [Gauge] that returns the value from a provided function on every collect run.
 ///
@@ -76,7 +75,7 @@ impl Collector for PullingGauge {
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(MetricType::GAUGE);
-        m.set_metric(RepeatedField::from_vec(vec![self.metric()]));
+        m.set_metric(from_vec!(vec![self.metric()]));
         vec![m]
     }
 }
