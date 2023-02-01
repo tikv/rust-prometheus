@@ -20,12 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: "stable"
-          default: true
+        uses: dtolnay/rust-toolchain@stable
       - name: cargo build
         run: cargo build
       - name: cargo test
@@ -47,12 +44,11 @@ jobs:
           - "nightly"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.channel }}
-          default: true
       - name: cargo build
         run: cargo build
       - name: cargo test
@@ -66,12 +62,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env['ACTION_MSRV_TOOLCHAIN'] }}
-          default: true
       - run: cargo build
       - run: cargo test --no-run
       - run: cargo build --no-default-features
@@ -83,12 +78,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env['ACTIONS_LINTS_TOOLCHAIN'] }}
-          default: true
           components: rustfmt, clippy
       - name: cargo fmt (check)
         run: cargo fmt --all -- --check -l
@@ -103,12 +97,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env['ACTIONS_LINTS_TOOLCHAIN']  }}
-          default: true
       - name: cargo bench (prometheus)
         run: cargo bench -p prometheus
       - name: cargo bench (prometheus-static-metric)
