@@ -44,7 +44,7 @@ pub fn make_static_metric(input: TokenStream) -> TokenStream {
     TokensBuilder::build(body).into()
 }
 
-/// Build auto flush able static metrics.
+/// Build auto flushable static metrics.
 /// refer to https://github.com/tikv/rust-prometheus/tree/master/static-metric for more info.
 #[proc_macro]
 pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
@@ -52,7 +52,7 @@ pub fn make_auto_flush_static_metric(input: TokenStream) -> TokenStream {
     AutoFlushTokensBuilder::build(body).into()
 }
 
-/// Instantiate a auto flush able static metric struct from a HistogramVec or CounterVec.
+/// Instantiate an auto flushable static metric struct from a HistogramVec or CounterVec.
 #[proc_macro]
 pub fn auto_flush_from(input: TokenStream) -> TokenStream {
     let def: AutoFlushFromDef = syn::parse(input).unwrap();
