@@ -224,7 +224,10 @@ pub fn push_raw(
             "unexpected status code {} while pushing to {} {}",
             response.status(),
             push_url,
-            response.text().map(|text| format!("with body `{}`", text)).unwrap_or_default()
+            response
+                .text()
+                .map(|text| format!("with body `{}`", text))
+                .unwrap_or_default()
         ))),
     }
 }

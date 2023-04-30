@@ -147,6 +147,9 @@ impl TextEncoder {
                             s.get_sample_count() as f64,
                         )?;
                     }
+                    MetricType::GAUGE_HISTOGRAM => {
+                        unimplemented!();
+                    }
                     MetricType::UNTYPED => {
                         unimplemented!();
                     }

@@ -18,7 +18,7 @@ travis-ci = { repository = "pingcap/rust-prometheus" }
 features = ["nightly"]
 
 [features]
-default = ["protobuf"]
+default = ["protobuf", "gen", "push"]
 gen = ["protobuf-codegen-pure"]
 nightly = ["libc"]
 process = ["libc", "procfs"]
