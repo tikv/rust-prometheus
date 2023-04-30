@@ -326,7 +326,7 @@ mod tests {
     use std::f64::EPSILON;
 
     use super::*;
-    use crate::metrics::{Collector, Opts};
+    use crate::{metrics::{Collector, Opts}, GetType};
 
     #[test]
     fn test_counter() {
@@ -343,9 +343,9 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
-        assert_eq!(m.get_label().len(), 2);
-        assert_eq!(m.get_counter().get_value() as u64, 43);
+        let m = mf.metric.get(0).unwrap();
+        assert_eq!(m.label.len(), 2);
+        assert_eq!(m.get_counter().value as u64, 43);
 
         counter.reset();
         assert_eq!(counter.get() as u64, 0);
@@ -363,9 +363,9 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
-        assert_eq!(m.get_label().len(), 0);
-        assert_eq!(m.get_counter().get_value() as u64, 12);
+        let m = mf.metric.get(0).unwrap();
+        assert_eq!(m.label.len(), 0);
+        assert_eq!(m.get_counter().value as u64, 12);
 
         counter.reset();
         assert_eq!(counter.get() as u64, 0);

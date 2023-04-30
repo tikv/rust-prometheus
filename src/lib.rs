@@ -126,14 +126,60 @@ This library supports four features:
 #[cfg(feature = "protobuf")]
 #[allow(warnings)]
 #[rustfmt::skip]
-#[path = "../proto/proto_model.rs"]
+#[path = "../proto/metrics.rs"]
 pub mod proto;
+
+#[cfg(feature = "protobuf")]
+#[allow(warnings)]
+#[rustfmt::skip]
+#[path = "../proto/gogo.rs"]
+pub mod gogo;
 
 #[cfg(feature = "protobuf")]
 macro_rules! from_vec {
     ($e: expr) => {
-        ::protobuf::RepeatedField::from_vec($e)
+        $e
     };
+}
+
+#[cfg(feature = "protobuf")]
+trait GetType {
+    fn get_counter(&self) -> Box<crate::proto::Counter>;
+    fn get_gauge(&self) -> Box<crate::proto::Gauge>;
+    fn get_histogram(&self) -> Box<crate::proto::Histogram>;
+    fn get_summary(&self) -> Box<crate::proto::Summary>;
+}
+
+#[cfg(feature = "protobuf")]
+impl GetType for crate::proto::MetricFamily {
+    fn get_counter(&self) -> Box<crate::proto::Counter> {
+        self.metric[0].get_counter()
+    }
+    fn get_gauge(&self) -> Box<crate::proto::Gauge> {
+        self.metric[0].get_gauge()
+    }
+    fn get_histogram(&self) -> Box<crate::proto::Histogram> {
+        self.metric[0].get_histogram()
+    }
+    fn get_summary(&self) -> Box<crate::proto::Summary> {
+        self.metric[0].get_summary()
+    }
+}
+
+#[cfg(feature = "protobuf")]
+impl GetType for crate::proto::Metric {
+    fn get_counter(&self) -> Box<crate::proto::Counter> {
+        self.counter.clone().0.expect("checked before call")
+    }
+    fn get_gauge(&self) -> Box<crate::proto::Gauge> {
+        self.gauge.clone().0.expect("checked before call")
+    }
+    fn get_histogram(&self) -> Box<crate::proto::Histogram> {
+        self.histogram.clone().0.expect("checked before call")
+    }
+    fn get_summary(&self) -> Box<crate::proto::Summary> {
+        self.summary.clone().0.expect("checked before call")
+    }
 }
 
 #[cfg(not(feature = "protobuf"))]

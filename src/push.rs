@@ -125,21 +125,21 @@ fn push<S: BuildHasher>(
 
     for mf in mfs {
         // Check for pre-existing grouping labels:
-        for m in mf.get_metric() {
-            for lp in m.get_label() {
-                if lp.get_name() == LABEL_NAME_JOB {
+        for m in mf.metric.clone() {
+            for lp in m.label {
+                if lp.name == LABEL_NAME_JOB {
                     return Err(Error::Msg(format!(
                         "pushed metric {} already contains a \
                          job label",
-                        mf.get_name()
+                        mf.name
                     )));
                 }
-                if grouping.contains_key(lp.get_name()) {
+                if grouping.contains_key(&lp.name) {
                     return Err(Error::Msg(format!(
                         "pushed metric {} already contains \
                          grouping label {}",
-                        mf.get_name(),
-                        lp.get_name()
+                        mf.name,
+                        lp.name
                     )));
                 }
             }
@@ -331,11 +331,11 @@ mod tests {
 
         for case in table {
             let mut l = proto::LabelPair::new();
-            l.set_name(case.0.to_owned());
+            l.name = case.0.to_owned();
             let mut m = proto::Metric::new();
-            m.set_label(from_vec!(vec![l]));
+            m.label = from_vec!(vec![l]);
             let mut mf = proto::MetricFamily::new();
-            mf.set_metric(from_vec!(vec![m]));
+            mf.metric = from_vec!(vec![m]);
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(format!("{}", res.unwrap_err()).contains(case.1));
         }

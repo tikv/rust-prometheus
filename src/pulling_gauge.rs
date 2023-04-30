@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt, sync::Arc};
 
+use protobuf::MessageField;
+
 use crate::{
     core::Collector,
     proto::{Gauge, Metric, MetricFamily, MetricType},
@@ -56,10 +58,10 @@ impl PullingGauge {
     fn metric(&self) -> Metric {
         let mut gauge = Gauge::default();
         let getter = &self.value;
-        gauge.set_value(getter());
+        gauge.value = getter();
 
         let mut metric = Metric::default();
-        metric.set_gauge(gauge);
+        metric.gauge = MessageField::some(gauge);
 
         metric
     }
@@ -72,10 +74,10 @@ impl Collector for PullingGauge {
 
     fn collect(&self) -> Vec<crate::proto::MetricFamily> {
         let mut m = MetricFamily::default();
-        m.set_name(self.desc.fq_name.clone());
-        m.set_help(self.desc.help.clone());
-        m.set_field_type(MetricType::GAUGE);
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.name = self.desc.fq_name.clone();
+        m.help = self.desc.help.clone();
+        m.type_ = MetricType::GAUGE.into();
+        m.metric = from_vec!(vec![self.metric()]);
         vec![m]
     }
 }
@@ -83,7 +85,7 @@ impl Collector for PullingGauge {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::metrics::Collector;
+    use crate::{metrics::Collector, GetType};
 
     #[test]
     fn test_pulling_gauge() {
@@ -95,6 +97,6 @@ mod tests {
         let metrics = gauge.collect();
         assert_eq!(metrics.len(), 1);
 
-        assert_eq!(VALUE, metrics[0].get_metric()[0].get_gauge().get_value());
+        assert_eq!(VALUE, metrics[0].metric[0].get_gauge().value);
     }
 }
