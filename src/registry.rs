@@ -13,7 +13,7 @@ use crate::metrics::Collector;
 use crate::proto;
 
 use cfg_if::cfg_if;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
 #[derive(Default)]
 struct RegistryCore {
@@ -293,20 +293,17 @@ cfg_if! {
 }
 
 // Default registry for rust-prometheus.
-lazy_static! {
-    static ref DEFAULT_REGISTRY: Registry = {
-        let reg = Registry::default();
+static DEFAULT_REGISTRY: Lazy<Registry> = Lazy::new(|| {
+    let reg = Registry::default();
 
-        // Register a default process collector.
-        register_default_process_collector(&reg).unwrap();
+    // Register a default process collector.
+    register_default_process_collector(&reg).unwrap();
 
-        reg
-    };
-}
+    reg
+});
 
 /// Default registry (global static).
 pub fn default_registry() -> &'static Registry {
-    lazy_static::initialize(&DEFAULT_REGISTRY);
     &DEFAULT_REGISTRY
 }
 
@@ -362,7 +359,7 @@ mod tests {
         assert!(r.register(Box::new(counter.clone())).is_err());
         assert!(r.unregister(Box::new(counter.clone())).is_ok());
         assert!(r.unregister(Box::new(counter.clone())).is_err());
-        assert!(r.register(Box::new(counter.clone())).is_ok());
+        assert!(r.register(Box::new(counter)).is_ok());
 
         let counter_vec =
             CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
@@ -385,7 +382,7 @@ mod tests {
         assert!(default_registry()
             .unregister(Box::new(counter.clone()))
             .is_err());
-        assert!(register(Box::new(counter.clone())).is_ok());
+        assert!(register(Box::new(counter)).is_ok());
     }
 
     #[test]
@@ -395,9 +392,9 @@ mod tests {
         let counter_a = Counter::new("test_a_counter", "test help").unwrap();
         let counter_b = Counter::new("test_b_counter", "test help").unwrap();
         let counter_2 = Counter::new("test_2_counter", "test help").unwrap();
-        r.register(Box::new(counter_b.clone())).unwrap();
-        r.register(Box::new(counter_2.clone())).unwrap();
-        r.register(Box::new(counter_a.clone())).unwrap();
+        r.register(Box::new(counter_b)).unwrap();
+        r.register(Box::new(counter_2)).unwrap();
+        r.register(Box::new(counter_a)).unwrap();
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 3);
@@ -469,7 +466,7 @@ mod tests {
 
         let r = Registry::new_custom(Some("common_prefix".to_string()), None).unwrap();
         let counter_a = Counter::new("test_a_counter", "test help").unwrap();
-        r.register(Box::new(counter_a.clone())).unwrap();
+        r.register(Box::new(counter_a)).unwrap();
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 1);
@@ -483,7 +480,7 @@ mod tests {
 
         let r = Registry::new_custom(None, Some(labels)).unwrap();
         let counter_a = Counter::new("test_a_counter", "test help").unwrap();
-        r.register(Box::new(counter_a.clone())).unwrap();
+        r.register(Box::new(counter_a)).unwrap();
         let counter_vec =
             CounterVec::new(Opts::new("test_vec", "test vec help"), &["a", "b"]).unwrap();
         r.register(Box::new(counter_vec.clone())).unwrap();

@@ -7,12 +7,12 @@ use std::collections::HashMap;
 
 use prometheus::{Encoder, IntCounter, Registry};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref DEFAULT_COUNTER: IntCounter = IntCounter::new("default", "generic counter").unwrap();
-    static ref CUSTOM_COUNTER: IntCounter = IntCounter::new("custom", "dedicated counter").unwrap();
-}
+static DEFAULT_COUNTER: Lazy<IntCounter> =
+    Lazy::new(|| IntCounter::new("default", "generic counter").unwrap());
+static CUSTOM_COUNTER: Lazy<IntCounter> =
+    Lazy::new(|| IntCounter::new("custom", "dedicated counter").unwrap());
 
 fn main() {
     // Register default metrics.

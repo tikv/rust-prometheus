@@ -2,20 +2,19 @@
 
 use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::{
     register_int_counter, register_int_counter_vec, register_int_gauge, register_int_gauge_vec,
 };
 
-lazy_static! {
-    static ref A_INT_COUNTER: IntCounter =
-        register_int_counter!("A_int_counter", "foobar").unwrap();
-    static ref A_INT_COUNTER_VEC: IntCounterVec =
-        register_int_counter_vec!("A_int_counter_vec", "foobar", &["a", "b"]).unwrap();
-    static ref A_INT_GAUGE: IntGauge = register_int_gauge!("A_int_gauge", "foobar").unwrap();
-    static ref A_INT_GAUGE_VEC: IntGaugeVec =
-        register_int_gauge_vec!("A_int_gauge_vec", "foobar", &["a", "b"]).unwrap();
-}
+static A_INT_COUNTER: Lazy<IntCounter> =
+    Lazy::new(|| register_int_counter!("A_int_counter", "foobar").unwrap());
+static A_INT_COUNTER_VEC: Lazy<IntCounterVec> =
+    Lazy::new(|| register_int_counter_vec!("A_int_counter_vec", "foobar", &["a", "b"]).unwrap());
+static A_INT_GAUGE: Lazy<IntGauge> =
+    Lazy::new(|| register_int_gauge!("A_int_gauge", "foobar").unwrap());
+static A_INT_GAUGE_VEC: Lazy<IntGaugeVec> =
+    Lazy::new(|| register_int_gauge_vec!("A_int_gauge_vec", "foobar", &["a", "b"]).unwrap());
 
 fn main() {
     A_INT_COUNTER.inc();

@@ -9,7 +9,7 @@ by using the `register_static_xxx!` macro provided by this crate.
 
 use prometheus::exponential_buckets;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::{register_counter_vec, register_histogram_vec};
 use prometheus_static_metric::{
     make_static_metric, register_static_counter_vec, register_static_histogram_vec,
@@ -38,23 +38,25 @@ make_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_COUNTER: HttpRequestStatistics = register_static_counter_vec!(
+static HTTP_COUNTER: Lazy<HttpRequestStatistics> = Lazy::new(|| {
+    register_static_counter_vec!(
         HttpRequestStatistics,
         "http_requests_total",
         "Number of HTTP requests.",
         &["method", "product"]
     )
-    .unwrap();
-    pub static ref HTTP_DURATION: HttpRequestDuration = register_static_histogram_vec!(
+    .unwrap()
+});
+static HTTP_DURATION: Lazy<HttpRequestDuration> = Lazy::new(|| {
+    register_static_histogram_vec!(
         HttpRequestDuration,
         "http_request_duration",
         "Duration of each HTTP request.",
         &["method"],
         exponential_buckets(0.0005, 2.0, 20).unwrap()
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 fn main() {
     HTTP_COUNTER.post.foo.inc();

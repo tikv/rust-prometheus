@@ -254,7 +254,7 @@ mod tests {
                 HashMap::new(),
             )
             .err()
-            .expect(format!("expected error for {}", name).as_ref());
+            .unwrap_or_else(|| panic!("expected error for {}", name));
             match res {
                 Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid label name", name)),
                 other => panic!("{}", other),
@@ -269,7 +269,7 @@ mod tests {
             labels.insert(name.into(), "value".into());
             let res = Desc::new("name".into(), "help".into(), vec![], labels)
                 .err()
-                .expect(format!("expected error for {}", name).as_ref());
+                .unwrap_or_else(|| panic!("expected error for {}", name));
             match res {
                 Error::Msg(msg) => assert_eq!(msg, format!("'{}' is not a valid label name", name)),
                 other => panic!("{}", other),
@@ -282,7 +282,7 @@ mod tests {
         for &name in &["-dash", "9gag", "has space"] {
             let res = Desc::new(name.into(), "help".into(), vec![], HashMap::new())
                 .err()
-                .expect(format!("expected error for {}", name).as_ref());
+                .unwrap_or_else(|| panic!("expected error for {}", name));
             match res {
                 Error::Msg(msg) => {
                     assert_eq!(msg, format!("'{}' is not a valid metric name", name))

@@ -2,7 +2,7 @@
 
 use prometheus::CounterVec;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::register_counter_vec;
 use prometheus_static_metric::make_static_metric;
 
@@ -21,16 +21,16 @@ make_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_COUNTER_VEC: CounterVec = register_counter_vec!(
+static HTTP_COUNTER_VEC: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         "http_requests_total",
         "Number of HTTP requests.",
         &["method", "product"]
     )
-    .unwrap();
-    pub static ref HTTP_COUNTER: HttpRequestStatistics =
-        HttpRequestStatistics::from(&HTTP_COUNTER_VEC);
-}
+    .unwrap()
+});
+static HTTP_COUNTER: Lazy<HttpRequestStatistics> =
+    Lazy::new(|| HttpRequestStatistics::from(&HTTP_COUNTER_VEC));
 
 fn main() {
     HTTP_COUNTER.post.foo.inc();

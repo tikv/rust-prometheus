@@ -2,7 +2,7 @@
 
 use prometheus::IntCounterVec;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::register_int_counter_vec;
 use prometheus_static_metric::make_static_metric;
 
@@ -25,17 +25,17 @@ make_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_COUNTER_VEC: IntCounterVec =
-        register_int_counter_vec!(
-            "http_requests_total",
-            "Number of HTTP requests.",
-            &["product", "method", "version"]    // it doesn't matter for the label order
-        ).unwrap();
+static HTTP_COUNTER_VEC: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "http_requests_total",
+        "Number of HTTP requests.",
+        &["product", "method", "version"] // it doesn't matter for the label order
+    )
+    .unwrap()
+});
 
-    pub static ref HTTP_COUNTER: HttpRequestStatistics = HttpRequestStatistics
-        ::from(&HTTP_COUNTER_VEC);
-}
+static HTTP_COUNTER: Lazy<HttpRequestStatistics> =
+    Lazy::new(|| HttpRequestStatistics::from(&HTTP_COUNTER_VEC));
 
 /// This example demonstrates the usage of:
 /// 1. using alternative metric types (i.e. IntCounter)

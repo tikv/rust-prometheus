@@ -7,29 +7,33 @@ use hyper::{
 };
 use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use prometheus::{labels, opts, register_counter, register_gauge, register_histogram_vec};
 
-lazy_static! {
-    static ref HTTP_COUNTER: Counter = register_counter!(opts!(
+static HTTP_COUNTER: Lazy<Counter> = Lazy::new(|| {
+    register_counter!(opts!(
         "example_http_requests_total",
         "Number of HTTP requests made.",
         labels! {"handler" => "all",}
     ))
-    .unwrap();
-    static ref HTTP_BODY_GAUGE: Gauge = register_gauge!(opts!(
+    .unwrap()
+});
+static HTTP_BODY_GAUGE: Lazy<Gauge> = Lazy::new(|| {
+    register_gauge!(opts!(
         "example_http_response_size_bytes",
         "The HTTP response sizes in bytes.",
         labels! {"handler" => "all",}
     ))
-    .unwrap();
-    static ref HTTP_REQ_HISTOGRAM: HistogramVec = register_histogram_vec!(
+    .unwrap()
+});
+static HTTP_REQ_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
         "example_http_request_duration_seconds",
         "The HTTP request latencies in seconds.",
         &["handler"]
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 async fn serve_req(_req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let encoder = TextEncoder::new();
