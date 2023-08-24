@@ -4,7 +4,9 @@
 use std::cmp::*;
 use std::f64;
 use std::ops::*;
-use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
+use std::sync::atomic::{
+    AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, AtomicUsize as StdAtomicUsize, Ordering,
+};
 
 /// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
 /// [`Counter`](crate::Counter) and [`IntCounter`](crate::Counter).
@@ -50,6 +52,18 @@ impl Number for f64 {
     #[inline]
     fn into_f64(self) -> f64 {
         self
+    }
+}
+
+impl Number for usize {
+    #[inline]
+    fn from_i64(v: i64) -> Self {
+        v as Self
+    }
+
+    #[inline]
+    fn into_f64(self) -> f64 {
+        self as f64
     }
 }
 
@@ -239,6 +253,42 @@ impl AtomicU64 {
     }
 }
 
+/// A atomic unsigned integer.
+#[derive(Debug)]
+pub struct AtomicUsize {
+    inner: StdAtomicUsize,
+}
+
+impl Atomic for AtomicUsize {
+    type T = usize;
+
+    fn new(val: Self::T) -> AtomicUsize {
+        AtomicUsize {
+            inner: StdAtomicUsize::new(val),
+        }
+    }
+
+    #[inline]
+    fn set(&self, val: Self::T) {
+        self.inner.store(val, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn get(&self) -> Self::T {
+        self.inner.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn inc_by(&self, delta: Self::T) {
+        self.inner.fetch_add(delta, Ordering::Relaxed);
+    }
+
+    #[inline]
+    fn dec_by(&self, delta: Self::T) {
+        self.inner.fetch_sub(delta, Ordering::Relaxed);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::f64::consts::PI;
@@ -274,5 +324,14 @@ mod test {
 
         au64.inc_by(123);
         assert_eq!(au64.get(), 123);
+    }
+
+    #[test]
+    fn test_atomic_usize() {
+        let ausize = AtomicUsize::new(0);
+        assert_eq!(ausize.get(), 0);
+
+        ausize.inc_by(123);
+        assert_eq!(ausize.get(), 123);
     }
 }
