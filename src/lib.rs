@@ -157,6 +157,7 @@ mod encoder;
 mod errors;
 mod gauge;
 mod histogram;
+mod maximum_over_interval_gauge;
 mod metrics;
 mod pulling_gauge;
 #[cfg(feature = "push")]

@@ -107,24 +107,12 @@ impl Atomic for AtomicF64 {
 
     #[inline]
     fn inc_by(&self, delta: Self::T) {
-        loop {
-            let current = self.inner.load(Ordering::Acquire);
-            let new = u64_to_f64(current) + delta;
-            let result = self.inner.compare_exchange_weak(
-                current,
-                f64_to_u64(new),
-                Ordering::Release,
-                Ordering::Relaxed,
-            );
-            if result.is_ok() {
-                return;
-            }
-        }
+        self.fetch_add(delta);
     }
 
     #[inline]
     fn dec_by(&self, delta: Self::T) {
-        self.inc_by(-delta);
+        self.fetch_add(-delta);
     }
 }
 
@@ -132,6 +120,29 @@ impl AtomicF64 {
     /// Store the value, returning the previous value.
     pub fn swap(&self, val: f64, ordering: Ordering) -> f64 {
         u64_to_f64(self.inner.swap(f64_to_u64(val), ordering))
+    }
+
+    /// Fetches the maximum of the current value and the provided value.
+    pub fn fetch_max(&self, val: f64, ordering: Ordering) -> f64 {
+        u64_to_f64(self.inner.fetch_max(f64_to_u64(val) ,ordering))
+    }
+
+    /// Fetches the old value after summing the provided value.
+    pub fn fetch_add(&self, val: f64) -> f64 {
+        let mut current: u64;
+        loop {
+            current = self.inner.load(Ordering::Acquire);
+            let new = u64_to_f64(current) + val;
+            let result = self.inner.compare_exchange_weak(
+                current,
+                f64_to_u64(new),
+                Ordering::Release,
+                Ordering::Relaxed,
+            );
+            if result.is_ok() {
+                return u64_to_f64(current);
+            }
+        }
     }
 }
 
