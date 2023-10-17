@@ -100,17 +100,19 @@ impl MaximumOverIntervalGauge {
         self.apply_delta(-v);
     }
 
+    /// Observe a new value. Sets it as the current value of the guage and tracks maximum value in the interval.
     pub fn observe(&self, v: f64) {
-        let previous_value = self.value.swap(v, Ordering::AcqRel);
-        if self.maximum_value.get() < previous_value {
-            self.maximum_value.set(previous_value);
-        }
+        self.value.swap(v, Ordering::Relaxed);
+        self.set_max_over_interval(v);
     }
 
     fn apply_delta(&self, delta: f64) {
         let previous_value = self.value.fetch_add(delta);
         let new_value = previous_value + delta;
+        self.set_max_over_interval(new_value);
+    }
 
+    fn set_max_over_interval(&self, value: f64) {
         let now = Instant::now();
         let interval_expiry = self.interval_expiry.upgradable_read();
         let loaded_interval_expiry = *interval_expiry;
@@ -125,14 +127,14 @@ impl MaximumOverIntervalGauge {
             // could have updated the value before we got the exclusive lock.
             if *interval_expiry == loaded_interval_expiry {
                 *interval_expiry = now + self.interval_duration;
-                self.maximum_value.set(new_value);
+                self.maximum_value.set(value);
 
                 return;
             }
         }
 
         // Set the maximum_value to the max of the current value & previous max.
-        self.maximum_value.fetch_max(new_value, Ordering::Relaxed);
+        self.maximum_value.fetch_max(value, Ordering::Relaxed);
     }
 }
 
