@@ -11,9 +11,6 @@ readme = "README.md"
 repository = "https://github.com/tikv/rust-prometheus"
 version = "0.13.3"
 
-[badges]
-travis-ci = { repository = "pingcap/rust-prometheus" }
-
 [package.metadata.docs.rs]
 features = ["nightly"]
 

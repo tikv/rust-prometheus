@@ -1,6 +1,6 @@
 # Prometheus Rust client library
 
-[![Build Status](https://travis-ci.org/tikv/rust-prometheus.svg?branch=master)](https://travis-ci.org/pingcap/rust-prometheus)
+[![Build Status](https://github.com/tikv/rust-prometheus/actions/workflows/rust.yml/badge.svg)](https://github.com/tikv/rust-prometheus/actions/workflows/rust.yml)
 [![docs.rs](https://docs.rs/prometheus/badge.svg)](https://docs.rs/prometheus)
 [![crates.io](https://img.shields.io/crates/v/prometheus.svg)](https://crates.io/crates/prometheus)
 
