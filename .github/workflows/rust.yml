@@ -9,9 +9,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # Pinned toolchain for linting and benchmarks
-  ACTIONS_LINTS_TOOLCHAIN: 1.63.0
+  ACTIONS_LINTS_TOOLCHAIN: 1.65.0
   # Minimum supported Rust version (MSRV)
-  ACTION_MSRV_TOOLCHAIN: 1.60.0
+  ACTION_MSRV_TOOLCHAIN: 1.65.0
   EXTRA_FEATURES: "protobuf push process"
 
 jobs:
