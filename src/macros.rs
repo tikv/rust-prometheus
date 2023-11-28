@@ -214,7 +214,7 @@ fn test_histogram_opts_trailing_comma() {
 macro_rules! register_counter {
     (@of_type $TYPE:ident, $OPTS:expr) => {{
         let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $crate::register(Box::new(counter.clone())).map(|_| counter)
+        $crate::register(Box::new(counter.clone())).map(|()| counter)
     }};
 
     ($OPTS:expr $(,)?) => {{
@@ -260,7 +260,7 @@ fn test_register_counter_trailing_comma() {
 macro_rules! register_counter_with_registry {
     (@of_type $TYPE: ident, $OPTS:expr, $REGISTRY:expr) => {{
         let counter = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $REGISTRY.register(Box::new(counter.clone())).map(|_| counter)
+        $REGISTRY.register(Box::new(counter.clone())).map(|()| counter)
     }};
 
     ($OPTS:expr, $REGISTRY:expr $(,)?) => {{
@@ -361,14 +361,14 @@ fn test_register_int_counter() {
 macro_rules! __register_counter_vec {
     ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr) => {{
         let counter_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
-        $crate::register(Box::new(counter_vec.clone())).map(|_| counter_vec)
+        $crate::register(Box::new(counter_vec.clone())).map(|()| counter_vec)
     }};
 
     ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr, $REGISTRY:expr) => {{
         let counter_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
         $REGISTRY
             .register(Box::new(counter_vec.clone()))
-            .map(|_| counter_vec)
+            .map(|()| counter_vec)
     }};
 }
 
@@ -543,12 +543,12 @@ fn test_register_int_counter_vec() {
 macro_rules! __register_gauge {
     ($TYPE:ident, $OPTS:expr) => {{
         let gauge = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $crate::register(Box::new(gauge.clone())).map(|_| gauge)
+        $crate::register(Box::new(gauge.clone())).map(|()| gauge)
     }};
 
     ($TYPE:ident, $OPTS:expr, $REGISTRY:expr) => {{
         let gauge = $crate::$TYPE::with_opts($OPTS).unwrap();
-        $REGISTRY.register(Box::new(gauge.clone())).map(|_| gauge)
+        $REGISTRY.register(Box::new(gauge.clone())).map(|()| gauge)
     }};
 }
 
@@ -670,14 +670,14 @@ macro_rules! register_int_gauge_with_registry {
 macro_rules! __register_gauge_vec {
     ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr $(,)?) => {{
         let gauge_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
-        $crate::register(Box::new(gauge_vec.clone())).map(|_| gauge_vec)
+        $crate::register(Box::new(gauge_vec.clone())).map(|()| gauge_vec)
     }};
 
     ($TYPE:ident, $OPTS:expr, $LABELS_NAMES:expr, $REGISTRY:expr $(,)?) => {{
         let gauge_vec = $crate::$TYPE::new($OPTS, $LABELS_NAMES).unwrap();
         $REGISTRY
             .register(Box::new(gauge_vec.clone()))
-            .map(|_| gauge_vec)
+            .map(|()| gauge_vec)
     }};
 }
 
@@ -917,7 +917,7 @@ macro_rules! register_histogram {
 
     ($HOPTS:expr $(,)?) => {{
         let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
-        $crate::register(Box::new(histogram.clone())).map(|_| histogram)
+        $crate::register(Box::new(histogram.clone())).map(|()| histogram)
     }};
 }
 
@@ -974,7 +974,7 @@ macro_rules! register_histogram_with_registry {
         let histogram = $crate::Histogram::with_opts($HOPTS).unwrap();
         $REGISTRY
             .register(Box::new(histogram.clone()))
-            .map(|_| histogram)
+            .map(|()| histogram)
     }};
 }
 
@@ -1030,7 +1030,7 @@ fn test_register_histogram_with_registry_trailing_comma() {
 macro_rules! register_histogram_vec {
     ($HOPTS:expr, $LABELS_NAMES:expr $(,)?) => {{
         let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
-        $crate::register(Box::new(histogram_vec.clone())).map(|_| histogram_vec)
+        $crate::register(Box::new(histogram_vec.clone())).map(|()| histogram_vec)
     }};
 
     ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr $(,)?) => {{
@@ -1094,7 +1094,7 @@ macro_rules! register_histogram_vec_with_registry {
         let histogram_vec = $crate::HistogramVec::new($HOPTS, $LABELS_NAMES).unwrap();
         $REGISTRY
             .register(Box::new(histogram_vec.clone()))
-            .map(|_| histogram_vec)
+            .map(|()| histogram_vec)
     }};
 
     ($NAME:expr, $HELP:expr, $LABELS_NAMES:expr, $REGISTRY:expr $(,)?) => {{
