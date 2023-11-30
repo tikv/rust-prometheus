@@ -27,6 +27,9 @@ This crate provides several optional components which can be enabled via [Cargo 
 
 - `push`: Enable [push metrics](https://prometheus.io/docs/instrumenting/pushing/) support.
 
+- `push-no-tls`: An alternative to `push`, which will not link in TLS libraries, disabling HTTPS support but resulting in a leaner build.
+   By default, the Pushgateway uses HTTP and not HTTPS.
+
 ### Static Metric
 
 When using a `MetricVec` with label values known at compile time
