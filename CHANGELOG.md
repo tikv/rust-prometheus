@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.4 (unreleased)
+
+- Add: `into_arc_value()`/`from_arc_value()` unsafe methods to `GenericCounter` and `GenericGauge` (#472)
+- Add: `into_arc_core()`/`from_arc_core()` methods to `Histogram` (#472)
+- Improvement: Mark `GenericCounter`, `GenericGauge` and `Histogram` as `#[repr(transparent)]` (#472)
+
 ## 0.13.3
 
 - Bug fix: Prevent ProcessCollector underflow with CPU time counter (#465)

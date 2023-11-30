@@ -14,6 +14,7 @@ use crate::vec::{MetricVec, MetricVecBuilder};
 
 /// The underlying implementation for [`Gauge`] and [`IntGauge`].
 #[derive(Debug)]
+#[repr(transparent)]
 pub struct GenericGauge<P: Atomic> {
     v: Arc<Value<P>>,
 }
@@ -87,6 +88,36 @@ impl<P: Atomic> GenericGauge<P> {
     #[inline]
     pub fn get(&self) -> P::T {
         self.v.get()
+    }
+
+    /// Unwraps this gauge into the inner [`Value`] representing it.
+    ///
+    /// # Safety
+    ///
+    /// This function is `unsafe`, because allows to bypass gauge's semantics,
+    /// and so, the improper use of the returned [`Value`] may lead to this
+    /// gauge behaving incorrectly.
+    ///
+    /// The caller must ensure that the returned [`Value`] will be used in
+    /// accordance with the gauge's semantics.
+    #[inline]
+    pub unsafe fn into_arc_value(this: Self) -> Arc<Value<P>> {
+        this.v
+    }
+
+    /// Wraps the provided [`Value`] into a gauge.
+    ///
+    /// # Safety
+    ///
+    /// This function is `unsafe`, because allows to bypass gauge's semantics,
+    /// and so, specifying the improper [`Value`] may lead to the gauge behaving
+    /// incorrectly.
+    ///
+    /// The caller must ensure that the provided [`Value`] withholds gauge's
+    /// semantics.
+    #[inline]
+    pub unsafe fn from_arc_value(v: impl Into<Arc<Value<P>>>) -> Self {
+        Self { v: v.into() }
     }
 }
 

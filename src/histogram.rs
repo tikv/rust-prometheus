@@ -667,6 +667,7 @@ impl Drop for HistogramTimer {
 /// [1]: https://prometheus.io/docs/prometheus/latest/querying/functions/#histogram_quantile
 /// [2]: https://prometheus.io/docs/practices/histograms/
 #[derive(Clone, Debug)]
+#[repr(transparent)]
 pub struct Histogram {
     core: Arc<HistogramCore>,
 }
@@ -745,6 +746,18 @@ impl Histogram {
     /// Return count of all samples.
     pub fn get_sample_count(&self) -> u64 {
         self.core.sample_count()
+    }
+
+    /// Unwraps this [`Histogram`] into the inner [`HistogramCore`].
+    #[inline]
+    pub fn into_arc_core(this: Self) -> Arc<HistogramCore> {
+        this.core
+    }
+
+    /// Wraps the provided [`HistogramCore`] into a [`Histogram`].
+    #[inline]
+    pub fn from_arc_core(core: impl Into<Arc<HistogramCore>>) -> Self {
+        Self { core: core.into() }
     }
 }
 
