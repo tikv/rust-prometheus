@@ -224,7 +224,7 @@ pub use self::pulling_gauge::PullingGauge;
 #[cfg(feature = "push")]
 pub use self::push::{
     hostname_grouping_key, push_add_collector, push_add_metrics, push_collector, push_metrics,
-    BasicAuthentication,
+    push_raw, BasicAuthentication,
 };
 pub use self::registry::Registry;
 pub use self::registry::{default_registry, gather, register, unregister};

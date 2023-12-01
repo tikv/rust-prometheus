@@ -173,6 +173,62 @@ fn push<S: BuildHasher>(
     }
 }
 
+/// Pushes snappy compressed data to url as is.
+pub fn push_raw(
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+    method: &str,
+    basic_auth: Option<BasicAuthentication>,
+) -> Result<()> {
+    let mut push_url = if url.contains("://") {
+        url.to_owned()
+    } else {
+        format!("http://{}", url)
+    };
+
+    if push_url.ends_with('/') {
+        push_url.pop();
+    }
+
+    let encoder = ProtobufEncoder::new();
+    let mut proto_buf = Vec::new();
+
+    for mf in mfs {
+        // Ignore error, `no metrics` and `no name`.
+        let _ = encoder.encode(&[mf], &mut proto_buf);
+    }
+
+    let buf = snap::raw::Encoder::new()
+        .compress_vec(&proto_buf)
+        .expect("msg");
+
+    let mut builder = HTTP_CLIENT
+        .request(
+            Method::from_str(method).unwrap(),
+            Url::from_str(&push_url).unwrap(),
+        )
+        .header(CONTENT_TYPE, encoder.format_type())
+        .header("Content-Encoding", "snappy")
+        .body(buf);
+
+    if let Some(BasicAuthentication { username, password }) = basic_auth {
+        builder = builder.basic_auth(username, Some(password));
+    }
+
+    let response = builder.send().map_err(|e| Error::Msg(format!("{}", e)))?;
+
+    match response.status() {
+        StatusCode::ACCEPTED => Ok(()),
+        StatusCode::OK => Ok(()),
+        _ => Err(Error::Msg(format!(
+            "unexpected status code {} while pushing to {} {}",
+            response.status(),
+            push_url,
+            response.text().map(|text| format!("with body `{}`", text)).unwrap_or_default()
+        ))),
+    }
+}
+
 fn push_from_collector<S: BuildHasher>(
     job: &str,
     grouping: HashMap<String, String, S>,
