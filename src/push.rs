@@ -125,21 +125,21 @@ fn push<S: BuildHasher>(
 
     for mf in mfs {
         // Check for pre-existing grouping labels:
-        for m in mf.get_metric() {
-            for lp in m.get_label() {
-                if lp.get_name() == LABEL_NAME_JOB {
+        for m in mf.metric.clone() {
+            for lp in m.label {
+                if lp.name == LABEL_NAME_JOB {
                     return Err(Error::Msg(format!(
                         "pushed metric {} already contains a \
                          job label",
-                        mf.get_name()
+                        mf.name
                     )));
                 }
-                if grouping.contains_key(lp.get_name()) {
+                if grouping.contains_key(&lp.name) {
                     return Err(Error::Msg(format!(
                         "pushed metric {} already contains \
                          grouping label {}",
-                        mf.get_name(),
-                        lp.get_name()
+                        mf.name,
+                        lp.name
                     )));
                 }
             }
@@ -169,6 +169,62 @@ fn push<S: BuildHasher>(
             "unexpected status code {} while pushing to {}",
             response.status(),
             push_url
+        ))),
+    }
+}
+
+/// Pushes snappy compressed data to url as is.
+pub fn push_raw(
+    url: &str,
+    mfs: Vec<proto::MetricFamily>,
+    method: &str,
+    basic_auth: Option<BasicAuthentication>,
+) -> Result<()> {
+    let mut push_url = if url.contains("://") {
+        url.to_owned()
+    } else {
+        format!("http://{}", url)
+    };
+
+    if push_url.ends_with('/') {
+        push_url.pop();
+    }
+
+    let encoder = ProtobufEncoder::new();
+    let mut proto_buf = Vec::new();
+
+    for mf in mfs {
+        // Ignore error, `no metrics` and `no name`.
+        let _ = encoder.encode(&[mf], &mut proto_buf);
+    }
+
+    let buf = snap::raw::Encoder::new()
+        .compress_vec(&proto_buf)
+        .expect("msg");
+
+    let mut builder = HTTP_CLIENT
+        .request(
+            Method::from_str(method).unwrap(),
+            Url::from_str(&push_url).unwrap(),
+        )
+        .header(CONTENT_TYPE, encoder.format_type())
+        .header("Content-Encoding", "snappy")
+        .body(buf);
+
+    if let Some(BasicAuthentication { username, password }) = basic_auth {
+        builder = builder.basic_auth(username, Some(password));
+    }
+
+    let response = builder.send().map_err(|e| Error::Msg(format!("{}", e)))?;
+
+    match response.status() {
+        StatusCode::ACCEPTED => Ok(()),
+        StatusCode::OK => Ok(()),
+        _ => Err(Error::Msg(format!(
+            "unexpected status code {} while pushing to {} {}",
+            response.status(),
+            push_url,
+            response.text().map(|text| format!("with body `{}`", text)).unwrap_or_default()
         ))),
     }
 }
@@ -275,11 +331,11 @@ mod tests {
 
         for case in table {
             let mut l = proto::LabelPair::new();
-            l.set_name(case.0.to_owned());
+            l.name = case.0.to_owned();
             let mut m = proto::Metric::new();
-            m.set_label(from_vec!(vec![l]));
+            m.label = from_vec!(vec![l]);
             let mut mf = proto::MetricFamily::new();
-            mf.set_metric(from_vec!(vec![m]));
+            mf.metric = from_vec!(vec![m]);
             let res = push_metrics("test", hostname_grouping_key(), "mockurl", vec![mf], None);
             assert!(format!("{}", res.unwrap_err()).contains(case.1));
         }

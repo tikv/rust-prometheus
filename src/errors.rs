@@ -25,7 +25,7 @@ pub enum Error {
     /// An error containing a [`protobuf::error::ProtobufError`].
     #[cfg(feature = "protobuf")]
     #[error("Protobuf error: {0}")]
-    Protobuf(#[from] protobuf::error::ProtobufError),
+    Protobuf(#[from] protobuf::Error),
 }
 
 /// A specialized Result type for prometheus.
