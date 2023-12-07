@@ -27,7 +27,7 @@ pub type Gauge = GenericGauge<AtomicF64>;
 /// all integers.
 pub type IntGauge = GenericGauge<AtomicI64>;
 
-/// The *unsigned* integer version of [`IntGauge`].
+/// The __unsigned__ integer version of [`IntGauge`].
 pub type UIntGauge = GenericGauge<AtomicU64>;
 
 impl<P: Atomic> Clone for GenericGauge<P> {
@@ -151,7 +151,7 @@ pub type GaugeVec = GenericGaugeVec<AtomicF64>;
 /// are all integers.
 pub type IntGaugeVec = GenericGaugeVec<AtomicI64>;
 
-/// The unsigned integer version of [`IntGaugeVec`].
+/// The __unsigned__ integer version of [`IntGaugeVec`].
 pub type UIntGaugeVec = GenericGaugeVec<AtomicU64>;
 
 impl<P: Atomic> GenericGaugeVec<P> {
