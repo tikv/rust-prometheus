@@ -124,7 +124,7 @@ impl AtomicF64 {
 
     /// Fetches the maximum of the current value and the provided value.
     pub fn fetch_max(&self, val: f64, ordering: Ordering) -> f64 {
-        u64_to_f64(self.inner.fetch_max(f64_to_u64(val) ,ordering))
+        u64_to_f64(self.inner.fetch_max(f64_to_u64(val), ordering))
     }
 
     /// Fetches the old value after summing the provided value.

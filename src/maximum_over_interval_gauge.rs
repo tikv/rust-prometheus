@@ -1,9 +1,6 @@
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use std::{
-    sync::{
-        atomic::Ordering,
-        Arc,
-    },
+    sync::{atomic::Ordering, Arc},
     time::Duration,
 };
 
@@ -13,7 +10,10 @@ use mock_instant::Instant;
 #[cfg(not(test))]
 use std::time::Instant;
 
-use crate::{core::{Collector, AtomicF64, Atomic}, Error, PullingGauge};
+use crate::{
+    core::{Atomic, AtomicF64, Collector},
+    Error, PullingGauge,
+};
 
 /// A prometheus gauge that exposes the maximum value of a gauge over an interval.
 ///
@@ -68,11 +68,7 @@ impl MaximumOverIntervalGauge {
 
             interval_expiry: Arc::new(RwLock::new(Instant::now() + interval)),
             interval_duration: interval,
-            gauge: PullingGauge::new(
-                name,
-                help,
-                Box::new(move || maximum_value.get()),
-            )?,
+            gauge: PullingGauge::new(name, help, Box::new(move || maximum_value.get()))?,
         })
     }
 
