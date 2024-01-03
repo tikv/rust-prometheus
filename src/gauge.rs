@@ -4,8 +4,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::atomic64::{Atomic, AtomicF64, AtomicI64, Number};
-use crate::core::AtomicU64;
+use crate::atomic64::{Atomic, AtomicF64, AtomicI64, AtomicU64, Number};
 use crate::desc::Desc;
 use crate::errors::Result;
 use crate::metrics::{Collector, Metric, Opts};
