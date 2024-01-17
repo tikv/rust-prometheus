@@ -70,3 +70,11 @@ harness = false
 [[bench]]
 name = "text_encoder"
 harness = false
+
+[[example]]
+name = "example_push"
+required-features = ["push"]
+
+[[example]]
+name = "example_process_collector"
+required-features = ["process"]

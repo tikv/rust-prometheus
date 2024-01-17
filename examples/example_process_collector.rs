@@ -1,6 +1,5 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#[cfg(all(feature = "process", target_os = "linux"))]
 fn main() {
     use std::thread;
     use std::time::Duration;
@@ -20,12 +19,4 @@ fn main() {
         buffer.clear();
         thread::sleep(Duration::from_secs(1));
     }
-}
-
-#[cfg(any(not(feature = "process"), not(target_os = "linux")))]
-fn main() {
-    println!(
-        r#"Please enable feature "process", try:
-    cargo run --features="process" --example example_process_collector"#
-    );
 }
