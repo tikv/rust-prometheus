@@ -1,7 +1,5 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-#![cfg_attr(not(feature = "push"), allow(unused_imports, dead_code))]
-
 use std::env;
 use std::thread;
 use std::time;
@@ -25,7 +23,6 @@ lazy_static! {
     .unwrap();
 }
 
-#[cfg(feature = "push")]
 fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
@@ -67,12 +64,4 @@ fn main() {
     }
 
     println!("Okay, please check the Pushgateway.");
-}
-
-#[cfg(not(feature = "push"))]
-fn main() {
-    println!(
-        r#"Please enable feature "push", try:
-    cargo run --features="push" --example example_push"#
-    );
 }
