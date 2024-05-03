@@ -11,9 +11,6 @@ readme = "README.md"
 repository = "https://github.com/tikv/rust-prometheus"
 version = "0.13.3"
 
-[badges]
-travis-ci = { repository = "pingcap/rust-prometheus" }
-
 [package.metadata.docs.rs]
 features = ["nightly"]
 
@@ -36,10 +33,10 @@ reqwest = { version = "^0.11", features = ["blocking"], optional = true }
 thiserror = "^1.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-procfs = { version = "^0.14", optional = true, default-features = false }
+procfs = { version = "^0.16", optional = true, default-features = false }
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = "0.5"
 getopts = "^0.2"
 hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
@@ -73,3 +70,11 @@ harness = false
 [[bench]]
 name = "text_encoder"
 harness = false
+
+[[example]]
+name = "example_push"
+required-features = ["push"]
+
+[[example]]
+name = "example_process_collector"
+required-features = ["process"]
