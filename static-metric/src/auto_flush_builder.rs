@@ -714,7 +714,6 @@ impl<'a> MetricBuilderContext<'a> {
                         })#local_suffix_call,
                     }
                 } else {
-                    let prev_labels_ident = prev_labels_ident;
                     quote! {
                         #name: #member_type::from(
                             #(

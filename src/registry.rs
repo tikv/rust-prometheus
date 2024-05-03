@@ -183,8 +183,8 @@ impl RegistryCore {
 
         // Write out MetricFamilies sorted by their name.
         mf_by_name
-            .into_iter()
-            .map(|(_, mut m)| {
+            .into_values()
+            .map(|mut m| {
                 // Add registry namespace prefix, if any.
                 if let Some(ref namespace) = self.prefix {
                     let prefixed = format!("{}_{}", namespace, m.get_name());
