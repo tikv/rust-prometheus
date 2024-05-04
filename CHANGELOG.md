@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.13.4
+
+- Improvement: Add PullingGauge (#405)
+
+- Improvement: Let cargo know which example requires which features (#511)
+
+- Bug fix: Prevent `clippy::ignored_unit_patterns` in macro expansions (#497)
+
+- Internal change: Add CI job for minimum toolchain (MSRV) (#467)
+
+- Internal change: Update CI to `actions/checkout@v4` (#499)
+
+- Internal change: Update dependencies
+
 ## 0.13.3
 
 - Bug fix: Prevent ProcessCollector underflow with CPU time counter (#465)
