@@ -9,10 +9,7 @@ license = "Apache-2.0"
 name = "prometheus"
 readme = "README.md"
 repository = "https://github.com/tikv/rust-prometheus"
-version = "0.13.3"
-
-[badges]
-travis-ci = { repository = "pingcap/rust-prometheus" }
+version = "0.13.4"
 
 [package.metadata.docs.rs]
 features = ["nightly"]
@@ -32,14 +29,14 @@ libc = { version = "^0.2", optional = true }
 parking_lot = "^0.12"
 protobuf = { version = "^2.0", optional = true }
 memchr = "^2.3"
-reqwest = { version = "^0.11", features = ["blocking"], optional = true }
+reqwest = { version = "^0.12", features = ["blocking"], optional = true }
 thiserror = "^1.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-procfs = { version = "^0.14", optional = true, default-features = false }
+procfs = { version = "^0.16", optional = true, default-features = false }
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = "0.5"
 getopts = "^0.2"
 hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
@@ -73,3 +70,11 @@ harness = false
 [[bench]]
 name = "text_encoder"
 harness = false
+
+[[example]]
+name = "example_push"
+required-features = ["push"]
+
+[[example]]
+name = "example_process_collector"
+required-features = ["process"]
