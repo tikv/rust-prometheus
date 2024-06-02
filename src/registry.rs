@@ -229,12 +229,14 @@ impl Registry {
     }
 
     /// Create a new registry, with optional custom prefix and labels.
-    pub fn new_custom(
-        prefix: Option<String>,
-        labels: Option<HashMap<String, String>>,
-    ) -> Result<Registry> {
+    pub fn new_custom<T, K, V>(prefix: Option<T>, labels: Option<HashMap<K, V>>) -> Result<Registry>
+    where
+        T: AsRef<str>,
+        K: AsRef<str>,
+        V: AsRef<str>,
+    {
         if let Some(ref namespace) = prefix {
-            if namespace.is_empty() {
+            if namespace.as_ref().is_empty() {
                 return Err(Error::Msg("empty prefix namespace".to_string()));
             }
         }
@@ -242,8 +244,20 @@ impl Registry {
         let reg = Registry::default();
         {
             let mut core = reg.r.write();
-            core.prefix = prefix;
-            core.labels = labels;
+
+            core.prefix = match prefix {
+                Some(s) => Some(s.as_ref().to_string()),
+                None => None,
+            };
+
+            core.labels = match labels {
+                Some(m) => Some(
+                    m.into_iter()
+                        .map(|(k, v)| (k.as_ref().to_string(), v.as_ref().to_string()))
+                        .collect(),
+                ),
+                None => None,
+            };
         }
         Ok(reg)
     }
