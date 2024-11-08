@@ -1060,7 +1060,7 @@ fn test_register_histogram_vec_trailing_comma() {
     assert!(histogram_vec.is_ok());
 }
 
-/// Create a [`HistogramVec`][crate::HistogramVec] and registers to default registry.
+/// Create a [`HistogramVec`][crate::HistogramVec] and registers to a custom registry.
 ///
 /// # Examples
 ///
