@@ -44,10 +44,10 @@ impl<P: Atomic> GenericCounter<P> {
 
     /// Create a [`GenericCounter`] with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+        Self::with_opts_and_label_values::<&str>(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn with_opts_and_label_values<L: AsRef<str>>(opts: &Opts, label_values: &[L]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -126,7 +126,7 @@ impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
     type M = GenericCounter<P>;
     type P = Opts;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+    fn build<L: AsRef<str>>(&self, opts: &Opts, vals: &[L]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }
@@ -148,8 +148,11 @@ impl<P: Atomic> GenericCounterVec<P> {
     /// Create a new [`GenericCounterVec`] based on the provided
     /// [`Opts`] and partitioned by the given label names. At least one label name must be
     /// provided.
-    pub fn new(opts: Opts, label_names: &[&str]) -> Result<Self> {
-        let variable_names = label_names.iter().map(|s| (*s).to_owned()).collect();
+    pub fn new<L: AsRef<str>>(opts: Opts, label_names: &[L]) -> Result<Self> {
+        let variable_names = label_names
+            .iter()
+            .map(|s| (*s).as_ref().to_owned())
+            .collect();
         let opts = opts.variable_labels(variable_names);
         let metric_vec =
             MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder::new(), opts)?;
@@ -283,7 +286,10 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
 
     /// Get a [`GenericLocalCounter`] by label values.
     /// See more [MetricVec::with_label_values].
-    pub fn with_label_values<'a>(&'a mut self, vals: &[&str]) -> &'a mut GenericLocalCounter<P> {
+    pub fn with_label_values<'a, L: AsRef<str>>(
+        &'a mut self,
+        vals: &[L],
+    ) -> &'a mut GenericLocalCounter<P> {
         let hash = self.vec.v.hash_label_values(vals).unwrap();
         let vec = &self.vec;
         self.local
@@ -293,7 +299,7 @@ impl<P: Atomic> GenericLocalCounterVec<P> {
 
     /// Remove a [`GenericLocalCounter`] by label values.
     /// See more [MetricVec::remove_label_values].
-    pub fn remove_label_values(&mut self, vals: &[&str]) -> Result<()> {
+    pub fn remove_label_values<L: AsRef<str>>(&mut self, vals: &[L]) -> Result<()> {
         let hash = self.vec.v.hash_label_values(vals)?;
         self.local.remove(&hash);
         self.vec.v.delete_label_values(vals)
