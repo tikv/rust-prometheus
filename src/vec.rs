@@ -2,10 +2,10 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
 use std::collections::HashMap;
-use std::hash::Hasher;
+use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
-
 use fnv::FnvHasher;
+use nohash_hasher::BuildNoHashHasher;
 use parking_lot::RwLock;
 
 use crate::desc::{Desc, Describer};
@@ -26,7 +26,8 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
 
 #[derive(Debug)]
 pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
-    pub children: RwLock<HashMap<u64, T::M>>,
+    // the key is pre-hashed, and so we use a no-hash hasher to avoid hashing again.
+    pub children: RwLock<HashMap<u64, T::M, BuildNoHashHasher<u64>>>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
@@ -59,7 +60,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.get_or_create_metric(h, vals)
     }
 
-    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
+    pub fn get_metric_with<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<T::M> {
         let h = self.hash_labels(labels)?;
 
         if let Some(metric) = self.children.read().get(&h).cloned() {
@@ -81,7 +82,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(())
     }
 
-    pub fn delete(&self, labels: &HashMap<&str, &str>) -> Result<()> {
+    pub fn delete<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<()> {
         let h = self.hash_labels(labels)?;
 
         let mut children = self.children.write();
@@ -113,7 +114,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn hash_labels(&self, labels: &HashMap<&str, &str>) -> Result<u64> {
+    fn hash_labels<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<u64> {
         if labels.len() != self.desc.variable_labels.len() {
             return Err(Error::InconsistentCardinality {
                 expect: self.desc.variable_labels.len(),
@@ -137,7 +138,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn get_label_values<'a>(&self, labels: &'a HashMap<&str, &str>) -> Result<Vec<&'a str>> {
+    fn get_label_values<'a, S: BuildHasher>(&self, labels: &'a HashMap<&str, &str, S>) -> Result<Vec<&'a str>> {
         let mut values = Vec::new();
         for name in &self.desc.variable_labels {
             match labels.get(&name.as_ref()) {
@@ -188,7 +189,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     pub fn create(metric_type: MetricType, new_metric: T, opts: T::P) -> Result<MetricVec<T>> {
         let desc = opts.describe()?;
         let v = MetricVecCore {
-            children: RwLock::new(HashMap::new()),
+            children: RwLock::new(HashMap::default()),
             desc,
             metric_type,
             new_metric,
@@ -237,7 +238,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// This method is used for the same purpose as
     /// `get_metric_with_label_values`. See there for pros and cons of the two
     /// methods.
-    pub fn get_metric_with(&self, labels: &HashMap<&str, &str>) -> Result<T::M> {
+    pub fn get_metric_with<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<T::M> {
         self.v.get_metric_with(labels)
     }
 
@@ -261,7 +262,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// `with` works as `get_metric_with`, but panics if an error occurs. The method allows
     /// neat syntax like:
     ///     httpReqs.with(Labels{"status":"404", "method":"POST"}).inc()
-    pub fn with(&self, labels: &HashMap<&str, &str>) -> T::M {
+    pub fn with<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> T::M {
         self.get_metric_with(labels).unwrap()
     }
 
@@ -289,7 +290,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     ///
     /// This method is used for the same purpose as `delete_label_values`. See
     /// there for pros and cons of the two methods.
-    pub fn remove(&self, labels: &HashMap<&str, &str>) -> Result<()> {
+    pub fn remove<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<()> {
         self.v.delete(labels)
     }
 

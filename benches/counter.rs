@@ -11,8 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use prometheus::{Counter, CounterVec, IntCounter, Opts};
+use fnv::FnvBuildHasher;
 use std::collections::HashMap;
 use std::sync::{atomic, Arc};
 use std::thread;
@@ -24,7 +25,7 @@ fn bench_counter_with_label_values(c: &mut Criterion) {
     )
     .unwrap();
     c.bench_function("counter_with_label_values", |b| {
-        b.iter(|| counter.with_label_values(&["eins", "zwei", "drei"]).inc())
+        b.iter(|| counter.with_label_values(&black_box(["eins", "zwei", "drei"])).inc())
     });
 }
 
@@ -41,7 +42,25 @@ fn bench_counter_with_mapped_labels(c: &mut Criterion) {
             labels.insert("two", "zwei");
             labels.insert("one", "eins");
             labels.insert("three", "drei");
-            counter.with(&labels).inc();
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_labels_fnv(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &["one", "two", "three"],
+    )
+        .unwrap();
+
+    c.bench_function("counter_with_mapped_labels_fnv", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity_and_hasher(3, FnvBuildHasher::default());
+            labels.insert("two", "zwei");
+            labels.insert("one", "eins");
+            labels.insert("three", "drei");
+            counter.with(&black_box(labels)).inc();
         })
     });
 }
@@ -192,6 +211,7 @@ criterion_group!(
     bench_counter_with_label_values,
     bench_counter_with_label_values_concurrent_write,
     bench_counter_with_mapped_labels,
+    bench_counter_with_mapped_labels_fnv,
     bench_counter_with_prepared_mapped_labels,
     bench_int_counter_no_labels,
     bench_int_counter_no_labels_concurrent_write,
