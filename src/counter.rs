@@ -75,6 +75,14 @@ impl<P: Atomic> GenericCounter<P> {
         self.v.get()
     }
 
+    /// Set the counter to a specific value.
+    /// This is useful when you're reexporting metrics from another location
+    /// that pre-aggregates them.
+    #[inline]
+    pub fn set(&self, v: P::T) {
+        self.v.set(v)
+    }
+
     /// Restart the counter, resetting its value back to 0.
     #[inline]
     pub fn reset(&self) {
