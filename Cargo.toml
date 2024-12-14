@@ -32,6 +32,9 @@ memchr = "^2.3"
 reqwest = { version = "^0.12", features = ["blocking"], optional = true }
 thiserror = "^1.0"
 
+[target.'cfg(any(target_arch = "powerpc", target_arch = "mips", target_arch = "xtensa"))'.dependencies]
+portable-atomic = "1.10.0"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 procfs = { version = "^0.16", optional = true, default-features = false }
 
