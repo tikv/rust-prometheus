@@ -38,7 +38,7 @@ procfs = { version = "^0.16", optional = true, default-features = false }
 [dev-dependencies]
 criterion = "0.5"
 getopts = "^0.2"
-hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
+hyper = { version = "^1.4", features = ["server", "http1", "tcp"] }
 tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
