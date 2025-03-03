@@ -43,10 +43,10 @@ impl<P: Atomic> GenericGauge<P> {
 
     /// Create a [`GenericGauge`] with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+        Self::with_opts_and_label_values::<&str>(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn with_opts_and_label_values<V: AsRef<str>>(opts: &Opts, label_values: &[V]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Gauge, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -129,7 +129,7 @@ impl<P: Atomic> MetricVecBuilder for GaugeVecBuilder<P> {
     type M = GenericGauge<P>;
     type P = Opts;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+    fn build<V: AsRef<str>>(&self, opts: &Opts, vals: &[V]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }
@@ -217,6 +217,29 @@ mod tests {
     }
 
     #[test]
+    fn test_gauge_vec_with_owned_labels() {
+        let vec = GaugeVec::new(
+            Opts::new("test_gauge_vec", "test gauge vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", "v1");
+        labels.insert("l2", "v2");
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        vec.with(&labels).dec();
+        vec.with(&labels).add(42.0);
+        vec.with(&labels).sub(42.0);
+        vec.with(&labels).set(42.0);
+
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+    }
+
+    #[test]
     fn test_gauge_vec_with_label_values() {
         let vec = GaugeVec::new(
             Opts::new("test_gauge_vec", "test gauge vec help"),
@@ -236,5 +259,31 @@ mod tests {
 
         assert!(vec.remove_label_values(&["v1"]).is_err());
         assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_gauge_vec_with_owned_label_values() {
+        let vec = GaugeVec::new(
+            Opts::new("test_gauge_vec", "test gauge vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+        let v3 = "v3".to_string();
+
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_err());
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_ok());
+
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        vec.with_label_values(&[v1.clone(), v2.clone()]).dec();
+        vec.with_label_values(&[v1.clone(), v2.clone()]).add(42.0);
+        vec.with_label_values(&[v1.clone(), v2.clone()]).sub(42.0);
+        vec.with_label_values(&[v1.clone(), v2.clone()]).set(42.0);
+
+        assert!(vec.remove_label_values(&[v1.clone()]).is_err());
+        assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
     }
 }

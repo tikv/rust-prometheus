@@ -327,7 +327,7 @@ pub struct HistogramCore {
 }
 
 impl HistogramCore {
-    pub fn new(opts: &HistogramOpts, label_values: &[&str]) -> Result<HistogramCore> {
+    pub fn new<V: AsRef<str>>(opts: &HistogramOpts, label_values: &[V]) -> Result<HistogramCore> {
         let desc = opts.describe()?;
 
         for name in &desc.variable_labels {
@@ -674,12 +674,12 @@ pub struct Histogram {
 impl Histogram {
     /// `with_opts` creates a [`Histogram`] with the `opts` options.
     pub fn with_opts(opts: HistogramOpts) -> Result<Histogram> {
-        Histogram::with_opts_and_label_values(&opts, &[])
+        Histogram::with_opts_and_label_values::<&str>(&opts, &[])
     }
 
-    fn with_opts_and_label_values(
+    fn with_opts_and_label_values<V: AsRef<str>>(
         opts: &HistogramOpts,
-        label_values: &[&str],
+        label_values: &[V],
     ) -> Result<Histogram> {
         let core = HistogramCore::new(opts, label_values)?;
 
@@ -783,7 +783,7 @@ impl MetricVecBuilder for HistogramVecBuilder {
     type M = Histogram;
     type P = HistogramOpts;
 
-    fn build(&self, opts: &HistogramOpts, vals: &[&str]) -> Result<Histogram> {
+    fn build<V: AsRef<str>>(&self, opts: &HistogramOpts, vals: &[V]) -> Result<Histogram> {
         Histogram::with_opts_and_label_values(opts, vals)
     }
 }
@@ -1384,6 +1384,27 @@ mod tests {
 
         assert!(vec.remove_label_values(&["v1"]).is_err());
         assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_histogram_vec_with_owned_label_values() {
+        let vec = HistogramVec::new(
+            HistogramOpts::new("test_histogram_vec", "test histogram vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+        let v3 = "v3".to_string();
+
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_err());
+        vec.with_label_values(&[v1.clone(), v2.clone()])
+            .observe(1.0);
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_ok());
+
+        assert!(vec.remove_label_values(&[v1.clone()]).is_err());
+        assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
     }
 
     #[test]
