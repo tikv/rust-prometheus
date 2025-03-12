@@ -165,7 +165,10 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use crate::metrics::{Collector, Opts};
+    use crate::{
+        metrics::{Collector, Opts},
+        proto_ext::MessageFieldExt,
+    };
 
     #[test]
     fn test_gauge() {

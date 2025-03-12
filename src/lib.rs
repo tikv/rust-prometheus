@@ -129,16 +129,14 @@ This library supports four features:
 #[path = "../proto/proto_model.rs"]
 pub mod proto;
 
-#[cfg(feature = "protobuf")]
-macro_rules! from_vec {
-    ($e: expr) => {
-        ::protobuf::RepeatedField::from_vec($e)
-    };
-}
-
 #[cfg(not(feature = "protobuf"))]
 #[path = "plain_model.rs"]
 pub mod proto;
+
+#[cfg(feature = "protobuf")]
+mod convert;
+#[cfg(feature = "protobuf")]
+mod proto_ext;
 
 #[cfg(not(feature = "protobuf"))]
 macro_rules! from_vec {

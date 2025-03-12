@@ -58,10 +58,7 @@ impl PullingGauge {
         let getter = &self.value;
         gauge.set_value(getter());
 
-        let mut metric = Metric::default();
-        metric.set_gauge(gauge);
-
-        metric
+        Metric::from_gauge(gauge)
     }
 }
 
@@ -75,7 +72,7 @@ impl Collector for PullingGauge {
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(MetricType::GAUGE);
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.set_metric(vec![self.metric()]);
         vec![m]
     }
 }
@@ -84,6 +81,7 @@ impl Collector for PullingGauge {
 mod tests {
     use super::*;
     use crate::metrics::Collector;
+    use crate::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_pulling_gauge() {

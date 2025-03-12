@@ -326,7 +326,10 @@ mod tests {
     use std::f64;
 
     use super::*;
-    use crate::metrics::{Collector, Opts};
+    use crate::{
+        metrics::{Collector, Opts},
+        proto_ext::MessageFieldExt,
+    };
 
     #[test]
     fn test_counter() {
