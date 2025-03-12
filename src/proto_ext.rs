@@ -133,6 +133,37 @@ impl Summary {
     pub fn set_quantile(&mut self, quantiles: Vec<Quantile>) {
         self.quantile = quantiles;
     }
+
+    /// Returns the quantiles of this summary.
+    pub fn get_quantile(&self) -> &[Quantile] {
+        &self.quantile
+    }
+
+    #[deprecated(since = "0.14.0", note = "Please use `.sample_count()` instead")]
+    /// Returns the sample count of this summary.
+    pub fn get_sample_count(&self) -> u64 {
+        self.sample_count()
+    }
+
+    #[deprecated(since = "0.14.0", note = "Please use `.sample_sum()` instead")]
+    /// Returns the sample sum of this summary.
+    pub fn get_sample_sum(&self) -> f64 {
+        self.sample_sum()
+    }
+}
+
+impl Quantile {
+    #[deprecated(since = "0.14.0", note = "Please use `.quantile()` instead")]
+    /// Returns the quantile of this quantile.
+    pub fn get_quantile(&self) -> f64 {
+        self.quantile()
+    }
+
+    #[deprecated(since = "0.14.0", note = "Please use `.value()` instead")]
+    /// Returns the value of this quantile.
+    pub fn get_value(&self) -> f64 {
+        self.value()
+    }
 }
 
 pub trait MessageFieldExt {
