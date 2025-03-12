@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use crate::errors::Result;
 use crate::histogram::BUCKET_LABEL;
 use crate::proto::{self, MetricFamily, MetricType};
+#[cfg(feature = "protobuf")]
 use crate::proto_ext::MessageFieldExt;
 
 use super::{check_metric_family, Encoder};
@@ -126,7 +127,7 @@ impl TextEncoder {
                     MetricType::SUMMARY => {
                         let s = m.get_summary();
 
-                        for q in s.quantile.iter() {
+                        for q in s.get_quantile().iter() {
                             write_sample(
                                 writer,
                                 name,

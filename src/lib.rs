@@ -138,13 +138,6 @@ mod convert;
 #[cfg(feature = "protobuf")]
 mod proto_ext;
 
-#[cfg(not(feature = "protobuf"))]
-macro_rules! from_vec {
-    ($e: expr) => {
-        $e
-    };
-}
-
 #[macro_use]
 mod macros;
 mod atomic64;
