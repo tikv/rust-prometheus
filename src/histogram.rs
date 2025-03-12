@@ -334,7 +334,7 @@ impl HistogramCore {
             check_bucket_label(name)?;
         }
         for pair in &desc.const_label_pairs {
-            check_bucket_label(pair.get_name())?;
+            check_bucket_label(pair.name())?;
         }
 
         let label_pairs = make_label_pairs(&desc, label_values)?;
@@ -453,7 +453,7 @@ impl HistogramCore {
             b.set_upper_bound(*upper_bound);
             buckets.push(b);
         }
-        h.set_bucket(from_vec!(buckets));
+        h.set_bucket(buckets);
 
         // Update the hot shard.
         hot_shard.count.inc_by(overall_count);
@@ -750,8 +750,7 @@ impl Histogram {
 
 impl Metric for Histogram {
     fn metric(&self) -> proto::Metric {
-        let mut m = proto::Metric::default();
-        m.set_label(from_vec!(self.core.label_pairs.clone()));
+        let mut m = proto::Metric::from_label(self.core.label_pairs.clone());
 
         let h = self.core.proto();
         m.set_histogram(h);
@@ -770,7 +769,7 @@ impl Collector for Histogram {
         m.set_name(self.core.desc.fq_name.clone());
         m.set_help(self.core.desc.help.clone());
         m.set_field_type(proto::MetricType::HISTOGRAM);
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.set_metric(vec![self.metric()]);
 
         vec![m]
     }
@@ -1520,7 +1519,7 @@ mod tests {
             sample_count = proto.get_sample_count();
             sample_sum = proto.get_sample_sum() as u64;
             // There is only one bucket thus the `[0]`.
-            cumulative_count = proto.get_bucket()[0].get_cumulative_count();
+            cumulative_count = proto.get_bucket()[0].cumulative_count();
 
             if sample_count != cumulative_count {
                 break;
