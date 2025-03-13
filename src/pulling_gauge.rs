@@ -81,6 +81,8 @@ impl Collector for PullingGauge {
 mod tests {
     use super::*;
     use crate::metrics::Collector;
+
+    #[cfg(feature = "protobuf")]
     use crate::proto_ext::MessageFieldExt;
 
     #[test]
