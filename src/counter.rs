@@ -44,10 +44,10 @@ impl<P: Atomic> GenericCounter<P> {
 
     /// Create a [`GenericCounter`] with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+        Self::with_opts_and_label_values::<&str>(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn with_opts_and_label_values<V: AsRef<str>>(opts: &Opts, label_values: &[V]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -126,7 +126,7 @@ impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
     type M = GenericCounter<P>;
     type P = Opts;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+    fn build<V: AsRef<str>>(&self, opts: &Opts, vals: &[V]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }
@@ -451,6 +451,40 @@ mod tests {
     }
 
     #[test]
+    fn test_counter_vec_with_owned_labels() {
+        let vec = CounterVec::new(
+            Opts::new("test_couter_vec", "test counter vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", v1.clone());
+        labels.insert("l2", v2.clone());
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+
+        let mut labels2 = HashMap::new();
+        labels2.insert("l1", v2.clone());
+        labels2.insert("l2", v1.clone());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels2).is_err());
+
+        vec.with(&labels).inc();
+
+        let mut labels3 = HashMap::new();
+        labels3.insert("l1", v1.clone());
+        assert!(vec.remove(&labels3).is_err());
+    }
+
+    #[test]
     fn test_int_counter_vec() {
         let vec = IntCounterVec::new(Opts::new("foo", "bar"), &["l1", "l2"]).unwrap();
 
@@ -487,6 +521,27 @@ mod tests {
         vec.with_label_values(&["v1", "v2"]).inc();
         assert!(vec.remove_label_values(&["v1"]).is_err());
         assert!(vec.remove_label_values(&["v1", "v3"]).is_err());
+    }
+
+    #[test]
+    fn test_counter_vec_with_owned_label_values() {
+        let vec = CounterVec::new(
+            Opts::new("test_vec", "test counter vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+        let v3 = "v3".to_string();
+
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_err());
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_ok());
+
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone()]).is_err());
+        assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
     }
 
     #[test]
