@@ -284,11 +284,11 @@ impl ShardAndCount {
 /// A histogram supports two main execution paths:
 ///
 /// 1. `observe` which increases the overall observation counter, updates the
-/// observation sum and increases a single bucket counter.
+///    observation sum and increases a single bucket counter.
 ///
 /// 2. `proto` (aka. collecting the metric, from now on referred to as the
-/// collect operation) which snapshots the state of the histogram and exposes it
-/// as a Protobuf struct.
+///    collect operation) which snapshots the state of the histogram and exposes
+///    it as a Protobuf struct.
 ///
 /// If an observe and a collect operation interleave, the latter could be
 /// exposing a snapshot of the histogram that does not uphold all histogram
@@ -1207,7 +1207,7 @@ impl Clone for LocalHistogramVec {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::{EPSILON, INFINITY};
+    use std::f64;
     use std::thread;
     use std::time::Duration;
 
@@ -1237,7 +1237,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
+        let m = mf.get_metric().first().unwrap();
         assert_eq!(m.get_label().len(), 2);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
@@ -1251,11 +1251,11 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
+        let m = mf.get_metric().first().unwrap();
         assert_eq!(m.get_label().len(), 0);
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 0);
-        assert!((proto_histogram.get_sample_sum() - 0.0) < EPSILON);
+        assert!((proto_histogram.get_sample_sum() - 0.0) < f64::EPSILON);
         assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
     }
 
@@ -1287,7 +1287,7 @@ mod tests {
         let m = mf.get_metric().get(0).unwrap();
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 3);
-        assert!((proto_histogram.get_sample_sum() - 0.0) > EPSILON);
+        assert!((proto_histogram.get_sample_sum() - 0.0) > f64::EPSILON);
     }
 
     #[test]
@@ -1311,7 +1311,11 @@ mod tests {
             (vec![], true, DEFAULT_BUCKETS.len()),
             (vec![-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0], true, 7),
             (vec![-2.0, -1.0, -0.5, 10.0, 0.5, 1.0, 2.0], false, 7),
-            (vec![-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, INFINITY], true, 6),
+            (
+                vec![-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, f64::INFINITY],
+                true,
+                6,
+            ),
         ];
 
         for (buckets, is_ok, length) in table {
@@ -1366,7 +1370,7 @@ mod tests {
         for (millis, seconds) in tbls {
             let d = Duration::from_millis(millis);
             let v = duration_to_seconds(d);
-            assert!((v - seconds).abs() < EPSILON);
+            assert!((v - seconds).abs() < f64::EPSILON);
         }
     }
 
@@ -1405,7 +1409,7 @@ mod tests {
 
         let proto_histogram = m.get_histogram();
         assert_eq!(proto_histogram.get_sample_count(), 1);
-        assert!((proto_histogram.get_sample_sum() - 1.0) < EPSILON);
+        assert!((proto_histogram.get_sample_sum() - 1.0) < f64::EPSILON);
         assert_eq!(proto_histogram.get_bucket().len(), buckets.len())
     }
 
@@ -1421,7 +1425,7 @@ mod tests {
             let m = histogram.metric();
             let proto_histogram = m.get_histogram();
             assert_eq!(proto_histogram.get_sample_count(), count);
-            assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
+            assert!((proto_histogram.get_sample_sum() - sum) < f64::EPSILON);
         };
 
         local.observe(1.0);
@@ -1456,7 +1460,7 @@ mod tests {
             let ms = vec.collect()[0].take_metric();
             let proto_histogram = ms[0].get_histogram();
             assert_eq!(proto_histogram.get_sample_count(), count);
-            assert!((proto_histogram.get_sample_sum() - sum) < EPSILON);
+            assert!((proto_histogram.get_sample_sum() - sum) < f64::EPSILON);
         };
 
         {
