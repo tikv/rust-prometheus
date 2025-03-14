@@ -37,11 +37,11 @@ pub struct Value<P: Atomic> {
 }
 
 impl<P: Atomic> Value<P> {
-    pub fn new<D: Describer>(
+    pub fn new<D: Describer, L: AsRef<str>>(
         describer: &D,
         val_type: ValueType,
         val: P::T,
-        label_values: &[&str],
+        label_values: &[L],
     ) -> Result<Self> {
         let desc = describer.describe()?;
         let label_pairs = make_label_pairs(&desc, label_values)?;
@@ -115,7 +115,7 @@ impl<P: Atomic> Value<P> {
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Result<Vec<LabelPair>> {
+pub fn make_label_pairs<L: AsRef<str>>(desc: &Desc, label_values: &[L]) -> Result<Vec<LabelPair>> {
     if desc.variable_labels.len() != label_values.len() {
         return Err(Error::InconsistentCardinality {
             expect: desc.variable_labels.len(),
@@ -136,7 +136,7 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Result<Vec<LabelP
     for (i, n) in desc.variable_labels.iter().enumerate() {
         let mut label_pair = LabelPair::default();
         label_pair.set_name(n.clone());
-        label_pair.set_value(label_values[i].to_owned());
+        label_pair.set_value(label_values[i].as_ref().to_owned());
         label_pairs.push(label_pair);
     }
 
