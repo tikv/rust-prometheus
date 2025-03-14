@@ -776,6 +776,7 @@ impl Collector for Histogram {
     }
 }
 
+/// Default [`HistogramVecBuilder`].
 #[derive(Clone, Debug)]
 pub struct HistogramVecBuilder {}
 
