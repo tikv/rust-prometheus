@@ -6,6 +6,8 @@ use std::io::{self, Write};
 use crate::errors::Result;
 use crate::histogram::BUCKET_LABEL;
 use crate::proto::{self, MetricFamily, MetricType};
+#[cfg(feature = "protobuf")]
+use crate::proto_ext::MessageFieldExt;
 
 use super::{check_metric_family, Encoder};
 
@@ -55,8 +57,8 @@ impl TextEncoder {
             check_metric_family(mf)?;
 
             // Write `# HELP` header.
-            let name = mf.get_name();
-            let help = mf.get_help();
+            let name = mf.name();
+            let help = mf.help();
             if !help.is_empty() {
                 writer.write_all("# HELP ")?;
                 writer.write_all(name)?;
@@ -87,14 +89,14 @@ impl TextEncoder {
 
                         let mut inf_seen = false;
                         for b in h.get_bucket() {
-                            let upper_bound = b.get_upper_bound();
+                            let upper_bound = b.upper_bound();
                             write_sample(
                                 writer,
                                 name,
                                 Some("_bucket"),
                                 m,
                                 Some((BUCKET_LABEL, &upper_bound.to_string())),
-                                b.get_cumulative_count() as f64,
+                                b.cumulative_count() as f64,
                             )?;
                             if upper_bound.is_sign_positive() && upper_bound.is_infinite() {
                                 inf_seen = true;
@@ -125,18 +127,18 @@ impl TextEncoder {
                     MetricType::SUMMARY => {
                         let s = m.get_summary();
 
-                        for q in s.get_quantile() {
+                        for q in s.get_quantile().iter() {
                             write_sample(
                                 writer,
                                 name,
                                 None,
                                 m,
-                                Some((QUANTILE, &q.get_quantile().to_string())),
-                                q.get_value(),
+                                Some((QUANTILE, &q.quantile().to_string())),
+                                q.value(),
                             )?;
                         }
 
-                        write_sample(writer, name, Some("_sum"), m, None, s.get_sample_sum())?;
+                        write_sample(writer, name, Some("_sum"), m, None, s.sample_sum())?;
 
                         write_sample(
                             writer,
@@ -144,7 +146,7 @@ impl TextEncoder {
                             Some("_count"),
                             m,
                             None,
-                            s.get_sample_count() as f64,
+                            s.sample_count() as f64,
                         )?;
                     }
                     MetricType::UNTYPED => {
@@ -191,7 +193,7 @@ fn write_sample(
     writer.write_all(" ")?;
     writer.write_all(&value.to_string())?;
 
-    let timestamp = mc.get_timestamp_ms();
+    let timestamp = mc.timestamp_ms();
     if timestamp != 0 {
         writer.write_all(" ")?;
         writer.write_all(&timestamp.to_string())?;
@@ -221,9 +223,9 @@ fn label_pairs_to_text(
     let mut separator = "{";
     for lp in pairs {
         writer.write_all(separator)?;
-        writer.write_all(lp.get_name())?;
+        writer.write_all(lp.name())?;
         writer.write_all("=\"")?;
-        writer.write_all(&escape_string(lp.get_value(), true))?;
+        writer.write_all(&escape_string(lp.value(), true))?;
         writer.write_all("\"")?;
 
         separator = ",";
@@ -423,11 +425,11 @@ test_histogram_count{a="1"} 1
         quantile2.set_quantile(100.0);
         quantile2.set_value(5.0);
 
-        summary.set_quantile(from_vec!(vec!(quantile1, quantile2)));
+        summary.set_quantile(vec![quantile1, quantile2]);
 
         let mut metric = Metric::default();
         metric.set_summary(summary);
-        metric_family.set_metric(from_vec!(vec!(metric)));
+        metric_family.set_metric(vec![metric]);
 
         let mut writer = Vec::<u8>::new();
         let encoder = TextEncoder::new();
