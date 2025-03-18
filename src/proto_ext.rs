@@ -1,4 +1,4 @@
-use protobuf::MessageField;
+use protobuf::{EnumOrUnknown, MessageField};
 
 use crate::proto::{
     Bucket, Counter, Gauge, Histogram, LabelPair, Metric, MetricFamily, MetricType, Quantile,
@@ -231,5 +231,35 @@ impl LabelPair {
     /// Returns the name of this label pair.
     pub fn get_name(&self) -> &str {
         self.name()
+    }
+}
+
+impl From<Counter> for MessageField<Counter> {
+    fn from(value: Counter) -> Self {
+        MessageField::some(value)
+    }
+}
+
+impl From<Gauge> for MessageField<Gauge> {
+    fn from(value: Gauge) -> Self {
+        MessageField::some(value)
+    }
+}
+
+impl From<Histogram> for MessageField<Histogram> {
+    fn from(value: Histogram) -> Self {
+        MessageField::some(value)
+    }
+}
+
+impl From<Summary> for MessageField<Summary> {
+    fn from(value: Summary) -> Self {
+        MessageField::some(value)
+    }
+}
+
+impl From<MetricType> for Option<EnumOrUnknown<MetricType>> {
+    fn from(value: MetricType) -> Self {
+        Some(EnumOrUnknown::from(value))
     }
 }

@@ -22,7 +22,7 @@ pub enum Error {
     /// An error containing a [`std::io::Error`].
     #[error("Io error: {0}")]
     Io(#[from] std::io::Error),
-    /// An error containing a [`protobuf::error::ProtobufError`].
+    /// An error containing a [`protobuf::Error`].
     #[cfg(feature = "protobuf")]
     #[error("Protobuf error: {0}")]
     Protobuf(#[from] protobuf::Error),

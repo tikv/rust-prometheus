@@ -28,7 +28,7 @@ fnv = "^1.0"
 lazy_static = "^1.4"
 libc = { version = "^0.2", optional = true }
 parking_lot = "^0.12"
-protobuf = { version = "^3.7", optional = true }
+protobuf = { version = "^3.7.2", optional = true }
 memchr = "^2.3"
 reqwest = { version = "^0.12", features = ["blocking"], optional = true }
 thiserror = "^2.0"
@@ -43,7 +43,7 @@ hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
-protobuf-codegen = { version = "^3.7", optional = true }
+protobuf-codegen = { version = "^3.7.2", optional = true }
 
 [workspace]
 members = ["static-metric"]

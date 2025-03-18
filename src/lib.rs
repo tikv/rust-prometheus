@@ -134,8 +134,6 @@ pub mod proto;
 pub mod proto;
 
 #[cfg(feature = "protobuf")]
-mod convert;
-#[cfg(feature = "protobuf")]
 mod proto_ext;
 
 #[macro_use]
