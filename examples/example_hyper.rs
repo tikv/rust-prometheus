@@ -1,14 +1,20 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-use hyper::{
-    header::CONTENT_TYPE,
-    service::{make_service_fn, service_fn},
-    Body, Request, Response, Server,
-};
-use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
+use std::net::SocketAddr;
 
+use hyper::body::Incoming;
+use hyper::header::CONTENT_TYPE;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::Request;
+use hyper::Response;
+use hyper_util::rt::TokioIo;
 use lazy_static::lazy_static;
 use prometheus::{labels, opts, register_counter, register_gauge, register_histogram_vec};
+use prometheus::{Counter, Encoder, Gauge, HistogramVec, TextEncoder};
+use tokio::net::TcpListener;
+
+type BoxedErr = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 lazy_static! {
     static ref HTTP_COUNTER: Counter = register_counter!(opts!(
@@ -31,22 +37,20 @@ lazy_static! {
     .unwrap();
 }
 
-async fn serve_req(_req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+async fn serve_req(_req: Request<Incoming>) -> Result<Response<String>, BoxedErr> {
     let encoder = TextEncoder::new();
 
     HTTP_COUNTER.inc();
     let timer = HTTP_REQ_HISTOGRAM.with_label_values(&["all"]).start_timer();
 
     let metric_families = prometheus::gather();
-    let mut buffer = vec![];
-    encoder.encode(&metric_families, &mut buffer).unwrap();
-    HTTP_BODY_GAUGE.set(buffer.len() as f64);
+    let body = encoder.encode_to_string(&metric_families)?;
+    HTTP_BODY_GAUGE.set(body.len() as f64);
 
     let response = Response::builder()
         .status(200)
         .header(CONTENT_TYPE, encoder.format_type())
-        .body(Body::from(buffer))
-        .unwrap();
+        .body(body)?;
 
     timer.observe_duration();
 
@@ -54,15 +58,18 @@ async fn serve_req(_req: Request<Body>) -> Result<Response<Body>, hyper::Error> 
 }
 
 #[tokio::main]
-async fn main() {
-    let addr = ([127, 0, 0, 1], 9898).into();
+async fn main() -> Result<(), BoxedErr> {
+    let addr: SocketAddr = ([127, 0, 0, 1], 9898).into();
     println!("Listening on http://{}", addr);
+    let listener = TcpListener::bind(addr).await?;
 
-    let serve_future = Server::bind(&addr).serve(make_service_fn(|_| async {
-        Ok::<_, hyper::Error>(service_fn(serve_req))
-    }));
+    loop {
+        let (stream, _) = listener.accept().await?;
+        let io = TokioIo::new(stream);
 
-    if let Err(err) = serve_future.await {
-        eprintln!("server error: {}", err);
+        let service = service_fn(serve_req);
+        if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
+            eprintln!("server error: {:?}", err);
+        };
     }
 }
