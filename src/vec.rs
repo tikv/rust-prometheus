@@ -45,7 +45,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         for child in children.values() {
             metrics.push(child.metric());
         }
-        m.set_metric(from_vec!(metrics));
+        m.set_metric(metrics);
         m
     }
 
@@ -428,7 +428,7 @@ mod tests {
         let label_pairs = m.get_label();
         assert_eq!(label_pairs.len(), labels.len());
         for lp in label_pairs.iter() {
-            assert_eq!(lp.get_value(), labels[lp.get_name()]);
+            assert_eq!(lp.value(), labels[lp.name()]);
         }
     }
 }

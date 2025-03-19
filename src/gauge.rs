@@ -166,6 +166,8 @@ mod tests {
 
     use super::*;
     use crate::metrics::{Collector, Opts};
+    #[cfg(feature = "protobuf")]
+    use crate::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_gauge() {
