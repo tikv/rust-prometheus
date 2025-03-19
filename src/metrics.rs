@@ -177,7 +177,7 @@ impl Describer for Opts {
 
 impl Ord for LabelPair {
     fn cmp(&self, other: &LabelPair) -> Ordering {
-        self.get_name().cmp(other.get_name())
+        self.name().cmp(other.name())
     }
 }
 

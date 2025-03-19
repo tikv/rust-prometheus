@@ -127,7 +127,7 @@ impl RegistryCore {
                     continue;
                 }
 
-                let name = mf.get_name().to_owned();
+                let name = mf.name().to_owned();
                 match mf_by_name.entry(name) {
                     BEntry::Vacant(entry) => {
                         entry.insert(mf);
@@ -166,8 +166,8 @@ impl RegistryCore {
                 }
 
                 for (lp1, lp2) in lps1.iter().zip(lps2.iter()) {
-                    if lp1.get_value() != lp2.get_value() {
-                        return lp1.get_value().cmp(lp2.get_value());
+                    if lp1.value() != lp2.value() {
+                        return lp1.value().cmp(lp2.value());
                     }
                 }
 
@@ -177,7 +177,7 @@ impl RegistryCore {
                 // here, even for inconsistent metrics. So sort equal metrics
                 // by their timestamp, with missing timestamps (implying "now")
                 // coming last.
-                m1.get_timestamp_ms().cmp(&m2.get_timestamp_ms())
+                m1.timestamp_ms().cmp(&m2.timestamp_ms())
             });
         }
 
@@ -187,7 +187,7 @@ impl RegistryCore {
             .map(|mut m| {
                 // Add registry namespace prefix, if any.
                 if let Some(ref namespace) = self.prefix {
-                    let prefixed = format!("{}_{}", namespace, m.get_name());
+                    let prefixed = format!("{}_{}", namespace, m.name());
                     m.set_name(prefixed);
                 }
 
@@ -204,9 +204,9 @@ impl RegistryCore {
                         .collect();
 
                     for metric in m.mut_metric().iter_mut() {
-                        let mut labels: Vec<_> = metric.take_label().into();
+                        let mut labels: Vec<_> = metric.take_label();
                         labels.append(&mut pairs.clone());
-                        metric.set_label(labels.into());
+                        metric.set_label(labels);
                     }
                 }
                 m
@@ -341,7 +341,10 @@ mod tests {
     use crate::counter::{Counter, CounterVec};
     use crate::desc::Desc;
     use crate::metrics::{Collector, Opts};
+    #[cfg(feature = "protobuf")]
     use crate::proto;
+    #[cfg(feature = "protobuf")]
+    use crate::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_registry() {
@@ -401,9 +404,9 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 3);
-        assert_eq!(mfs[0].get_name(), "test_2_counter");
-        assert_eq!(mfs[1].get_name(), "test_a_counter");
-        assert_eq!(mfs[2].get_name(), "test_b_counter");
+        assert_eq!(mfs[0].name(), "test_2_counter");
+        assert_eq!(mfs[1].name(), "test_a_counter");
+        assert_eq!(mfs[2].name(), "test_b_counter");
 
         let r = Registry::new();
         let opts = Opts::new("test", "test help")
@@ -473,7 +476,7 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 1);
-        assert_eq!(mfs[0].get_name(), "common_prefix_test_a_counter");
+        assert_eq!(mfs[0].name(), "common_prefix_test_a_counter");
     }
 
     #[test]
@@ -493,8 +496,8 @@ mod tests {
 
         let mfs = r.gather();
         assert_eq!(mfs.len(), 2);
-        assert_eq!(mfs[0].get_name(), "test_a_counter");
-        assert_eq!(mfs[1].get_name(), "test_vec");
+        assert_eq!(mfs[0].name(), "test_a_counter");
+        assert_eq!(mfs[1].name(), "test_vec");
 
         let mut needle = proto::LabelPair::default();
         needle.set_name("tkey".to_string());

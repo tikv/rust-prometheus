@@ -43,7 +43,7 @@ fn test_labels_without_trailing_comma() {
         "foo" => "bar"
     };
     assert_eq!(labels.len(), 2);
-    assert!(labels.get("test").is_some());
+    assert!(labels.contains_key("test"));
     assert_eq!(*(labels.get("test").unwrap()), "hello");
 }
 
@@ -84,6 +84,7 @@ macro_rules! opts {
             let opts = $crate::Opts::new($NAME, $HELP);
             let lbs = HashMap::<String, String>::new();
             $(
+                #[allow(clippy::redundant_locals)]
                 let mut lbs = lbs;
                 lbs.extend($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
             )*
@@ -104,7 +105,7 @@ fn test_opts_trailing_comma() {
 
     let opts = opts!(name, help, labels! {"test" => "hello", "foo" => "bar",},);
     assert_eq!(opts.const_labels.len(), 2);
-    assert!(opts.const_labels.get("foo").is_some());
+    assert!(opts.const_labels.contains_key("foo"));
     assert_eq!(opts.const_labels.get("foo").unwrap(), "bar");
 
     let opts = opts!(
@@ -114,7 +115,7 @@ fn test_opts_trailing_comma() {
         labels! {"ans" => "42",},
     );
     assert_eq!(opts.const_labels.len(), 3);
-    assert!(opts.const_labels.get("ans").is_some());
+    assert!(opts.const_labels.contains_key("ans"));
     assert_eq!(opts.const_labels.get("ans").unwrap(), "42");
 }
 
@@ -191,7 +192,7 @@ fn test_histogram_opts_trailing_comma() {
     assert_eq!(opts.common_opts.name, name);
     assert_eq!(opts.common_opts.help, help);
     assert_eq!(opts.buckets.len(), 2);
-    assert!(opts.common_opts.const_labels.get("key").is_some());
+    assert!(opts.common_opts.const_labels.contains_key("key"));
     assert_eq!(opts.common_opts.const_labels.get("key").unwrap(), "value");
 }
 
@@ -1060,7 +1061,7 @@ fn test_register_histogram_vec_trailing_comma() {
     assert!(histogram_vec.is_ok());
 }
 
-/// Create a [`HistogramVec`][crate::HistogramVec] and registers to default registry.
+/// Create a [`HistogramVec`][crate::HistogramVec] and registers to a custom registry.
 ///
 /// # Examples
 ///

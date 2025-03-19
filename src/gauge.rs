@@ -166,6 +166,8 @@ mod tests {
 
     use super::*;
     use crate::metrics::{Collector, Opts};
+    #[cfg(feature = "protobuf")]
+    use crate::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_gauge() {
@@ -188,7 +190,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
+        let m = mf.get_metric().first().unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_gauge().get_value() as u64, 42);
     }

@@ -241,8 +241,8 @@ impl AtomicU64 {
 
 #[cfg(test)]
 mod test {
+    use std::f64;
     use std::f64::consts::PI;
-    use std::f64::{self, EPSILON};
 
     use super::*;
 
@@ -251,7 +251,7 @@ mod test {
         let table: Vec<f64> = vec![0.0, 1.0, PI, f64::MIN, f64::MAX];
 
         for f in table {
-            assert!((f - AtomicF64::new(f).get()).abs() < EPSILON);
+            assert!((f - AtomicF64::new(f).get()).abs() < f64::EPSILON);
         }
     }
 

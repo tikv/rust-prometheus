@@ -85,8 +85,7 @@ impl<P: Atomic> Value<P> {
     }
 
     pub fn metric(&self) -> Metric {
-        let mut m = Metric::default();
-        m.set_label(from_vec!(self.label_pairs.clone()));
+        let mut m = Metric::from_label(self.label_pairs.clone());
 
         let val = self.get();
         match self.val_type {
@@ -110,7 +109,7 @@ impl<P: Atomic> Value<P> {
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.val_type.metric_type());
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.set_metric(vec![self.metric()]);
         m
     }
 }
