@@ -341,7 +341,9 @@ mod tests {
     use crate::counter::{Counter, CounterVec};
     use crate::desc::Desc;
     use crate::metrics::{Collector, Opts};
+    #[cfg(feature = "protobuf")]
     use crate::proto;
+    #[cfg(feature = "protobuf")]
     use crate::proto_ext::MessageFieldExt;
 
     #[test]

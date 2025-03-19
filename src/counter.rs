@@ -326,10 +326,9 @@ mod tests {
     use std::f64;
 
     use super::*;
-    use crate::{
-        metrics::{Collector, Opts},
-        proto_ext::MessageFieldExt,
-    };
+    use crate::metrics::{Collector, Opts};
+    #[cfg(feature = "protobuf")]
+    use crate::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_counter() {
