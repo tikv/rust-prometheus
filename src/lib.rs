@@ -158,6 +158,7 @@ mod errors;
 mod gauge;
 mod histogram;
 mod metrics;
+mod nohash;
 mod pulling_gauge;
 #[cfg(feature = "push")]
 mod push;

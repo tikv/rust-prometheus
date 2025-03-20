@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 use fnv::FnvHasher;
-use nohash_hasher::BuildNoHashHasher;
 use parking_lot::RwLock;
 
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
 use crate::metrics::{Collector, Metric};
+use crate::nohash::BuildNoHashHasher;
 use crate::proto::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
@@ -27,7 +27,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
 #[derive(Debug)]
 pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
     // the key is pre-hashed, and so we use a no-hash hasher to avoid hashing again.
-    pub children: RwLock<HashMap<u64, T::M, BuildNoHashHasher<u64>>>,
+    pub children: RwLock<HashMap<u64, T::M, BuildNoHashHasher>>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
