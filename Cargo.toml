@@ -32,6 +32,7 @@ protobuf = { version = "^3.7.2", optional = true }
 memchr = "^2.3"
 reqwest = { version = "^0.12", features = ["blocking"], optional = true }
 thiserror = "^2.0"
+rapidhash = { version = "1.4.0" }  # path = "../rapidhash"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 procfs = { version = "^0.17", optional = true, default-features = false }
