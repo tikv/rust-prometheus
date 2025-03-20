@@ -12,8 +12,8 @@
 // limitations under the License.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use prometheus::{Counter, CounterVec, IntCounter, Opts};
 use fnv::FnvBuildHasher;
+use prometheus::{Counter, CounterVec, IntCounter, Opts};
 use std::collections::HashMap;
 use std::sync::{atomic, Arc};
 use std::thread;
@@ -25,7 +25,11 @@ fn bench_counter_with_label_values(c: &mut Criterion) {
     )
     .unwrap();
     c.bench_function("counter_with_label_values", |b| {
-        b.iter(|| counter.with_label_values(&black_box(["eins", "zwei", "drei"])).inc())
+        b.iter(|| {
+            counter
+                .with_label_values(&black_box(["eins", "zwei", "drei"]))
+                .inc()
+        })
     });
 }
 
@@ -52,7 +56,7 @@ fn bench_counter_with_mapped_labels_fnv(c: &mut Criterion) {
         Opts::new("benchmark_counter", "A counter to benchmark it."),
         &["one", "two", "three"],
     )
-        .unwrap();
+    .unwrap();
 
     c.bench_function("counter_with_mapped_labels_fnv", |b| {
         b.iter(|| {

@@ -2,9 +2,9 @@ use std::hash::{BuildHasherDefault, Hasher};
 
 /// Inspired by nohash-hasher, but we avoid the crate dependency because it's in public archive.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct NoHashHasher(u64);
+pub(crate) struct NoHashHasher(u64);
 
-pub type BuildNoHashHasher = BuildHasherDefault<NoHashHasher>;
+pub(crate) type BuildNoHashHasher = BuildHasherDefault<NoHashHasher>;
 
 impl Hasher for NoHashHasher {
     #[inline]

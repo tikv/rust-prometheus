@@ -157,7 +157,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn get_label_values<'a, V, S: BuildHasher>(&'a self, labels: &'a HashMap<&str, V, S>) -> Result<Vec<&'a str>>
+    fn get_label_values<'a, V, S: BuildHasher>(
+        &'a self,
+        labels: &'a HashMap<&str, V, S>,
+    ) -> Result<Vec<&'a str>>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
