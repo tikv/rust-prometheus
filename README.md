@@ -18,6 +18,8 @@ Find the latest documentation at <https://docs.rs/prometheus>.
 
 This crate provides several optional components which can be enabled via [Cargo `[features]`](https://doc.rust-lang.org/cargo/reference/features.html):
 
+- `protobuf`: Protobuf support, enabled by default.
+
 - `gen`: To generate protobuf client with the latest protobuf version instead of
   using the pre-generated client.
 

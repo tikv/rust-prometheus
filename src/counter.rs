@@ -44,10 +44,10 @@ impl<P: Atomic> GenericCounter<P> {
 
     /// Create a [`GenericCounter`] with the `opts` options.
     pub fn with_opts(opts: Opts) -> Result<Self> {
-        Self::with_opts_and_label_values(&opts, &[])
+        Self::with_opts_and_label_values::<&str>(&opts, &[])
     }
 
-    fn with_opts_and_label_values(opts: &Opts, label_values: &[&str]) -> Result<Self> {
+    fn with_opts_and_label_values<V: AsRef<str>>(opts: &Opts, label_values: &[V]) -> Result<Self> {
         let v = Value::new(opts, ValueType::Counter, P::T::from_i64(0), label_values)?;
         Ok(Self { v: Arc::new(v) })
     }
@@ -126,7 +126,7 @@ impl<P: Atomic> MetricVecBuilder for CounterVecBuilder<P> {
     type M = GenericCounter<P>;
     type P = Opts;
 
-    fn build(&self, opts: &Opts, vals: &[&str]) -> Result<Self::M> {
+    fn build<V: AsRef<str>>(&self, opts: &Opts, vals: &[V]) -> Result<Self::M> {
         Self::M::with_opts_and_label_values(opts, vals)
     }
 }
@@ -323,10 +323,12 @@ impl<P: Atomic> Clone for GenericLocalCounterVec<P> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::f64::EPSILON;
+    use std::f64;
 
     use super::*;
     use crate::metrics::{Collector, Opts};
+    #[cfg(feature = "protobuf")]
+    use crate::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_counter() {
@@ -343,7 +345,7 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
+        let m = mf.get_metric().first().unwrap();
         assert_eq!(m.get_label().len(), 2);
         assert_eq!(m.get_counter().get_value() as u64, 43);
 
@@ -363,12 +365,12 @@ mod tests {
         assert_eq!(mfs.len(), 1);
 
         let mf = mfs.pop().unwrap();
-        let m = mf.get_metric().get(0).unwrap();
+        let m = mf.get_metric().first().unwrap();
         assert_eq!(m.get_label().len(), 0);
         assert_eq!(m.get_counter().get_value() as u64, 12);
 
         counter.reset();
-        assert_eq!(counter.get() as u64, 0);
+        assert_eq!(counter.get(), 0);
     }
 
     #[test]
@@ -414,9 +416,9 @@ mod tests {
 
         local_counter.reset();
         counter.reset();
-        assert_eq!(counter.get() as u64, 0);
+        assert_eq!(counter.get(), 0);
         local_counter.flush();
-        assert_eq!(counter.get() as u64, 0);
+        assert_eq!(counter.get(), 0);
     }
 
     #[test]
@@ -447,6 +449,40 @@ mod tests {
 
         let mut labels3 = HashMap::new();
         labels3.insert("l1", "v1");
+        assert!(vec.remove(&labels3).is_err());
+    }
+
+    #[test]
+    fn test_counter_vec_with_owned_labels() {
+        let vec = CounterVec::new(
+            Opts::new("test_couter_vec", "test counter vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", v1.clone());
+        labels.insert("l2", v2.clone());
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+
+        let mut labels2 = HashMap::new();
+        labels2.insert("l1", v2.clone());
+        labels2.insert("l2", v1.clone());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels2).is_err());
+
+        vec.with(&labels).inc();
+
+        let mut labels3 = HashMap::new();
+        labels3.insert("l1", v1.clone());
         assert!(vec.remove(&labels3).is_err());
     }
 
@@ -490,6 +526,27 @@ mod tests {
     }
 
     #[test]
+    fn test_counter_vec_with_owned_label_values() {
+        let vec = CounterVec::new(
+            Opts::new("test_vec", "test counter vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+        let v3 = "v3".to_string();
+
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_err());
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_ok());
+
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone()]).is_err());
+        assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
+    }
+
+    #[test]
     fn test_counter_vec_local() {
         let vec = CounterVec::new(
             Opts::new("test_vec_local", "test counter vec help"),
@@ -502,48 +559,48 @@ mod tests {
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_err());
 
         local_vec_1.with_label_values(&["v1", "v2"]).inc_by(23.0);
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 23.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
 
         local_vec_1.flush();
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= f64::EPSILON);
 
         local_vec_1.flush();
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= f64::EPSILON);
 
         local_vec_1.with_label_values(&["v1", "v2"]).inc_by(11.0);
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 11.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 23.0) <= f64::EPSILON);
 
         local_vec_1.flush();
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 34.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 34.0) <= f64::EPSILON);
 
         // When calling `remove_label_values`, it is "flushed" immediately.
         assert!(local_vec_1.remove_label_values(&["v1", "v2"]).is_ok());
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
 
         local_vec_1.with_label_values(&["v1", "v2"]).inc();
         assert!(local_vec_1.remove_label_values(&["v1"]).is_err());
         assert!(local_vec_1.remove_label_values(&["v1", "v3"]).is_err());
 
         local_vec_1.with_label_values(&["v1", "v2"]).inc_by(13.0);
-        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= EPSILON);
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= EPSILON);
+        assert!((local_vec_1.with_label_values(&["v1", "v2"]).get() - 14.0) <= f64::EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 0.0) <= f64::EPSILON);
 
         local_vec_2.with_label_values(&["v1", "v2"]).inc_by(7.0);
-        assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= EPSILON);
+        assert!((local_vec_2.with_label_values(&["v1", "v2"]).get() - 7.0) <= f64::EPSILON);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= f64::EPSILON);
 
         local_vec_1.flush();
         local_vec_2.flush();
-        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= EPSILON);
+        assert!((vec.with_label_values(&["v1", "v2"]).get() - 21.0) <= f64::EPSILON);
     }
 
     #[test]

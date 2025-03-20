@@ -2,13 +2,12 @@
 
 #[cfg(feature = "gen")]
 fn generate_protobuf_binding_file() {
-    protobuf_codegen_pure::run(protobuf_codegen_pure::Args {
-        out_dir: "proto",
-        input: &["proto/proto_model.proto"],
-        includes: &["proto"],
-        ..Default::default()
-    })
-    .unwrap();
+    protobuf_codegen::Codegen::new()
+        .out_dir("proto")
+        .inputs(["proto/proto_model.proto"])
+        .includes(["proto"])
+        .run()
+        .expect("Protobuf codegen failed");
 }
 
 #[cfg(not(feature = "gen"))]

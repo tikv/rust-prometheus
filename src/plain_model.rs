@@ -29,7 +29,13 @@ impl LabelPair {
         self.name = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.name()` instead")]
     pub fn get_name(&self) -> &str {
+        self.name()
+    }
+
+    /// Returns the name of this label pair.
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -37,7 +43,13 @@ impl LabelPair {
         self.value = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.value()` instead")]
     pub fn get_value(&self) -> &str {
+        self.value()
+    }
+
+    /// Returns the value of this label pair.
+    pub fn value(&self) -> &str {
         &self.value
     }
 }
@@ -99,7 +111,13 @@ impl Quantile {
         self.quantile = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.quantile()` instead")]
     pub fn get_quantile(&self) -> f64 {
+        self.quantile()
+    }
+
+    /// Returns the quantile of this quantile.
+    pub fn quantile(&self) -> f64 {
         self.quantile
     }
 
@@ -107,7 +125,13 @@ impl Quantile {
         self.value = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.value()` instead")]
     pub fn get_value(&self) -> f64 {
+        self.value()
+    }
+
+    /// Returns the value of this quantile.
+    pub fn value(&self) -> f64 {
         self.value
     }
 }
@@ -129,7 +153,13 @@ impl Summary {
         self.sample_count = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.sample_count()` instead")]
     pub fn get_sample_count(&self) -> u64 {
+        self.sample_count
+    }
+
+    /// Returns the sample count of this summary.
+    pub fn sample_count(&self) -> u64 {
         self.sample_count
     }
 
@@ -137,7 +167,13 @@ impl Summary {
         self.sample_sum = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.sample_sum()` instead")]
     pub fn get_sample_sum(&self) -> f64 {
+        self.sample_sum()
+    }
+
+    /// Returns the sample sum of this summary.
+    pub fn sample_sum(&self) -> f64 {
         self.sample_sum
     }
 
@@ -232,7 +268,13 @@ impl Bucket {
         self.cumulative_count = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.cumulative_count()` instead")]
     pub fn get_cumulative_count(&self) -> u64 {
+        self.cumulative_count()
+    }
+
+    /// Returns the cumulative count of this bucket.
+    pub fn cumulative_count(&self) -> u64 {
         self.cumulative_count
     }
 
@@ -240,7 +282,13 @@ impl Bucket {
         self.upper_bound = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.upper_bound()` instead")]
     pub fn get_upper_bound(&self) -> f64 {
+        self.upper_bound()
+    }
+
+    /// Returns the upper bound of this bucket.
+    pub fn upper_bound(&self) -> f64 {
         self.upper_bound
     }
 }
@@ -261,6 +309,22 @@ impl Metric {
     #[deprecated(note = "Use default()", since = "0.5.1")]
     pub fn new() -> Metric {
         Default::default()
+    }
+
+    /// Creates a new metric with the specified label pairs.
+    pub fn from_label(label: Vec<LabelPair>) -> Self {
+        Metric {
+            label,
+            ..Default::default()
+        }
+    }
+
+    /// Creates a new metric with the specified gauge value.
+    pub fn from_gauge(gauge: Gauge) -> Self {
+        Metric {
+            gauge: gauge.into(),
+            ..Default::default()
+        }
     }
 
     pub fn set_label(&mut self, v: Vec<LabelPair>) {
@@ -331,7 +395,13 @@ impl Metric {
         self.timestamp_ms = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.timestamp_ms()` instead")]
     pub fn get_timestamp_ms(&self) -> i64 {
+        self.timestamp_ms()
+    }
+
+    /// Returns the timestamp of this metric.
+    pub fn timestamp_ms(&self) -> i64 {
         self.timestamp_ms
     }
 }
@@ -373,7 +443,13 @@ impl MetricFamily {
         self.name = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.name()` instead")]
     pub fn get_name(&self) -> &str {
+        self.name()
+    }
+
+    /// Returns the name of this metric family.
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -381,7 +457,13 @@ impl MetricFamily {
         self.help = v;
     }
 
+    #[deprecated(since = "0.14.0", note = "Please use `.help()` instead")]
     pub fn get_help(&self) -> &str {
+        self.help()
+    }
+
+    /// Returns the help text of this metric family.
+    pub fn help(&self) -> &str {
         &self.help
     }
 

@@ -37,11 +37,11 @@ pub struct Value<P: Atomic> {
 }
 
 impl<P: Atomic> Value<P> {
-    pub fn new<D: Describer>(
+    pub fn new<D: Describer, V: AsRef<str>>(
         describer: &D,
         val_type: ValueType,
         val: P::T,
-        label_values: &[&str],
+        label_values: &[V],
     ) -> Result<Self> {
         let desc = describer.describe()?;
         let label_pairs = make_label_pairs(&desc, label_values)?;
@@ -85,8 +85,7 @@ impl<P: Atomic> Value<P> {
     }
 
     pub fn metric(&self) -> Metric {
-        let mut m = Metric::default();
-        m.set_label(from_vec!(self.label_pairs.clone()));
+        let mut m = Metric::from_label(self.label_pairs.clone());
 
         let val = self.get();
         match self.val_type {
@@ -110,12 +109,12 @@ impl<P: Atomic> Value<P> {
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(self.val_type.metric_type());
-        m.set_metric(from_vec!(vec![self.metric()]));
+        m.set_metric(vec![self.metric()]);
         m
     }
 }
 
-pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Result<Vec<LabelPair>> {
+pub fn make_label_pairs<V: AsRef<str>>(desc: &Desc, label_values: &[V]) -> Result<Vec<LabelPair>> {
     if desc.variable_labels.len() != label_values.len() {
         return Err(Error::InconsistentCardinality {
             expect: desc.variable_labels.len(),
@@ -136,7 +135,7 @@ pub fn make_label_pairs(desc: &Desc, label_values: &[&str]) -> Result<Vec<LabelP
     for (i, n) in desc.variable_labels.iter().enumerate() {
         let mut label_pair = LabelPair::default();
         label_pair.set_name(n.clone());
-        label_pair.set_value(label_values[i].to_owned());
+        label_pair.set_value(label_values[i].as_ref().to_owned());
         label_pairs.push(label_pair);
     }
 

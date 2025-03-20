@@ -30,7 +30,7 @@ fn check_metric_family(mf: &MetricFamily) -> Result<()> {
     if mf.get_metric().is_empty() {
         return Err(Error::Msg(format!("MetricFamily has no metrics: {:?}", mf)));
     }
-    if mf.get_name().is_empty() {
+    if mf.name().is_empty() {
         return Err(Error::Msg(format!("MetricFamily has no name: {:?}", mf)));
     }
     Ok(())

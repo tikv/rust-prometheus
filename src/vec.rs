@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
+
 use fnv::FnvHasher;
 use parking_lot::RwLock;
 
@@ -21,7 +22,7 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
     type P: Describer + Sync + Send + Clone;
 
     /// `build` builds a [`Metric`] with option and corresponding label names.
-    fn build(&self, _: &Self::P, _: &[&str]) -> Result<Self::M>;
+    fn build<V: AsRef<str>>(&self, _: &Self::P, _: &[V]) -> Result<Self::M>;
 }
 
 #[derive(Debug)]
@@ -46,11 +47,14 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         for child in children.values() {
             metrics.push(child.metric());
         }
-        m.set_metric(from_vec!(metrics));
+        m.set_metric(metrics);
         m
     }
 
-    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
+    pub fn get_metric_with_label_values<V>(&self, vals: &[V]) -> Result<T::M>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         let h = self.hash_label_values(vals)?;
 
         if let Some(metric) = self.children.read().get(&h).cloned() {
@@ -60,7 +64,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.get_or_create_metric(h, vals)
     }
 
-    pub fn get_metric_with<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<T::M> {
+    pub fn get_metric_with<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<T::M>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         let h = self.hash_labels(labels)?;
 
         if let Some(metric) = self.children.read().get(&h).cloned() {
@@ -71,7 +78,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.get_or_create_metric(h, &vals)
     }
 
-    pub fn delete_label_values(&self, vals: &[&str]) -> Result<()> {
+    pub fn delete_label_values<V>(&self, vals: &[V]) -> Result<()>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         let h = self.hash_label_values(vals)?;
 
         let mut children = self.children.write();
@@ -82,7 +92,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(())
     }
 
-    pub fn delete<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<()> {
+    pub fn delete<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<()>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         let h = self.hash_labels(labels)?;
 
         let mut children = self.children.write();
@@ -98,7 +111,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.children.write().clear();
     }
 
-    pub(crate) fn hash_label_values(&self, vals: &[&str]) -> Result<u64> {
+    pub(crate) fn hash_label_values<V>(&self, vals: &[V]) -> Result<u64>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         if vals.len() != self.desc.variable_labels.len() {
             return Err(Error::InconsistentCardinality {
                 expect: self.desc.variable_labels.len(),
@@ -108,13 +124,16 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
 
         let mut h = FnvHasher::default();
         for val in vals {
-            h.write(val.as_bytes());
+            h.write(val.as_ref().as_bytes());
         }
 
         Ok(h.finish())
     }
 
-    fn hash_labels<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<u64> {
+    fn hash_labels<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<u64>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         if labels.len() != self.desc.variable_labels.len() {
             return Err(Error::InconsistentCardinality {
                 expect: self.desc.variable_labels.len(),
@@ -125,7 +144,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         let mut h = FnvHasher::default();
         for name in &self.desc.variable_labels {
             match labels.get(&name.as_ref()) {
-                Some(val) => h.write(val.as_bytes()),
+                Some(val) => h.write(val.as_ref().as_bytes()),
                 None => {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
@@ -138,11 +157,14 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn get_label_values<'a, S: BuildHasher>(&self, labels: &'a HashMap<&str, &str, S>) -> Result<Vec<&'a str>> {
+    fn get_label_values<'a, V, S: BuildHasher>(&'a self, labels: &'a HashMap<&str, V, S>) -> Result<Vec<&'a str>>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         let mut values = Vec::new();
         for name in &self.desc.variable_labels {
             match labels.get(&name.as_ref()) {
-                Some(val) => values.push(*val),
+                Some(val) => values.push(val.as_ref()),
                 None => {
                     return Err(Error::Msg(format!(
                         "label name {} missing in label map",
@@ -154,7 +176,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(values)
     }
 
-    fn get_or_create_metric(&self, hash: u64, label_values: &[&str]) -> Result<T::M> {
+    fn get_or_create_metric<V>(&self, hash: u64, label_values: &[V]) -> Result<T::M>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         let mut children = self.children.write();
         // Check exist first.
         if let Some(metric) = children.get(&hash).cloned() {
@@ -222,7 +247,10 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// an alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
-    pub fn get_metric_with_label_values(&self, vals: &[&str]) -> Result<T::M> {
+    pub fn get_metric_with_label_values<V>(&self, vals: &[V]) -> Result<T::M>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         self.v.get_metric_with_label_values(vals)
     }
 
@@ -238,7 +266,10 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// This method is used for the same purpose as
     /// `get_metric_with_label_values`. See there for pros and cons of the two
     /// methods.
-    pub fn get_metric_with<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<T::M> {
+    pub fn get_metric_with<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<T::M>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         self.v.get_metric_with(labels)
     }
 
@@ -255,14 +286,20 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// ).unwrap();
     /// vec.with_label_values(&["404", "POST"]).inc()
     /// ```
-    pub fn with_label_values(&self, vals: &[&str]) -> T::M {
+    pub fn with_label_values<V>(&self, vals: &[V]) -> T::M
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         self.get_metric_with_label_values(vals).unwrap()
     }
 
     /// `with` works as `get_metric_with`, but panics if an error occurs. The method allows
     /// neat syntax like:
     ///     httpReqs.with(Labels{"status":"404", "method":"POST"}).inc()
-    pub fn with<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> T::M {
+    pub fn with<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> T::M
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         self.get_metric_with(labels).unwrap()
     }
 
@@ -278,7 +315,10 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// alternative to avoid that type of mistake. For higher label numbers, the
     /// latter has a much more readable (albeit more verbose) syntax, but it comes
     /// with a performance overhead (for creating and processing the Labels map).
-    pub fn remove_label_values(&self, vals: &[&str]) -> Result<()> {
+    pub fn remove_label_values<V>(&self, vals: &[V]) -> Result<()>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         self.v.delete_label_values(vals)
     }
 
@@ -290,7 +330,10 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     ///
     /// This method is used for the same purpose as `delete_label_values`. See
     /// there for pros and cons of the two methods.
-    pub fn remove<S: BuildHasher>(&self, labels: &HashMap<&str, &str, S>) -> Result<()> {
+    pub fn remove<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<()>
+    where
+        V: AsRef<str> + std::fmt::Debug,
+    {
         self.v.delete(labels)
     }
 
@@ -350,6 +393,40 @@ mod tests {
     }
 
     #[test]
+    fn test_counter_vec_with_owned_labels() {
+        let vec = CounterVec::new(
+            Opts::new("test_couter_vec", "test counter vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", v1.clone());
+        labels.insert("l2", v2.clone());
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+
+        let mut labels2 = HashMap::new();
+        labels2.insert("l1", v2.clone());
+        labels2.insert("l2", v1.clone());
+
+        vec.with(&labels).inc();
+        assert!(vec.remove(&labels2).is_err());
+
+        vec.with(&labels).inc();
+
+        let mut labels3 = HashMap::new();
+        labels3.insert("l1", v1.clone());
+        assert!(vec.remove(&labels3).is_err());
+    }
+
+    #[test]
     fn test_counter_vec_with_label_values() {
         let vec = CounterVec::new(
             Opts::new("test_vec", "test counter vec help"),
@@ -367,6 +444,27 @@ mod tests {
     }
 
     #[test]
+    fn test_counter_vec_with_owned_label_values() {
+        let vec = CounterVec::new(
+            Opts::new("test_vec", "test counter vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+        let v3 = "v3".to_string();
+
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_err());
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_ok());
+
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone()]).is_err());
+        assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
+    }
+
+    #[test]
     fn test_gauge_vec_with_labels() {
         let vec = GaugeVec::new(
             Opts::new("test_gauge_vec", "test gauge vec help"),
@@ -377,6 +475,32 @@ mod tests {
         let mut labels = HashMap::new();
         labels.insert("l1", "v1");
         labels.insert("l2", "v2");
+        assert!(vec.remove(&labels).is_err());
+
+        vec.with(&labels).inc();
+        vec.with(&labels).dec();
+        vec.with(&labels).add(42.0);
+        vec.with(&labels).sub(42.0);
+        vec.with(&labels).set(42.0);
+
+        assert!(vec.remove(&labels).is_ok());
+        assert!(vec.remove(&labels).is_err());
+    }
+
+    #[test]
+    fn test_gauge_vec_with_owned_labels() {
+        let vec = GaugeVec::new(
+            Opts::new("test_gauge_vec", "test gauge vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+
+        let mut labels = HashMap::new();
+        labels.insert("l1", v1.clone());
+        labels.insert("l2", v2.clone());
         assert!(vec.remove(&labels).is_err());
 
         vec.with(&labels).inc();
@@ -412,6 +536,32 @@ mod tests {
     }
 
     #[test]
+    fn test_gauge_vec_with_owned_label_values() {
+        let vec = GaugeVec::new(
+            Opts::new("test_gauge_vec", "test gauge vec help"),
+            &["l1", "l2"],
+        )
+        .unwrap();
+
+        let v1 = "v1".to_string();
+        let v2 = "v2".to_string();
+        let v3 = "v3".to_string();
+
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_err());
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        assert!(vec.remove_label_values(&[v1.clone(), v2.clone()]).is_ok());
+
+        vec.with_label_values(&[v1.clone(), v2.clone()]).inc();
+        vec.with_label_values(&[v1.clone(), v2.clone()]).dec();
+        vec.with_label_values(&[v1.clone(), v2.clone()]).add(42.0);
+        vec.with_label_values(&[v1.clone(), v2.clone()]).sub(42.0);
+        vec.with_label_values(&[v1.clone(), v2.clone()]).set(42.0);
+
+        assert!(vec.remove_label_values(&[v1.clone()]).is_err());
+        assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
+    }
+
+    #[test]
     fn test_vec_get_metric_with() {
         let vec = CounterVec::new(
             Opts::new("test_vec", "test counter vec help"),
@@ -429,7 +579,7 @@ mod tests {
         let label_pairs = m.get_label();
         assert_eq!(label_pairs.len(), labels.len());
         for lp in label_pairs.iter() {
-            assert_eq!(lp.get_value(), labels[lp.get_name()]);
+            assert_eq!(lp.value(), labels[lp.name()]);
         }
     }
 }
