@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.14.0
+
+- API change: Use `AsRef<str>` for owned label values (#537)
+
+- Improvement: Hashing improvements (#532)
+
+- Dependency upgrade: Update `hyper` to 1.6 (#524)
+
+- Dependency upgrade: Update `procfs` to 0.17 (#543)
+
+- Dependency upgrade: Update `protobuf` to 3.7.2 for RUSTSEC-2024-0437 (#541)
+
+- Dependency upgrade: Update `thiserror` to 2.0 (#534)
+
+- Internal change: Fix LSP and Clippy warnings (#540)
+
+- Internal change: Bump MSRV to 1.81 (#539)
+
+- Documentation: Fix `register_histogram_vec_with_registry` docstring (#528)
+
+- Documentation: Fix typos in static-metric docstrings (#479)
+
+- Documentation: Add missing `protobuf` feature to README list (#531)
+
 ## 0.13.4
 
 - Improvement: Add PullingGauge (#405)
