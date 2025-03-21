@@ -2,7 +2,7 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
 use std::collections::HashMap;
-use std::hash::Hasher;
+use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 
 use fnv::FnvHasher;
@@ -11,6 +11,7 @@ use parking_lot::RwLock;
 use crate::desc::{Desc, Describer};
 use crate::errors::{Error, Result};
 use crate::metrics::{Collector, Metric};
+use crate::nohash::BuildNoHashHasher;
 use crate::proto::{MetricFamily, MetricType};
 
 /// An interface for building a metric vector.
@@ -26,7 +27,8 @@ pub trait MetricVecBuilder: Send + Sync + Clone {
 
 #[derive(Debug)]
 pub(crate) struct MetricVecCore<T: MetricVecBuilder> {
-    pub children: RwLock<HashMap<u64, T::M>>,
+    // the key is pre-hashed, and so we use a no-hash hasher to avoid hashing again.
+    pub children: RwLock<HashMap<u64, T::M, BuildNoHashHasher>>,
     pub desc: Desc,
     pub metric_type: MetricType,
     pub new_metric: T,
@@ -62,7 +64,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         self.get_or_create_metric(h, vals)
     }
 
-    pub fn get_metric_with<V>(&self, labels: &HashMap<&str, V>) -> Result<T::M>
+    pub fn get_metric_with<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<T::M>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
@@ -90,7 +92,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(())
     }
 
-    pub fn delete<V>(&self, labels: &HashMap<&str, V>) -> Result<()>
+    pub fn delete<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<()>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
@@ -128,7 +130,7 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn hash_labels<V>(&self, labels: &HashMap<&str, V>) -> Result<u64>
+    fn hash_labels<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<u64>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
@@ -155,7 +157,10 @@ impl<T: MetricVecBuilder> MetricVecCore<T> {
         Ok(h.finish())
     }
 
-    fn get_label_values<'a, V>(&'a self, labels: &'a HashMap<&str, V>) -> Result<Vec<&'a str>>
+    fn get_label_values<'a, V, S: BuildHasher>(
+        &'a self,
+        labels: &'a HashMap<&str, V, S>,
+    ) -> Result<Vec<&'a str>>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
@@ -212,7 +217,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     pub fn create(metric_type: MetricType, new_metric: T, opts: T::P) -> Result<MetricVec<T>> {
         let desc = opts.describe()?;
         let v = MetricVecCore {
-            children: RwLock::new(HashMap::new()),
+            children: RwLock::new(HashMap::default()),
             desc,
             metric_type,
             new_metric,
@@ -264,7 +269,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// This method is used for the same purpose as
     /// `get_metric_with_label_values`. See there for pros and cons of the two
     /// methods.
-    pub fn get_metric_with<V>(&self, labels: &HashMap<&str, V>) -> Result<T::M>
+    pub fn get_metric_with<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<T::M>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
@@ -294,7 +299,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     /// `with` works as `get_metric_with`, but panics if an error occurs. The method allows
     /// neat syntax like:
     ///     httpReqs.with(Labels{"status":"404", "method":"POST"}).inc()
-    pub fn with<V>(&self, labels: &HashMap<&str, V>) -> T::M
+    pub fn with<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> T::M
     where
         V: AsRef<str> + std::fmt::Debug,
     {
@@ -328,7 +333,7 @@ impl<T: MetricVecBuilder> MetricVec<T> {
     ///
     /// This method is used for the same purpose as `delete_label_values`. See
     /// there for pros and cons of the two methods.
-    pub fn remove<V>(&self, labels: &HashMap<&str, V>) -> Result<()>
+    pub fn remove<V, S: BuildHasher>(&self, labels: &HashMap<&str, V, S>) -> Result<()>
     where
         V: AsRef<str> + std::fmt::Debug,
     {
