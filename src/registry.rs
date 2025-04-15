@@ -94,7 +94,7 @@ impl RegistryCore {
         let mut id_set = Vec::new();
         let mut collector_id: u64 = 0;
         for desc in c.desc() {
-            if !id_set.iter().any(|id| *id == desc.id) {
+            if !id_set.contains(&desc.id) {
                 id_set.push(desc.id);
                 collector_id = collector_id.wrapping_add(desc.id);
             }
