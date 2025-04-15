@@ -1357,16 +1357,6 @@ mod tests {
     }
 
     #[test]
-    fn test_duration_to_seconds() {
-        let tbls = vec![(1000, 1.0), (1100, 1.1), (100_111, 100.111)];
-        for (millis, seconds) in tbls {
-            let d = Duration::from_millis(millis);
-            let v = d.as_secs_f64();
-            assert!((v - seconds).abs() < f64::EPSILON);
-        }
-    }
-
-    #[test]
     fn test_histogram_vec_with_label_values() {
         let vec = HistogramVec::new(
             HistogramOpts::new("test_histogram_vec", "test histogram vec help"),
