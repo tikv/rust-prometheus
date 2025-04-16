@@ -542,7 +542,7 @@ impl Instant {
 
     #[inline]
     pub fn elapsed_sec(&self) -> f64 {
-        duration_to_seconds(self.elapsed())
+        self.elapsed().as_secs_f64()
     }
 }
 
@@ -879,13 +879,6 @@ pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Result<Vec<
     }
 
     Ok(buckets)
-}
-
-/// `duration_to_seconds` converts Duration to seconds.
-#[inline]
-pub fn duration_to_seconds(d: Duration) -> f64 {
-    let nanos = f64::from(d.subsec_nanos()) / 1e9;
-    d.as_secs() as f64 + nanos
 }
 
 #[derive(Clone, Debug)]
@@ -1360,16 +1353,6 @@ mod tests {
             if got.is_ok() {
                 assert_eq!(got.unwrap(), vec);
             }
-        }
-    }
-
-    #[test]
-    fn test_duration_to_seconds() {
-        let tbls = vec![(1000, 1.0), (1100, 1.1), (100_111, 100.111)];
-        for (millis, seconds) in tbls {
-            let d = Duration::from_millis(millis);
-            let v = duration_to_seconds(d);
-            assert!((v - seconds).abs() < f64::EPSILON);
         }
     }
 
