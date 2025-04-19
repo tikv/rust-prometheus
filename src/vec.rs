@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 
-use fnv::FnvHasher;
+// TODO: experimenting, alternating while benchmarking
+// use fnv::FnvHasher;
+use rapidhash::RapidHasher as FnvHasher;
+
 use parking_lot::RwLock;
 
 use crate::desc::{Desc, Describer};
