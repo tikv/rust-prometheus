@@ -142,7 +142,7 @@ fn test_opts_trailing_comma() {
 /// let opts = histogram_opts!(name,
 ///                            help,
 ///                            vec![1.0, 2.0],
-///                            labels!{"key".to_string() => "value".to_string(),});
+///                            labels!{"key" => "value",});
 /// assert_eq!(opts.common_opts.name, name);
 /// assert_eq!(opts.common_opts.help, help);
 /// assert_eq!(opts.buckets.len(), 2);
@@ -161,9 +161,17 @@ macro_rules! histogram_opts {
         hopts.buckets($BUCKETS)
     }};
 
-    ($NAME:expr, $HELP:expr, $BUCKETS:expr, $CONST_LABELS:expr $(,)?) => {{
+    ($NAME:expr, $HELP:expr, $BUCKETS:expr $ ( , $CONST_LABELS:expr ) * $ ( , ) ? ) => {{
+        use std::collections::HashMap;
+
         let hopts = histogram_opts!($NAME, $HELP, $BUCKETS);
-        hopts.const_labels($CONST_LABELS)
+        let lbs = HashMap::<String, String>::new();
+        $(
+            let mut lbs = lbs;
+            lbs.extend($CONST_LABELS.iter().map(|(k, v)| ((*k).into(), (*v).into())));
+        )*
+
+        hopts.const_labels(lbs)
     }};
 }
 
@@ -187,13 +195,16 @@ fn test_histogram_opts_trailing_comma() {
         name,
         help,
         vec![1.0, 2.0],
-        labels! {"key".to_string() => "value".to_string(),},
+        labels! {"key" => "value",},
+        labels! {"key2" => "value2",},
     );
     assert_eq!(opts.common_opts.name, name);
     assert_eq!(opts.common_opts.help, help);
     assert_eq!(opts.buckets.len(), 2);
     assert!(opts.common_opts.const_labels.contains_key("key"));
     assert_eq!(opts.common_opts.const_labels.get("key").unwrap(), "value");
+    assert!(opts.common_opts.const_labels.get("key2").is_some());
+    assert_eq!(opts.common_opts.const_labels.get("key2").unwrap(), "value2");
 }
 
 /// Create a [`Counter`][crate::Counter] and registers to default registry.
