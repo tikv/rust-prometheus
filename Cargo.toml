@@ -37,7 +37,7 @@ thiserror = "^2.0"
 procfs = { version = "^0.17", optional = true, default-features = false }
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.6"
 getopts = "^0.2"
 hyper = { version = "^1.6", features = ["http1", "server"] }
 hyper-util = { version = "^0.1", features = ["http1", "server", "tokio"] }
