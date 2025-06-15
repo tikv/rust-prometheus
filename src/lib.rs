@@ -49,19 +49,18 @@ You can find more examples within
 # Static Metrics
 
 This crate supports staticly built metrics. You can use it with
-[`lazy_static`](https://docs.rs/lazy_static/) to quickly build up and collect
+[`LazyLock`](https://doc.rust-lang.org/std/sync/struct.LazyLock.html) to quickly build up and collect
 some metrics.
 
 ```rust
 use prometheus::{self, IntCounter, TextEncoder, Encoder};
 
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 use prometheus::register_int_counter;
 
-lazy_static! {
-    static ref HIGH_FIVE_COUNTER: IntCounter =
-        register_int_counter!("highfives", "Number of high fives received").unwrap();
-}
+static HIGH_FIVE_COUNTER: LazyLock<IntCounter> =
+    LazyLock::new(|| register_int_counter!("highfives", "Number of high fives received").unwrap());
+
 
 HIGH_FIVE_COUNTER.inc();
 assert_eq!(HIGH_FIVE_COUNTER.get(), 1);
@@ -75,14 +74,12 @@ By default, this registers with a default registry. To make a report, you can ca
 # use prometheus::IntCounter;
 use prometheus::{self, TextEncoder, Encoder};
 
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 use prometheus::register_int_counter;
 
 // Register & measure some metrics.
-# lazy_static! {
-#     static ref HIGH_FIVE_COUNTER: IntCounter =
-#        register_int_counter!("highfives", "Number of high fives received").unwrap();
-# }
+# static HIGH_FIVE_COUNTER: LazyLock<IntCounter> =
+#    LazyLock::new(|| register_int_counter!("highfives", "Number of high fives received").unwrap());
 # HIGH_FIVE_COUNTER.inc();
 
 let mut buffer = Vec::new();

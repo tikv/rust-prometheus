@@ -1,27 +1,29 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
 use std::env;
+use std::sync::LazyLock;
 use std::thread;
 use std::time;
 
 use getopts::Options;
 use prometheus::{Counter, Histogram};
 
-use lazy_static::lazy_static;
 use prometheus::{labels, register_counter, register_histogram};
 
-lazy_static! {
-    static ref PUSH_COUNTER: Counter = register_counter!(
+static PUSH_COUNTER: LazyLock<Counter> = LazyLock::new(|| {
+    register_counter!(
         "example_push_total",
         "Total number of prometheus client pushed."
     )
-    .unwrap();
-    static ref PUSH_REQ_HISTOGRAM: Histogram = register_histogram!(
+    .unwrap()
+});
+static PUSH_REQ_HISTOGRAM: LazyLock<Histogram> = LazyLock::new(|| {
+    register_histogram!(
         "example_push_request_duration_seconds",
         "The push request latencies in seconds."
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 fn main() {
     let args: Vec<String> = env::args().collect();
