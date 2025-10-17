@@ -4,13 +4,12 @@
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::str::{self, FromStr};
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{Method, StatusCode, Url};
-
-use lazy_static::lazy_static;
 
 use crate::encoder::{Encoder, ProtobufEncoder};
 use crate::errors::{Error, Result};
@@ -20,12 +19,12 @@ use crate::registry::Registry;
 
 const REQWEST_TIMEOUT_SEC: Duration = Duration::from_secs(10);
 
-lazy_static! {
-    static ref HTTP_CLIENT: Client = Client::builder()
+static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    Client::builder()
         .timeout(REQWEST_TIMEOUT_SEC)
         .build()
-        .unwrap();
-}
+        .unwrap()
+});
 
 /// `BasicAuthentication` holder for supporting `push` to Pushgateway endpoints
 /// using Basic access authentication.

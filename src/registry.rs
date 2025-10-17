@@ -5,6 +5,7 @@ use std::collections::btree_map::Entry as BEntry;
 use std::collections::hash_map::Entry as HEntry;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use parking_lot::RwLock;
 
@@ -13,7 +14,6 @@ use crate::metrics::Collector;
 use crate::proto;
 
 use cfg_if::cfg_if;
-use lazy_static::lazy_static;
 
 #[derive(Default)]
 struct RegistryCore {
@@ -293,20 +293,17 @@ cfg_if! {
 }
 
 // Default registry for rust-prometheus.
-lazy_static! {
-    static ref DEFAULT_REGISTRY: Registry = {
-        let reg = Registry::default();
+static DEFAULT_REGISTRY: LazyLock<Registry> = LazyLock::new(|| {
+    let reg = Registry::default();
 
-        // Register a default process collector.
-        register_default_process_collector(&reg).unwrap();
+    // Register a default process collector.
+    register_default_process_collector(&reg).unwrap();
 
-        reg
-    };
-}
+    reg
+});
 
 /// Default registry (global static).
 pub fn default_registry() -> &'static Registry {
-    lazy_static::initialize(&DEFAULT_REGISTRY);
     &DEFAULT_REGISTRY
 }
 

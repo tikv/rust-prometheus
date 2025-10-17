@@ -4,7 +4,7 @@
 //!
 //! This module only supports **Linux** platform.
 
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 
 use crate::counter::IntCounter;
 use crate::desc::Desc;
@@ -190,21 +190,13 @@ impl Collector for ProcessCollector {
     }
 }
 
-lazy_static! {
-    // getconf CLK_TCK
-    static ref CLK_TCK: i64 = {
-        unsafe {
-            libc::sysconf(libc::_SC_CLK_TCK)
-        }.into()
-    };
+// getconf CLK_TCK
+static CLK_TCK: LazyLock<i64> =
+    LazyLock::new(|| unsafe { libc::sysconf(libc::_SC_CLK_TCK) }.into());
 
-    // getconf PAGESIZE
-    static ref PAGESIZE: i64 = {
-        unsafe {
-            libc::sysconf(libc::_SC_PAGESIZE)
-        }.into()
-    };
-}
+// getconf PAGESIZE
+static PAGESIZE: LazyLock<i64> =
+    LazyLock::new(|| unsafe { libc::sysconf(libc::_SC_PAGESIZE) }.into());
 
 #[cfg(test)]
 mod tests {

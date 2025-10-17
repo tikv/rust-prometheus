@@ -1,14 +1,11 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::LazyLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lazy_static::lazy_static;
-
 /// Milliseconds since ANCHOR.
 static RECENT: AtomicU64 = AtomicU64::new(0);
-lazy_static! {
-    static ref ANCHOR: Instant = Instant::now();
-}
+static ANCHOR: LazyLock<Instant> = LazyLock::new(Instant::now);
 
 /// Convert a duration to millisecond.
 #[inline]
@@ -39,9 +36,7 @@ pub fn recent_millis() -> u64 {
     RECENT.load(Ordering::Relaxed)
 }
 
-lazy_static! {
-    static ref UPDATER_IS_RUNNING: AtomicBool = AtomicBool::new(false);
-}
+static UPDATER_IS_RUNNING: LazyLock<AtomicBool> = LazyLock::new(AtomicBool::default);
 
 const CHECK_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
 

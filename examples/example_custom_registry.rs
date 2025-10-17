@@ -4,15 +4,14 @@
 //! and how to perform registration across function boundaries.
 
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use prometheus::{Encoder, IntCounter, Registry};
 
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref DEFAULT_COUNTER: IntCounter = IntCounter::new("default", "generic counter").unwrap();
-    static ref CUSTOM_COUNTER: IntCounter = IntCounter::new("custom", "dedicated counter").unwrap();
-}
+static DEFAULT_COUNTER: LazyLock<IntCounter> =
+    LazyLock::new(|| IntCounter::new("default", "generic counter").unwrap());
+static CUSTOM_COUNTER: LazyLock<IntCounter> =
+    LazyLock::new(|| IntCounter::new("custom", "dedicated counter").unwrap());
 
 fn main() {
     // Register default metrics.
