@@ -103,12 +103,14 @@ impl<P: Atomic> Metric for GenericCounter<P> {
     }
 }
 
+/// Default [`CounterVecBuilder`].
 #[derive(Debug)]
 pub struct CounterVecBuilder<P: Atomic> {
     _phantom: PhantomData<P>,
 }
 
 impl<P: Atomic> CounterVecBuilder<P> {
+    /// Create default builder.
     pub fn new() -> Self {
         Self {
             _phantom: PhantomData,

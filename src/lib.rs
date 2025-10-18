@@ -188,10 +188,12 @@ pub mod core {
 
     pub use super::atomic64::*;
     pub use super::counter::{
-        GenericCounter, GenericCounterVec, GenericLocalCounter, GenericLocalCounterVec,
+        CounterVecBuilder, GenericCounter, GenericCounterVec, GenericLocalCounter,
+        GenericLocalCounterVec,
     };
     pub use super::desc::{Desc, Describer};
-    pub use super::gauge::{GenericGauge, GenericGaugeVec};
+    pub use super::gauge::{GaugeVecBuilder, GenericGauge, GenericGaugeVec};
+    pub use super::histogram::HistogramVecBuilder;
     pub use super::metrics::{Collector, Metric, Opts};
     pub use super::vec::{MetricVec, MetricVecBuilder};
 }

@@ -106,12 +106,14 @@ impl<P: Atomic> Metric for GenericGauge<P> {
     }
 }
 
+/// Default [`GaugeVecBuilder`].
 #[derive(Debug)]
 pub struct GaugeVecBuilder<P: Atomic> {
     _phantom: PhantomData<P>,
 }
 
 impl<P: Atomic> GaugeVecBuilder<P> {
+    /// Create default builder.
     pub fn new() -> Self {
         Self {
             _phantom: PhantomData,
