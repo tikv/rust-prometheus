@@ -20,7 +20,8 @@ default = ["protobuf"]
 gen = ["protobuf-codegen"]
 nightly = ["libc"]
 process = ["libc", "procfs"]
-push = ["reqwest", "libc", "protobuf"]
+push = ["dep:reqwest", "libc", "protobuf", "reqwest/default-tls"]
+push-rustls = ["dep:reqwest", "libc", "protobuf", "reqwest/rustls-tls"]
 
 [dependencies]
 cfg-if = "^1.0"
@@ -30,7 +31,7 @@ libc = { version = "^0.2", optional = true }
 parking_lot = "^0.12"
 protobuf = { version = "^3.7.2", optional = true }
 memchr = "^2.3"
-reqwest = { version = "^0.12", features = ["blocking"], optional = true }
+reqwest = { version = "^0.12", features = ["blocking", "charset", "http2", "system-proxy"], default-features = false, optional = true }
 thiserror = "^2.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]

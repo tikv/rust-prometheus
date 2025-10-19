@@ -149,7 +149,7 @@ mod histogram;
 mod metrics;
 mod nohash;
 mod pulling_gauge;
-#[cfg(feature = "push")]
+#[cfg(any(feature = "push", feature = "push-rustls"))]
 mod push;
 mod registry;
 mod value;
@@ -211,7 +211,7 @@ pub use self::histogram::{exponential_buckets, linear_buckets};
 pub use self::histogram::{Histogram, HistogramOpts, HistogramTimer, HistogramVec};
 pub use self::metrics::Opts;
 pub use self::pulling_gauge::PullingGauge;
-#[cfg(feature = "push")]
+#[cfg(any(feature = "push", feature = "push-rustls"))]
 pub use self::push::{
     hostname_grouping_key, push_add_collector, push_add_metrics, push_collector, push_metrics,
     BasicAuthentication,
