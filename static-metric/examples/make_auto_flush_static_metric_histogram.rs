@@ -6,9 +6,10 @@ Use metric enums to reuse possible values of a label.
 
 */
 
+use std::sync::LazyLock;
+
 use prometheus::*;
 
-use lazy_static::lazy_static;
 use prometheus_static_metric::{auto_flush_from, make_auto_flush_static_metric};
 
 make_auto_flush_static_metric! {
@@ -35,19 +36,17 @@ make_auto_flush_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_HISTO_VEC: HistogramVec =
-        register_histogram_vec ! (
-            "http_requests_total",
-            "Number of HTTP requests.",
-            & ["product", "method", "version"]    // it doesn't matter for the label order
-        ).unwrap();
-}
+pub static HTTP_HISTO_VEC: LazyLock<HistogramVec> = LazyLock::new(|| {
+    register_histogram_vec!(
+        "http_requests_total",
+        "Number of HTTP requests.",
+        &["product", "method", "version"] // it doesn't matter for the label order
+    )
+    .unwrap()
+});
 
-lazy_static! {
-    pub static ref TLS_HTTP_COUNTER: Lhrs =
-        auto_flush_from!(HTTP_HISTO_VEC, Lhrs, std::time::Duration::from_secs(1));
-}
+pub static TLS_HTTP_COUNTER: LazyLock<Lhrs> =
+    LazyLock::new(|| auto_flush_from!(HTTP_HISTO_VEC, Lhrs, std::time::Duration::from_secs(1)));
 
 fn main() {
     TLS_HTTP_COUNTER.foo.post.http1.observe(1.0);
@@ -96,8 +95,6 @@ use std::collections::HashMap;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::thread::LocalKey;
-
-use lazy_static::lazy_static;
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
@@ -362,22 +359,18 @@ impl Lhrs {
     }
 }
 
-lazy_static! {
-pub static ref HTTP_HISTO_VEC: HistogramVec =
+pub static HTTP_HISTO_VEC: LazyLock<HistogramVec> = LazyLock::new(||
 register_histogram_vec ! (
 "http_requests_total",
 "Number of HTTP requests.",
 & ["product", "method", "version"]    // it doesn't matter for the label order
-).unwrap();
-}
+).unwrap());
 
 thread_local! {
 pub static TLS_HTTP_COUNTER_INNER: LhrsInner = LhrsInner::from(& HTTP_HISTO_VEC);
 }
 
-lazy_static! {
-    pub static ref TLS_HTTP_COUNTER: Lhrs = Lhrs::from(&TLS_HTTP_COUNTER_INNER);
-}
+pub static TLS_HTTP_COUNTER: LazyLock<Lhrs> = LazyLock::new(|| Lhrs::from(&TLS_HTTP_COUNTER_INNER));
 
 fn main() {
     TLS_HTTP_COUNTER.foo.post.http1.observe(1.0);

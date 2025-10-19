@@ -1,10 +1,9 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
-use std::cell::Cell;
+use std::{cell::Cell, sync::LazyLock};
 
 use prometheus::*;
 
-use lazy_static::lazy_static;
 use prometheus_static_metric::make_static_metric;
 
 make_static_metric! {
@@ -28,14 +27,14 @@ make_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_COUNTER_VEC: IntCounterVec =
-        register_int_counter_vec!(
-            "http_requests_total",
-            "Number of HTTP requests.",
-            &["product", "method", "version"]    // it doesn't matter for the label order
-        ).unwrap();
-}
+pub static HTTP_COUNTER_VEC: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!(
+        "http_requests_total",
+        "Number of HTTP requests.",
+        &["product", "method", "version"] // it doesn't matter for the label order
+    )
+    .unwrap()
+});
 
 thread_local! {
     static THREAD_LAST_TICK_TIME: Cell<u64> = Cell::new(timer::now_millis());

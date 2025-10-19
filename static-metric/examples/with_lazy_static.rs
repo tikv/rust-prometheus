@@ -1,8 +1,9 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
+use std::sync::LazyLock;
+
 use prometheus::CounterVec;
 
-use lazy_static::lazy_static;
 use prometheus::register_counter_vec;
 use prometheus_static_metric::make_static_metric;
 
@@ -21,16 +22,16 @@ make_static_metric! {
     }
 }
 
-lazy_static! {
-    pub static ref HTTP_COUNTER_VEC: CounterVec = register_counter_vec!(
+pub static HTTP_COUNTER_VEC: LazyLock<CounterVec> = LazyLock::new(|| {
+    register_counter_vec!(
         "http_requests_total",
         "Number of HTTP requests.",
         &["method", "product"]
     )
-    .unwrap();
-    pub static ref HTTP_COUNTER: HttpRequestStatistics =
-        HttpRequestStatistics::from(&HTTP_COUNTER_VEC);
-}
+    .unwrap()
+});
+pub static HTTP_COUNTER: LazyLock<HttpRequestStatistics> =
+    LazyLock::new(|| HttpRequestStatistics::from(&HTTP_COUNTER_VEC));
 
 fn main() {
     HTTP_COUNTER.post.foo.inc();
