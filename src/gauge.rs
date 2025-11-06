@@ -72,15 +72,15 @@ impl<P: Atomic> GenericGauge<P> {
     /// Add the given value to the gauge. (The value can be
     /// negative, resulting in a decrement of the gauge.)
     #[inline]
-    pub fn add(&self, v: P::T) {
-        self.v.inc_by(v);
+    pub fn add(&self, v: P::T) -> P::T {
+        self.v.inc_by(v)
     }
 
     /// Subtract the given value from the gauge. (The value can be
     /// negative, resulting in an increment of the gauge.)
     #[inline]
-    pub fn sub(&self, v: P::T) {
-        self.v.dec_by(v);
+    pub fn sub(&self, v: P::T) -> P::T {
+        self.v.dec_by(v)
     }
 
     /// Return the gauge value.
@@ -287,5 +287,22 @@ mod tests {
 
         assert!(vec.remove_label_values(&[v1.clone()]).is_err());
         assert!(vec.remove_label_values(&[v1.clone(), v3.clone()]).is_err());
+    }
+
+    #[test]
+    fn test_gauge_inc_sub_return_old() {
+        let opts = Opts::new("test", "test help")
+            .const_label("a", "1")
+            .const_label("b", "2");
+
+        let gauge = IntGauge::with_opts(opts).unwrap();
+        gauge.inc();
+        assert_eq!(gauge.get(), 1);
+        let val = gauge.add(20);
+        assert_eq!(val, 1);
+        assert_eq!(gauge.get(), 21);
+        let val = gauge.sub(10);
+        assert_eq!(val, 21);
+        assert_eq!(gauge.get(), 11);
     }
 }

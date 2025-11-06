@@ -65,8 +65,8 @@ impl<P: Atomic> Value<P> {
     }
 
     #[inline]
-    pub fn inc_by(&self, val: P::T) {
-        self.val.inc_by(val);
+    pub fn inc_by(&self, val: P::T) -> P::T {
+        self.val.inc_by(val)
     }
 
     #[inline]
@@ -80,7 +80,7 @@ impl<P: Atomic> Value<P> {
     }
 
     #[inline]
-    pub fn dec_by(&self, val: P::T) {
+    pub fn dec_by(&self, val: P::T) -> P::T {
         self.val.dec_by(val)
     }
 

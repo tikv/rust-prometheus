@@ -64,10 +64,10 @@ pub trait Atomic: Send + Sync {
     fn set(&self, val: Self::T);
     /// Get the value.
     fn get(&self) -> Self::T;
-    /// Increment the value by a given amount.
-    fn inc_by(&self, delta: Self::T);
-    /// Decrement the value by a given amount.
-    fn dec_by(&self, delta: Self::T);
+    /// Increment the value by a given amount returning the old value.
+    fn inc_by(&self, delta: Self::T) -> Self::T;
+    /// Decrement the value by a given amount returning the old value.
+    fn dec_by(&self, delta: Self::T) -> Self::T;
 }
 
 /// A atomic float.
@@ -106,7 +106,7 @@ impl Atomic for AtomicF64 {
     }
 
     #[inline]
-    fn inc_by(&self, delta: Self::T) {
+    fn inc_by(&self, delta: Self::T) -> Self::T {
         loop {
             let current = self.inner.load(Ordering::Acquire);
             let new = u64_to_f64(current) + delta;
@@ -117,14 +117,14 @@ impl Atomic for AtomicF64 {
                 Ordering::Relaxed,
             );
             if result.is_ok() {
-                return;
+                return u64_to_f64(current);
             }
         }
     }
 
     #[inline]
-    fn dec_by(&self, delta: Self::T) {
-        self.inc_by(-delta);
+    fn dec_by(&self, delta: Self::T) -> Self::T {
+        self.inc_by(-delta)
     }
 }
 
@@ -161,13 +161,13 @@ impl Atomic for AtomicI64 {
     }
 
     #[inline]
-    fn inc_by(&self, delta: Self::T) {
-        self.inner.fetch_add(delta, Ordering::Relaxed);
+    fn inc_by(&self, delta: Self::T) -> Self::T {
+        self.inner.fetch_add(delta, Ordering::Relaxed)
     }
 
     #[inline]
-    fn dec_by(&self, delta: Self::T) {
-        self.inner.fetch_sub(delta, Ordering::Relaxed);
+    fn dec_by(&self, delta: Self::T) -> Self::T {
+        self.inner.fetch_sub(delta, Ordering::Relaxed)
     }
 }
 
@@ -197,13 +197,13 @@ impl Atomic for AtomicU64 {
     }
 
     #[inline]
-    fn inc_by(&self, delta: Self::T) {
-        self.inc_by_with_ordering(delta, Ordering::Relaxed);
+    fn inc_by(&self, delta: Self::T) -> Self::T {
+        self.inc_by_with_ordering(delta, Ordering::Relaxed)
     }
 
     #[inline]
-    fn dec_by(&self, delta: Self::T) {
-        self.inner.fetch_sub(delta, Ordering::Relaxed);
+    fn dec_by(&self, delta: Self::T) -> Self::T {
+        self.inner.fetch_sub(delta, Ordering::Relaxed)
     }
 }
 
@@ -229,13 +229,18 @@ impl AtomicU64 {
     }
 
     /// Increment the value by a given amount with the provided memory ordering.
-    pub fn inc_by_with_ordering(&self, delta: u64, ordering: Ordering) {
-        self.inner.fetch_add(delta, ordering);
+    pub fn inc_by_with_ordering(&self, delta: u64, ordering: Ordering) -> u64 {
+        self.inner.fetch_add(delta, ordering)
     }
 
     /// Stores a value into the atomic integer, returning the previous value.
     pub fn swap(&self, val: u64, ordering: Ordering) -> u64 {
         self.inner.swap(val, ordering)
+    }
+
+    /// Returns a reference to the inner atomic u64
+    pub fn inner(&self) -> &StdAtomicU64 {
+        &self.inner
     }
 }
 
