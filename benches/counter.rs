@@ -14,6 +14,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use fnv::FnvBuildHasher;
 use prometheus::{Counter, CounterVec, IntCounter, Opts};
+use rapidhash::RapidBuildHasher;
 use std::collections::HashMap;
 use std::sync::{atomic, Arc};
 use std::thread;
@@ -64,6 +65,144 @@ fn bench_counter_with_mapped_labels_fnv(c: &mut Criterion) {
             labels.insert("two", "zwei");
             labels.insert("one", "eins");
             labels.insert("three", "drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_labels_rapidhash(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &["one", "two", "three"],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_labels_rapidhash", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity_and_hasher(3, RapidBuildHasher::default());
+            labels.insert("two", "zwei");
+            labels.insert("one", "eins");
+            labels.insert("three", "drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_mid_labels(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &["midsize_one", "midsize_two", "midsize_three"],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_mid_labels", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity(3);
+            labels.insert("midsize_two", "midsize_zwei");
+            labels.insert("midsize_one", "midsize_eins");
+            labels.insert("midsize_three", "midsize_drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_mid_labels_fnv(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &["midsize_one", "midsize_two", "midsize_three"],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_mid_labels_fnv", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity_and_hasher(3, FnvBuildHasher::default());
+            labels.insert("midsize_two", "midsize_zwei");
+            labels.insert("midsize_one", "midsize_eins");
+            labels.insert("midsize_three", "midsize_drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_mid_labels_rapidhash(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &["midsize_one", "midsize_two", "midsize_three"],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_mid_labels_rapidhash", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity_and_hasher(3, RapidBuildHasher::default());
+            labels.insert("midsize_two", "midsize_zwei");
+            labels.insert("midsize_one", "midsize_eins");
+            labels.insert("midsize_three", "midsize_drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_long_labels(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &[
+            "longer_field_number_one",
+            "longer_field_number_two",
+            "longer_field_number_three",
+        ],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_longer_labels", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity(3);
+            labels.insert("longer_field_number_two", "longer_field_number_zwei");
+            labels.insert("longer_field_number_one", "longer_field_number_eins");
+            labels.insert("longer_field_number_three", "longer_field_number_drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_long_labels_fnv(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &[
+            "longer_field_number_one",
+            "longer_field_number_two",
+            "longer_field_number_three",
+        ],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_longer_labels_fnv", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity_and_hasher(3, FnvBuildHasher::default());
+            labels.insert("longer_field_number_two", "longer_field_number_zwei");
+            labels.insert("longer_field_number_one", "longer_field_number_eins");
+            labels.insert("longer_field_number_three", "longer_field_number_drei");
+            counter.with(&black_box(labels)).inc();
+        })
+    });
+}
+
+fn bench_counter_with_mapped_long_labels_rapidhash(c: &mut Criterion) {
+    let counter = CounterVec::new(
+        Opts::new("benchmark_counter", "A counter to benchmark it."),
+        &[
+            "longer_field_number_one",
+            "longer_field_number_two",
+            "longer_field_number_three",
+        ],
+    )
+    .unwrap();
+
+    c.bench_function("counter_with_mapped_longer_labels_rapidhash", |b| {
+        b.iter(|| {
+            let mut labels = HashMap::with_capacity_and_hasher(3, RapidBuildHasher::default());
+            labels.insert("longer_field_number_two", "longer_field_number_zwei");
+            labels.insert("longer_field_number_one", "longer_field_number_eins");
+            labels.insert("longer_field_number_three", "longer_field_number_drei");
             counter.with(&black_box(labels)).inc();
         })
     });
@@ -216,6 +355,13 @@ criterion_group!(
     bench_counter_with_label_values_concurrent_write,
     bench_counter_with_mapped_labels,
     bench_counter_with_mapped_labels_fnv,
+    bench_counter_with_mapped_labels_rapidhash,
+    bench_counter_with_mapped_mid_labels,
+    bench_counter_with_mapped_mid_labels_fnv,
+    bench_counter_with_mapped_mid_labels_rapidhash,
+    bench_counter_with_mapped_long_labels,
+    bench_counter_with_mapped_long_labels_fnv,
+    bench_counter_with_mapped_long_labels_rapidhash,
     bench_counter_with_prepared_mapped_labels,
     bench_int_counter_no_labels,
     bench_int_counter_no_labels_concurrent_write,
