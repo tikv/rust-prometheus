@@ -51,7 +51,7 @@ pub fn ensure_updater() {
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_ok()
     {
-        std::thread::Builder::new()
+        thread::Builder::new()
             .name("time updater".to_owned())
             .spawn(|| loop {
                 thread::sleep(CHECK_UPDATE_INTERVAL);
