@@ -4,7 +4,12 @@
 use std::cmp::*;
 use std::f64;
 use std::ops::*;
+#[cfg(not(any(target_arch = "mips", target_arch = "powerpc", target_arch = "xtensa")))]
 use std::sync::atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
+
+#[cfg(any(target_arch = "mips", target_arch = "powerpc", target_arch = "xtensa"))]
+use portable_atomic::{AtomicI64 as StdAtomicI64, AtomicU64 as StdAtomicU64, Ordering};
+
 
 /// An interface for numbers. Used to generically model float metrics and integer metrics, i.e.
 /// [`Counter`](crate::Counter) and [`IntCounter`](crate::Counter).

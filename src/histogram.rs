@@ -5,10 +5,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
 use std::sync::{
-    atomic::{AtomicU64 as StdAtomicU64, Ordering},
     Arc, Mutex,
 };
+
+#[cfg(not(any(target_arch = "mips", target_arch = "powerpc", target_arch = "xtensa")))]
+use std::sync::atomic::{AtomicU64 as StdAtomicU64, Ordering};
+
 use std::time::{Duration, Instant as StdInstant};
+#[cfg(any(target_arch = "mips", target_arch = "powerpc", target_arch = "xtensa"))]
+use portable_atomic::{AtomicU64 as StdAtomicU64, Ordering};
 
 use crate::atomic64::{Atomic, AtomicF64, AtomicU64};
 use crate::desc::{Desc, Describer};
