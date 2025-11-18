@@ -7,7 +7,7 @@ use crate::{
 
 /// A [Gauge] that returns the value from a provided function on every collect run.
 ///
-/// This metric is the equivalant of Go's
+/// This metric is the equivalent of Go's
 /// <https://pkg.go.dev/github.com/prometheus/client_golang@v1.11.0/prometheus#GaugeFunc>
 ///
 /// # Examples
@@ -28,7 +28,7 @@ use crate::{
 #[derive(Clone)]
 pub struct PullingGauge {
     desc: crate::core::Desc,
-    value: Arc<Box<dyn Fn() -> f64 + Send + Sync>>,
+    value: Arc<dyn Fn() -> f64 + Send + Sync>,
 }
 
 impl fmt::Debug for PullingGauge {
@@ -48,7 +48,7 @@ impl PullingGauge {
         value: Box<dyn Fn() -> f64 + Send + Sync>,
     ) -> crate::Result<Self> {
         Ok(PullingGauge {
-            value: Arc::new(value),
+            value: Arc::from(value),
             desc: crate::core::Desc::new(name.into(), help.into(), Vec::new(), HashMap::new())?,
         })
     }
