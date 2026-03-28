@@ -41,12 +41,7 @@ impl ProcessCollector {
         let mut descs = Vec::new();
 
         let cpu_total = Gauge::with_opts(
-            Opts::new(
-                "process_cpu_seconds_total",
-                "Total user and system CPU time spent in \
-                 seconds.",
-            )
-            .namespace(namespace.clone()),
+            Opts::new("process_cpu_seconds_total", "TEST.").namespace(namespace.clone()),
         )
         .unwrap();
         descs.extend(cpu_total.desc().into_iter().cloned());
