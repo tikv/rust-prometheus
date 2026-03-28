@@ -6,9 +6,9 @@
 
 use lazy_static::lazy_static;
 
-use crate::counter::IntCounter;
+use crate::counter::{Counter, IntCounter};
 use crate::desc::Desc;
-use crate::gauge::IntGauge;
+use crate::gauge::{Gauge, IntGauge};
 use crate::metrics::{Collector, Opts};
 use crate::proto;
 
@@ -25,7 +25,7 @@ const METRICS_NUMBER: usize = 7;
 pub struct ProcessCollector {
     pid: pid_t,
     descs: Vec<Desc>,
-    cpu_total: IntCounter,
+    cpu_total: Gauge,
     open_fds: IntGauge,
     max_fds: IntGauge,
     vsize: IntGauge,
@@ -40,7 +40,7 @@ impl ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
 
-        let cpu_total = IntCounter::with_opts(
+        let cpu_total = Gauge::with_opts(
             Opts::new(
                 "process_cpu_seconds_total",
                 "Total user and system CPU time spent in \
@@ -163,12 +163,8 @@ impl Collector for ProcessCollector {
             self.rss.set((stat.rss as i64) * *PAGESIZE);
 
             // cpu
-            let total = (stat.utime + stat.stime) / *CLK_TCK as u64;
-            let past = self.cpu_total.get();
-            // If two threads are collecting metrics at the same time,
-            // the cpu_total counter may have already been updated,
-            // and the subtraction may underflow.
-            self.cpu_total.inc_by(total.saturating_sub(past));
+            let total = (stat.utime + stat.stime) as f64 / *CLK_TCK as f64;
+            self.cpu_total.set(total);
             cpu_total_mfs = Some(self.cpu_total.collect());
 
             // threads
