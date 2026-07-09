@@ -48,7 +48,7 @@ You can find more examples within
 
 # Static Metrics
 
-This crate supports staticly built metrics. You can use it with
+This crate supports statically built metrics. You can use it with
 [`lazy_static`](https://docs.rs/lazy_static/) to quickly build up and collect
 some metrics.
 

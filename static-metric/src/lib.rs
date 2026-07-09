@@ -1,7 +1,7 @@
 // Copyright 2019 TiKV Project Authors. Licensed under Apache-2.0.
 
 /*!
-This crate provides staticly built metrics to your Prometheus application.
+This crate provides statically built metrics to your Prometheus application.
 
 This is useful since it reduces the amount of branching and processing needed at runtime to collect metrics.
 
@@ -13,14 +13,14 @@ use prometheus::register_int_counter;
 
 lazy_static! {
     static ref HIGH_FIVE_COUNTER: IntCounter =
-        register_int_counter!("highfives", "Number of high fives recieved").unwrap();
+        register_int_counter!("highfives", "Number of high fives received").unwrap();
 }
 
 HIGH_FIVE_COUNTER.inc();
 assert_eq!(HIGH_FIVE_COUNTER.get(), 1);
 ```
 
-Is it reccomended that you consult the [`prometheus` documentation for more information.](https://docs.rs/prometheus/)
+Is it recommended that you consult the [`prometheus` documentation for more information.](https://docs.rs/prometheus/)
 */
 mod auto_flush_builder;
 mod auto_flush_from;
