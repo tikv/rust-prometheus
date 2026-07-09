@@ -7,7 +7,7 @@ use crate::{
 
 /// A [Gauge] that returns the value from a provided function on every collect run.
 ///
-/// This metric is the equivalant of Go's
+/// This metric is the equivalent of Go's
 /// <https://pkg.go.dev/github.com/prometheus/client_golang@v1.11.0/prometheus#GaugeFunc>
 ///
 /// # Examples
