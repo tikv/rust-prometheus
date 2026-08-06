@@ -803,7 +803,7 @@ impl HistogramVec {
         let metric_vec =
             MetricVec::create(proto::MetricType::HISTOGRAM, HistogramVecBuilder {}, opts)?;
 
-        Ok(metric_vec as HistogramVec)
+        Ok(metric_vec)
     }
 
     /// Return a `LocalHistogramVec` for single thread usage.

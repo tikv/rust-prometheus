@@ -156,7 +156,7 @@ impl<P: Atomic> GenericGaugeVec<P> {
         let opts = opts.variable_labels(variable_names);
         let metric_vec = MetricVec::create(proto::MetricType::GAUGE, GaugeVecBuilder::new(), opts)?;
 
-        Ok(metric_vec as Self)
+        Ok(metric_vec)
     }
 }
 
