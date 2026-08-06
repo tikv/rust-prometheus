@@ -154,7 +154,7 @@ impl<P: Atomic> GenericCounterVec<P> {
         let metric_vec =
             MetricVec::create(proto::MetricType::COUNTER, CounterVecBuilder::new(), opts)?;
 
-        Ok(metric_vec as Self)
+        Ok(metric_vec)
     }
 
     /// Return a [`GenericLocalCounterVec`] for single thread usage.
