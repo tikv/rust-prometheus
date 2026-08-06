@@ -239,6 +239,45 @@ impl AtomicU64 {
     }
 }
 
+/// A wrapper type that aligns atomic metric counters to 64-byte CPU cache lines.
+///
+/// This eliminates CPU cache line false sharing when multiple atomic counters
+/// (e.g. inside `CounterVec` or `GaugeVec`) are stored adjacently in memory
+/// and updated concurrently by multiple CPU worker threads.
+#[derive(Debug, Default)]
+#[repr(align(64))]
+pub struct CachePadded<P> {
+    inner: P,
+}
+
+impl<P> CachePadded<P> {
+    /// Create a new 64-byte cache-padded atomic metric value.
+    pub const fn new(inner: P) -> Self {
+        Self { inner }
+    }
+
+    /// Consumes the wrapper and returns the inner value.
+    pub fn into_inner(self) -> P {
+        self.inner
+    }
+}
+
+impl<P> Deref for CachePadded<P> {
+    type Target = P;
+
+    #[inline]
+    fn deref(&self) -> &P {
+        &self.inner
+    }
+}
+
+impl<P> DerefMut for CachePadded<P> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut P {
+        &mut self.inner
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::f64;
@@ -274,5 +313,15 @@ mod test {
 
         au64.inc_by(123);
         assert_eq!(au64.get(), 123);
+    }
+
+    #[test]
+    fn test_cache_padded() {
+        let padded = CachePadded::new(AtomicU64::new(42));
+        assert_eq!(std::mem::align_of_val(&padded), 64);
+        assert_eq!(padded.get(), 42);
+        padded.inc_by(8);
+        assert_eq!(padded.get(), 50);
+        assert_eq!(padded.into_inner().get(), 50);
     }
 }
